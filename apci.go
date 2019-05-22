@@ -2,6 +2,10 @@ package iec10x
 
 import "errors"
 
+// i帧 含apci和asdu 信息帧. information
+// S帧 只含apci S帧用于主要用确认帧的正确传输,协议称是监视. supervisory
+// U帧 只含apci 未编号控制信息 unnumbered
+
 // U帧 ctr1
 const (
 	uStartDtActive  = iota // 启动激活
@@ -10,7 +14,6 @@ const (
 	uStopDtConfirm         // 停止确认
 	uTestFrActive          // 测试激活
 	uTestFrConfirm         // 测试确认
-
 )
 
 type APCI struct {
@@ -19,15 +22,15 @@ type APCI struct {
 	ctr1, ctr2, ctr3, ctr4 byte
 }
 
-type iFrame struct {
+type iAPCI struct {
 	sendSN, rcvSN uint16
 }
 
-type sFrame struct {
+type sAPCI struct {
 	rcvSN uint16
 }
 
-type uFrame struct {
+type uAPCI struct {
 	testFrConfirm  bool // bit8 测试确认
 	testFrActive   bool // bit7 测试激活
 	stopDtConfirm  bool // bit6 停止确认
@@ -51,18 +54,18 @@ func (this APCI) bytes() []byte {
 // 解析到I,S,U帧
 func (this APCI) parse() interface{} {
 	if this.ctr1&0x01 == 0 {
-		return iFrame{
+		return iAPCI{
 			sendSN: uint16(this.ctr1)>>1 + uint16(this.ctr2)<<7,
 			rcvSN:  uint16(this.ctr3)>>1 + uint16(this.ctr4)<<7,
 		}
 	}
 
 	if this.ctr1&0x03 == 0x01 {
-		return sFrame{
+		return sAPCI{
 			rcvSN: uint16(this.ctr3)>>1 + uint16(this.ctr4)<<7,
 		}
 	}
-	return uFrame{
+	return uAPCI{
 		startDtConfirm: this.ctr1&0x04 != 0,
 		startDtActive:  this.ctr1&0x08 != 0,
 		stopDtConfirm:  this.ctr1&0x10 != 0,
@@ -72,40 +75,40 @@ func (this APCI) parse() interface{} {
 	}
 }
 
-// NewIFrameAPCI 创建I帧
-func NewIFrameAPCI(asduLen byte, sendSN, RcvSN uint16) (*APCI, error) {
+// newIAPCI 创建I帧
+func newIAPCI(asduLen byte, sendSN, RcvSN uint16) (*APCI, error) {
 	if asduLen+4 > APDUFiledSizeMax {
 		return nil, errors.New("apdu filed large than 253")
 	}
 	return &APCI{
-		start: f12startVarFrame,
-		ctr1:  byte(sendSN << 1),
-		ctr2:  byte(sendSN >> 7),
-		ctr3:  byte(RcvSN << 1),
-		ctr4:  byte(RcvSN >> 7),
+		start:     f12startVarFrame,
+		apduFiled: asduLen + 4,
+		ctr1:      byte(sendSN << 1),
+		ctr2:      byte(sendSN >> 7),
+		ctr3:      byte(RcvSN << 1),
+		ctr4:      byte(RcvSN >> 7),
 	}, nil
 }
 
-// NewSFrameAPCI 新建S帧
-func NewSFrameAPCI(asduLen byte, RcvSN uint16) (*APCI, error) {
-	if asduLen+4 > APDUFiledSizeMax {
-		return nil, errors.New("apdu filed large than 253")
-	}
+// newSFrameAPCI 创建S帧
+func newSAPCI(RcvSN uint16) *APCI {
 	return &APCI{
-		start: f12startVarFrame,
-		ctr1:  0x01,
-		ctr2:  0,
-		ctr3:  byte(RcvSN << 1),
-		ctr4:  byte(RcvSN >> 7),
-	}, nil
+		start:     f12startVarFrame,
+		apduFiled: 4,
+		ctr1:      0x01,
+		ctr2:      0,
+		ctr3:      byte(RcvSN << 1),
+		ctr4:      byte(RcvSN >> 7),
+	}
 }
 
-// NewUFrameAPCI 新建U帧
-func NewUFrameAPCI(asduLen byte, which int) (*APCI, error) {
-	if asduLen+4 > APDUFiledSizeMax {
-		return nil, errors.New("apdu filed large than 253")
+// newUAPCI 创建U帧
+func newUAPCI(which int) *APCI {
+	apci := &APCI{
+		start:     f12startVarFrame,
+		apduFiled: 4,
+		ctr1:      0x03,
 	}
-	apci := &APCI{start: f12startVarFrame, ctr1: 0x03}
 	switch which {
 	case uStartDtActive:
 		apci.ctr1 |= 0x04
@@ -120,7 +123,7 @@ func NewUFrameAPCI(asduLen byte, which int) (*APCI, error) {
 	case uTestFrConfirm:
 		apci.ctr1 |= 0x80
 	default:
-		return nil, errors.New("unknow control filed type")
+		panic("unknow control filed type")
 	}
-	return apci, nil
+	return apci
 }
