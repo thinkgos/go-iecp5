@@ -43,12 +43,12 @@ type APCI struct {
 
 // I格式 用于编号的信息传输
 type iAPCI struct {
-	sendSN, rcvSN uint
+	sendSN, rcvSN uint16
 }
 
 // S格式 编号的监视功能
 type sAPCI struct {
-	rcvSN uint
+	rcvSN uint16
 }
 
 // U格式 未编号的控制功能
@@ -60,14 +60,14 @@ type uAPCI struct {
 func (this APCI) parse() (interface{}, string) {
 	if this.ctr1&0x01 == 0 {
 		return iAPCI{
-			sendSN: uint(this.ctr1)>>1 + uint(this.ctr2)<<7,
-			rcvSN:  uint(this.ctr3)>>1 + uint(this.ctr4)<<7,
+			sendSN: uint16(this.ctr1)>>1 + uint16(this.ctr2)<<7,
+			rcvSN:  uint16(this.ctr3)>>1 + uint16(this.ctr4)<<7,
 		}, iFrame
 	}
 
 	if this.ctr1&0x03 == 0x01 {
 		return sAPCI{
-			rcvSN: uint(this.ctr3)>>1 + uint(this.ctr4)<<7,
+			rcvSN: uint16(this.ctr3)>>1 + uint16(this.ctr4)<<7,
 		}, sFrame
 	}
 
@@ -92,7 +92,7 @@ func (this APCI) String() string {
 }
 
 // newIFrame 创建I帧 ,返回apdu
-func newIFrame(asdu []byte, sendSN, RcvSN uint) ([]byte, error) {
+func newIFrame(asdu []byte, sendSN, RcvSN uint16) ([]byte, error) {
 	if len(asdu) > ASDUSizeMax {
 		return nil, errors.New("ASDU filed large than max 249")
 	}
@@ -111,7 +111,7 @@ func newIFrame(asdu []byte, sendSN, RcvSN uint) ([]byte, error) {
 }
 
 // newSFrame 创建S帧,返回apdu
-func newSFrame(RcvSN uint) []byte {
+func newSFrame(RcvSN uint16) []byte {
 	return []byte{startFrame, 4, 1, 0, byte(RcvSN << 1), byte(RcvSN >> 7)}
 }
 
