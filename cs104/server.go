@@ -54,7 +54,7 @@ type Server struct {
 	*elog.Elog
 }
 
-// TCP returns a session with status false.
+// NewServer returns a cs104 server
 func NewServer(conf *Config, conn net.Conn) (*Server, error) {
 	err := conf.Valid()
 	if err != nil {
