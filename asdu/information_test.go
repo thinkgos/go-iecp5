@@ -73,7 +73,7 @@ func TestCommand(t *testing.T) {
 	tests := []struct {
 		name     string
 		this     Command
-		wantQual byte
+		wantQual uint
 		wantExec bool
 	}{
 		{"with selects", Command(0x84), 1, false},
@@ -95,7 +95,7 @@ func TestSetPointCmd(t *testing.T) {
 	tests := []struct {
 		name     string
 		this     SetPointCmd
-		wantQual byte
+		wantQual uint
 		wantExec bool
 	}{
 		{"with selects", SetPointCmd(0x87), 7, false},

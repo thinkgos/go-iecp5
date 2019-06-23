@@ -14,7 +14,7 @@ const (
 )
 
 const (
-	// "t₀" 范围[1, 255]s
+	// "t₀" 范围[1, 255]s 默认 30s
 	ConnectTimeout0Min = 1 * time.Second
 	ConnectTimeout0Max = 255 * time.Second
 	// "t₁" 范围[1, 255]s 默认 15s. See IEC 60870-5-104, figure 18.
