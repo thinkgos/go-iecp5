@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/astaxie/beego/logs"
 	"github.com/thinkgos/go-iecp5/asdu"
 	"github.com/thinkgos/library/elog"
 )
@@ -33,7 +32,7 @@ type Server struct {
 	conn net.Conn
 
 	In   chan []byte
-	Out  chan []byte
+	out  chan []byte
 	recv chan []byte // for recvLoop
 	send chan []byte // for sendLoop
 
@@ -60,7 +59,6 @@ func NewServer(conf *Config, conn net.Conn) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	elog.SetProvider(logs.GetBeeLogger())
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -69,7 +67,7 @@ func NewServer(conf *Config, conn net.Conn) (*Server, error) {
 		conn:   conn,
 
 		In:   make(chan []byte),
-		Out:  make(chan []byte),
+		out:  make(chan []byte),
 		recv: make(chan []byte, conf.RecvUnackLimitW),
 		send: make(chan []byte, conf.SendUnackLimitK), // may not block!
 
@@ -147,7 +145,7 @@ func (t *Server) recvLoop() {
 				}
 				if rdCnt == length {
 					apdu := datagram[:length]
-					t.Debug("cs104 server: Raw RX [ % X ]", apdu)
+					t.Debug("cs104 server: Raw RX [% X]", apdu)
 					t.recv <- apdu // copy
 				}
 			}
@@ -164,7 +162,7 @@ func (t *Server) sendLoop() {
 	}()
 
 	for apdu := range t.send {
-		t.Debug("cs104 server: Raw TX [ % X]", apdu)
+		t.Debug("cs104 server: Raw TX [% X]", apdu)
 		for wrCnt := 0; len(apdu) > wrCnt; {
 			byteCount, err := t.conn.Write(apdu[wrCnt:])
 			if err != nil {
@@ -185,41 +183,41 @@ func (t *Server) sendLoop() {
 }
 
 // Run is the big fat state machine.
-func (t *Server) run() {
-	t.Informational("cs104 server: run start!")
+func (this *Server) run() {
+	this.Informational("cs104 server: run start!")
 	// when connected establish and not enable "data transfer" yet
 	// defualt: STOPDT
 	isActive := false
 	checkTicker := time.NewTicker(timeoutResolution)
 	defer func() {
 		checkTicker.Stop()
-		if t.ackNoIn != t.seqNoIn {
+		if this.ackNoIn != this.seqNoIn {
 			select {
-			case t.send <- newSFrame(t.seqNoIn):
-				t.ackNoIn = t.seqNoIn
+			case this.send <- newSFrame(this.seqNoIn):
+				this.ackNoIn = this.seqNoIn
 			default:
 			}
 		}
 
-		close(t.send) // kill send loop
-		t.conn.Close()
+		close(this.send) // kill send loop
+		this.conn.Close()
 
 		// await receive loop
-		for apdu := range t.recv {
+		for apdu := range this.recv {
 			apci, _ := parse(apdu)
 			switch head, f := apci.parse(); f {
 			case iFrame:
-				t.updateAckNoOut(head.(iAPCI).rcvSN)
+				this.updateAckNoOut(head.(iAPCI).rcvSN)
 
 			case sFrame:
-				t.updateAckNoOut(head.(sAPCI).rcvSN)
+				this.updateAckNoOut(head.(sAPCI).rcvSN)
 			default:
 				// discard
 			}
 		}
 
-		close(t.In)
-		t.Informational("cs104 server: run stop!")
+		close(this.In)
+		this.Informational("cs104 server: run stop!")
 	}()
 
 	// transmission timestamps for timeout calculation
@@ -231,66 +229,60 @@ func (t *Server) run() {
 	// var stopDtActiveSendSince = willNotTimeout
 
 	for {
-		if isActive && seqNoCount(t.ackNoOut, t.seqNoOut) <= t.SendUnackLimitK {
+		if isActive && seqNoCount(this.ackNoOut, this.seqNoOut) <= this.SendUnackLimitK {
 			select {
-			case o, ok := <-t.Out:
+			case o, ok := <-this.out:
 				if !ok {
 					return
 				}
-				t.submit(o)
+				this.submit(o)
 				continue
 			default:
 			}
 		}
-
 		select {
-		case <-t.ctx.Done():
+		case <-this.ctx.Done():
 			return
-		case o, ok := <-t.Out:
-			if !ok {
-				return
-			}
-			t.submit(o)
 
 		case now := <-checkTicker.C:
 			// check all timeouts
-			if now.Sub(testFrAliveSendSince) >= t.SendUnackTimeout1 {
+			if now.Sub(testFrAliveSendSince) >= this.SendUnackTimeout1 {
 				// now.Sub(startDtActiveSendSince) >= t.SendUnackTimeout1 ||
 				// now.Sub(stopDtActiveSendSince) >= t.SendUnackTimeout1 ||
 				return
 			}
 			// check oldest unacknowledged outbound
-			if t.ackNoOut != t.seqNoOut &&
-				now.Sub(t.pending[t.ackNoOut].send) >= t.SendUnackTimeout1 {
-				t.ackNoOut++
+			if this.ackNoOut != this.seqNoOut &&
+				now.Sub(this.pending[this.ackNoOut].send) >= this.SendUnackTimeout1 {
+				this.ackNoOut++
 				return
 			}
 
 			// 确定最早发送的i-Frame是否超时
-			if t.ackNoIn != t.seqNoIn &&
-				(now.Sub(unAckRecvdSince) >= t.RecvUnackTimeout2 ||
-					now.Sub(t.idleSince) >= timeoutResolution) {
-				t.send <- newSFrame(t.seqNoIn)
-				t.ackNoIn = t.seqNoIn
+			if this.ackNoIn != this.seqNoIn &&
+				(now.Sub(unAckRecvdSince) >= this.RecvUnackTimeout2 ||
+					now.Sub(this.idleSince) >= timeoutResolution) {
+				this.send <- newSFrame(this.seqNoIn)
+				this.ackNoIn = this.seqNoIn
 			}
 
 			// 空闲时间到，发送TestFrActive帧
-			if now.Sub(t.idleSince) >= t.IdleTimeout3 {
-				t.send <- newUFrame(uTestFrActive)
+			if now.Sub(this.idleSince) >= this.IdleTimeout3 {
+				this.send <- newUFrame(uTestFrActive)
 				testFrAliveSendSince = time.Now()
-				t.idleSince = testFrAliveSendSince
+				this.idleSince = testFrAliveSendSince
 			}
 
-		case apdu, ok := <-t.recv:
+		case apdu, ok := <-this.recv:
 			if !ok {
 				return
 			}
 			apci, asdu := parse(apdu)
 			head, f := apci.parse()
-			t.idleSince = time.Now() // 每收到一个i帧,S帧,U帧, 重置空闲定时器
+			this.idleSince = time.Now() // 每收到一个i帧,S帧,U帧, 重置空闲定时器
 			switch f {
 			case sFrame:
-				if !t.updateAckNoOut(head.(sAPCI).rcvSN) {
+				if !this.updateAckNoOut(head.(sAPCI).rcvSN) {
 					return
 				}
 
@@ -299,41 +291,41 @@ func (t *Server) run() {
 					break // not active, discard apdu
 				}
 				ihead := head.(iAPCI)
-				if !t.updateAckNoOut(ihead.rcvSN) || ihead.sendSN != t.seqNoIn {
+				if !this.updateAckNoOut(ihead.rcvSN) || ihead.sendSN != this.seqNoIn {
 					return
 				}
 
-				t.In <- asdu
-				if t.ackNoIn == t.seqNoIn { // first unacked
+				this.In <- asdu
+				if this.ackNoIn == this.seqNoIn { // first unacked
 					unAckRecvdSince = time.Now()
 				}
 
-				t.seqNoIn = (t.seqNoIn + 1) & 32767
-				if seqNoCount(t.ackNoIn, t.seqNoIn) >= t.RecvUnackLimitW {
-					t.send <- newSFrame(t.seqNoIn)
-					t.ackNoIn = t.seqNoIn
+				this.seqNoIn = (this.seqNoIn + 1) & 32767
+				if seqNoCount(this.ackNoIn, this.seqNoIn) >= this.RecvUnackLimitW {
+					this.send <- newSFrame(this.seqNoIn)
+					this.ackNoIn = this.seqNoIn
 				}
 
 			case uFrame:
 				switch head.(uAPCI).function {
 				case uStartDtActive:
-					t.send <- newUFrame(uStartDtConfirm)
+					this.send <- newUFrame(uStartDtConfirm)
 					isActive = true
 				// case uStartDtConfirm:
 				// 	isActive = true
 				// 	startDtActiveSendSince = willNotTimeout
 				case uStopDtActive:
-					t.send <- newUFrame(uStopDtConfirm)
+					this.send <- newUFrame(uStopDtConfirm)
 					isActive = false
 				// case uStopDtConfirm:
 				// 	isActive = false
 				// 	stopDtActiveSendSince = willNotTimeout
 				case uTestFrActive:
-					t.send <- newUFrame(uTestFrConfirm)
+					this.send <- newUFrame(uTestFrConfirm)
 				case uTestFrConfirm:
 					testFrAliveSendSince = willNotTimeout
 				default:
-					t.Error("cs104 server: illegal U-Frame functions[%v]", head.(uAPCI).function)
+					this.Error("cs104 server: illegal U-Frame functions[%v]", head.(uAPCI).function)
 				}
 			}
 		}
@@ -389,11 +381,12 @@ func (this *Server) SendASDU(u *asdu.ASDU) error {
 	if err != nil {
 		return err
 	}
-	select {
-	case this.Out <- data:
-	default:
-		return errors.New("cs104: buffer is full")
-	}
+	// select {
+	// case this.out <- data:
+	// default:
+	// 	return errors.New("cs104: buffer is full")
+	// }
+	this.out <- data
 	return nil
 }
 

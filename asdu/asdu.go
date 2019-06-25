@@ -129,14 +129,14 @@ type ASDU struct {
 	// 0: 同一类型，有不同objAddress的信息元素集合
 	// 1： 同一类型，相同objAddress信息元素集合
 	InfoSeq   bool
-	Info      []byte   // information object serial
+	InfoObj   []byte   // information object serial
 	bootstrap [17]byte // prevents Info malloc
 }
 
 // NewASDU returns a new ASDU with the provided parameters.
 func NewASDU(p *Params, id Identifier) *ASDU {
 	u := &ASDU{Params: p, Identifier: id}
-	u.Info = u.bootstrap[:0]
+	u.InfoObj = u.bootstrap[:0]
 	return u
 }
 
@@ -152,8 +152,8 @@ func MustNewInro(p *Params, commonAddr CommonAddr, origAddr OriginAddr, group ui
 		Identifier: Identifier{C_IC_NA_1, Act, origAddr, commonAddr},
 	}
 
-	u.Info = u.bootstrap[:p.InfoObjAddrSize+1]
-	u.Info[p.InfoObjAddrSize] = byte(group + uint(Inrogen))
+	u.InfoObj = u.bootstrap[:p.InfoObjAddrSize+1]
+	u.InfoObj[p.InfoObjAddrSize] = byte(group + uint(Inrogen))
 	return u
 }
 
@@ -172,7 +172,7 @@ func (u *ASDU) Reply(c Cause) *ASDU {
 	r := NewASDU(u.Params, u.Identifier)
 	r.Cause = c | u.Cause&TestFlag
 	r.InfoSeq = u.InfoSeq
-	r.Info = append(r.Info, u.Info...)
+	r.InfoObj = append(r.InfoObj, u.InfoObj...)
 	return r
 }
 
@@ -181,20 +181,20 @@ func (u *ASDU) String() string {
 	dataSize, err := GetInfoObjSize(u.Type)
 	if err != nil {
 		if !u.InfoSeq {
-			return fmt.Sprintf("%s: %#x", u.Identifier, u.Info)
+			return fmt.Sprintf("%s: %#x", u.Identifier, u.InfoObj)
 		}
-		return fmt.Sprintf("%s seq: %#x", u.Identifier, u.Info)
+		return fmt.Sprintf("%s seq: %#x", u.Identifier, u.InfoObj)
 	}
 
-	end := len(u.Info)
+	end := len(u.InfoObj)
 	addrSize := u.InfoObjAddrSize
 	if end < addrSize {
 		if !u.InfoSeq {
-			return fmt.Sprintf("%s: %#x <EOF>", u.Identifier, u.Info)
+			return fmt.Sprintf("%s: %#x <EOF>", u.Identifier, u.InfoObj)
 		}
-		return fmt.Sprintf("%s seq: %#x <EOF>", u.Identifier, u.Info)
+		return fmt.Sprintf("%s seq: %#x <EOF>", u.Identifier, u.InfoObj)
 	}
-	addr := u.DecodeInfoObjAddr(u.Info)
+	addr := u.DecodeInfoObjAddr(u.InfoObj)
 
 	buf := bytes.NewBufferString(u.Identifier.String())
 
@@ -202,10 +202,10 @@ func (u *ASDU) String() string {
 		start := i
 		i += dataSize
 		if i > end {
-			fmt.Fprintf(buf, " %d:%#x <EOF>", addr, u.Info[start:])
+			fmt.Fprintf(buf, " %d:%#x <EOF>", addr, u.InfoObj[start:])
 			break
 		}
-		fmt.Fprintf(buf, " %d:%#x", addr, u.Info[start:i])
+		fmt.Fprintf(buf, " %d:%#x", addr, u.InfoObj[start:i])
 		if i == end {
 			break
 		}
@@ -216,10 +216,10 @@ func (u *ASDU) String() string {
 			start = i
 			i += addrSize
 			if i > end {
-				fmt.Fprintf(buf, " %#x <EOF>", u.Info[start:i])
+				fmt.Fprintf(buf, " %#x <EOF>", u.InfoObj[start:i])
 				break
 			}
-			addr = u.DecodeInfoObjAddr(u.Info[start:])
+			addr = u.DecodeInfoObjAddr(u.InfoObj[start:])
 		}
 	}
 
@@ -254,16 +254,16 @@ func (u *ASDU) MarshalBinary() (data []byte, err error) {
 	// See companion standard 101, subclause 7.2.2.
 	if u.InfoSeq {
 		vsq = 0x80
-		objCount = (len(u.Info) - u.InfoObjAddrSize) / objSize
+		objCount = (len(u.InfoObj) - u.InfoObjAddrSize) / objSize
 	} else {
-		objCount = len(u.Info) / (u.InfoObjAddrSize + objSize)
+		objCount = len(u.InfoObj) / (u.InfoObjAddrSize + objSize)
 	}
 	if objCount >= 128 {
 		return nil, errInfoObjIndexFit
 	}
 	vsq |= byte(objCount)
 
-	data = make([]byte, 0, 2+u.CauseSize+u.CommonAddrSize+len(u.Info))
+	data = make([]byte, 0, 2+u.CauseSize+u.CommonAddrSize+len(u.InfoObj))
 	data = append(data, byte(u.Type), vsq, byte(u.Cause))
 	if u.CauseSize == 2 {
 		data = append(data, byte(u.OrigAddr))
@@ -278,7 +278,7 @@ func (u *ASDU) MarshalBinary() (data []byte, err error) {
 		data = append(data, byte(u.CommonAddr), byte(u.CommonAddr>>8))
 	}
 
-	return append(data, u.Info...), nil
+	return append(data, u.InfoObj...), nil
 }
 
 // UnmarshalBinary honors the encoding.BinaryUnmarshaler interface.
@@ -289,7 +289,7 @@ func (u *ASDU) UnmarshalBinary(data []byte) error {
 	if lenDUI > len(data) {
 		return io.EOF
 	}
-	u.Info = append(u.bootstrap[:0], data[lenDUI:]...)
+	u.InfoObj = append(u.bootstrap[:0], data[lenDUI:]...)
 
 	u.Type = TypeID(data[0])
 	// fixed element size
@@ -313,10 +313,10 @@ func (u *ASDU) UnmarshalBinary(data []byte) error {
 	switch {
 	case size == 0:
 		return errInfoObjIndexFit
-	case size > len(u.Info):
+	case size > len(u.InfoObj):
 		return io.EOF
-	case size < len(u.Info): // not explicitly prohibited
-		u.Info = u.Info[:size]
+	case size < len(u.InfoObj): // not explicitly prohibited
+		u.InfoObj = u.InfoObj[:size]
 	}
 
 	u.Cause = Cause(data[2])
@@ -352,19 +352,19 @@ func (u *ASDU) AddInfoObjAddr(addr InfoObjAddr) error {
 		if addr > 255 {
 			return errInfoObjAddrFit
 		}
-		u.Info = append(u.Info, byte(addr))
+		u.InfoObj = append(u.InfoObj, byte(addr))
 
 	case 2:
 		if addr > 65535 {
 			return errInfoObjAddrFit
 		}
-		u.Info = append(u.Info, byte(addr), byte(addr>>8))
+		u.InfoObj = append(u.InfoObj, byte(addr), byte(addr>>8))
 
 	case 3:
 		if addr > 16777215 {
 			return errInfoObjAddrFit
 		}
-		u.Info = append(u.Info, byte(addr), byte(addr>>8), byte(addr>>16))
+		u.InfoObj = append(u.InfoObj, byte(addr), byte(addr>>8), byte(addr>>16))
 	default:
 		return errParam
 	}

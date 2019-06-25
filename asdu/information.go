@@ -21,56 +21,56 @@ const InfoObjIrrelevantAddr InfoObjAddr = 0
 
 // SinglePoint is a measured value of a switch.
 // See companion standard 101, subclause 7.2.6.1.
-type SinglePoint uint
+type SinglePoint byte
 
 // 单点信息
 const (
-	Off SinglePoint = iota
-	On
+	SPIOff SinglePoint = iota
+	SPIOn
 )
 
 // DoublePoint is a measured value of a determination aware switch.
 // See companion standard 101, subclause 7.2.6.2.
-type DoublePoint uint
+type DoublePoint byte
 
 // 双点信息
 const (
-	IndeterminateOrIntermediate DoublePoint = iota // 不确定或中间状态
-	DeterminedOff                                  // 确定状态开
-	DeterminedOn                                   // 确定状态关
-	Indeterminate                                  // 不确定或中间状态
+	DPIIndeterminateOrIntermediate DoublePoint = iota // 不确定或中间状态
+	DPIDeterminedOff                                  // 确定状态开
+	DPIDeterminedOn                                   // 确定状态关
+	DPIIndeterminate                                  // 不确定或中间状态
 )
 
 // Quality descriptor flags attribute measured values.
 // See companion standard 101, subclause 7.2.6.3.
 const (
-	// Overflow marks whether the value is beyond a predefined range.
-	Overflow = 1 << iota
+	// QDSOverflow marks whether the value is beyond a predefined range.
+	QDSOverflow = 1 << iota
 
 	_ // reserve
 	_ // reserve
 
-	// TimeInvalid flags that the elapsed time was incorrectly acquired.
+	// QDSTimeInvalid flags that the elapsed time was incorrectly acquired.
 	// This attribute is only valid for events of protection equipment.
 	// See companion standard 101, subclause 7.2.6.4.
-	TimeInvalid
+	QDSTimeInvalid
 
-	// Blocked flags that the value is blocked for transmission; the
+	// QDSBlocked flags that the value is blocked for transmission; the
 	// value remains in the state that was acquired before it was blocked.
-	Blocked
+	QDSBlocked
 
-	// Substituted flags that the value was provided by the input of
+	// QDSSubstituted flags that the value was provided by the input of
 	// an operator (dispatcher) instead of an automatic source.
-	Substituted
+	QDSSubstituted
 
-	// NotTopical flags that the most recent update was unsuccessful.
-	NotTopical
+	// QDSNotTopical flags that the most recent update was unsuccessful.
+	QDSNotTopical
 
-	// Invalid flags that the value was incorrectly acquired.
-	Invalid
+	// QDSInvalid flags that the value was incorrectly acquired.
+	QDSInvalid
 
-	// OK means no flags, no problems.
-	OK = 0
+	// QDSOK means no flags, no problems.
+	QDSOK = 0
 )
 
 // StepPos is a measured value with transient state indication.
@@ -117,17 +117,17 @@ func (this Normalize) Float64() float64 {
 // 测量值参数限定词
 // See companion standard 101, subclause 7.2.6.24.
 const (
-	_          = iota // 0: not used
-	Threashold        // 1: threshold value
-	Smoothing         // 2: smoothing factor (filter time constant)
-	LowLimit          // 3: low limit for transmission of measured values
-	HighLimit         // 4: high limit for transmission of measured values
+	_             = iota // 0: not used
+	QPMThreashold        // 1: threshold value
+	QPMSmoothing         // 2: smoothing factor (filter time constant)
+	QPMLowLimit          // 3: low limit for transmission of measured values
+	QPMHighLimit         // 4: high limit for transmission of measured values
 
 	// 5‥31: reserved for standard definitions of this companion standard (compatible range)
 	// 32‥63: reserved for special use (private range)
 
-	ChangeFlag      = 64  // bit6 marks local parameter change  当地参数改变
-	InOperationFlag = 128 // bit7 marks parameter operation 参数在运行
+	QPMChangeFlag      = 0x40 // bit6 marks local parameter change  当地参数改变
+	QPMInOperationFlag = 0x80 // bit7 marks parameter operation 参数在运行
 )
 
 // Command is a command.
@@ -137,7 +137,6 @@ type Command byte
 
 // <0>: 未用
 // Qual returns the qualifier of command.
-//
 //	0: no additional definition
 //	1: short pulse duration (circuit-breaker), duration determined by a system parameter in the outstation
 //	2: long pulse duration, duration determined by a system parameter in the outstation
