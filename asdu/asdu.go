@@ -69,7 +69,7 @@ func (this Params) Valid() error {
 // ValidAddr returns the validation result of a station address.
 func (this Params) ValidCommonAddr(addr CommonAddr) error {
 	if addr == 0 {
-		return errCommonoAddrZero
+		return errCommonAddrZero
 	}
 	if bits.Len(uint(addr)) > this.CommonAddrSize*8 {
 		return errCommonAddrFit
@@ -232,7 +232,7 @@ func (u *ASDU) MarshalBinary() (data []byte, err error) {
 	case u.Cause == Unused:
 		return nil, errCauseZero
 	case u.CommonAddr == InvalidCommonAddr:
-		return nil, errCommonoAddrZero
+		return nil, errCommonAddrZero
 	case !(u.CauseSize == 1 || u.CauseSize == 2):
 		return nil, errParam
 	case u.CauseSize == 1 && u.OrigAddr != 0:

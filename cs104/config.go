@@ -20,7 +20,7 @@ const (
 	// "t₁" 范围[1, 255]s 默认 15s. See IEC 60870-5-104, figure 18.
 	SendUnackTimeout1Min = 1 * time.Second
 	SendUnackTimeout1Max = 255 * time.Second
-	// 标准 "t₂" 范围[1, 255]s 默认 10s, See IEC 60870-5-104, figure 10.
+	// "t₂" 范围[1, 255]s 默认 10s, See IEC 60870-5-104, figure 10.
 	RecvUnackTimeout2Min = 1 * time.Second
 	RecvUnackTimeout2Max = 255 * time.Second
 	// "t₃" 范围[1 second, 48 hours] 默认 20 s, See IEC 60870-5-104, subclause 5.2.

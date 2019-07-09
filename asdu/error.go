@@ -3,9 +3,9 @@ package asdu
 import "errors"
 
 var (
-	errTypeIdentifier  = errors.New("asdu: type identification unknown")
-	errCauseZero       = errors.New("asdu: cause of transmission 0 is not used")
-	errCommonoAddrZero = errors.New("asdu: common address 0 is not used")
+	errTypeIdentifier = errors.New("asdu: type identification unknown")
+	errCauseZero      = errors.New("asdu: cause of transmission 0 is not used")
+	errCommonAddrZero = errors.New("asdu: common address 0 is not used")
 
 	errParam           = errors.New("asdu: fixed system parameter out of range")
 	errOriginAddrFit   = errors.New("asdu: originator address not allowed with cause size 1 system parameter")
