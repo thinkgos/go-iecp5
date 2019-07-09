@@ -5,13 +5,13 @@ package asdu
 // InfoObjAddr is the information object address.
 // The width is controlled by Params.InfoObjAddrSize.
 // See companion standard 101, subclause 7.2.5.
-// width 1
+// - width 1
 // <0>: 无关的信息对象地址
 // <1..255>: 信息对象地址
-// width 2
+// - width 2
 // <0>: 无关的信息对象地址
 // <1..65535>: 信息对象地址
-// width 3
+// - width 3
 // <0>: 无关的信息对象地址
 // <1..16777215>: 信息对象地址
 type InfoObjAddr uint

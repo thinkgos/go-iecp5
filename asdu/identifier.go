@@ -8,7 +8,7 @@ import "strconv"
 type TypeID uint8
 
 // The standard ASDU type identification.
-// M for monitored information,
+// M for monitored information
 // C for control information
 // P for parameter
 // F for file transfer.
@@ -154,7 +154,7 @@ const (
 	F_SC_NB_1 // QueryLog - request archive file (section 104) 查询日志
 )
 
-// ObjSize maps the type identification (TypeID) to the serial octet size.
+// infoObjSize maps the type identification (TypeID) to the serial octet size.
 // Type extensions must register here.
 var infoObjSize = [256]int{
 	M_SP_NA_1: 1,
@@ -281,33 +281,43 @@ func (this TypeID) String() string {
 	}
 }
 
+// Variable is variable structure qualifier
+// number <0..127>, bit0 - bit6
+// seq, bit7
+// 0: 同一类型，有不同objAddress的信息元素集合 (一个地址+一个元素)
+// 1： 同一类型，相同objAddress信息元素集合 (一个地址,后续连续N个元素)
+type Variable byte
+
+// Variable sequence
+const (
+	VariableSeq = 0x80
+)
+
 // Cause is the cause of transmission.
 // See companion standard 101, subclause 7.2.3.
 // Cause defined
 // | T | P/N | 5..0 cause |
 // T = test, 0: 未试验, 1：试验
-// P/N 对由启动应用功能所请求的激活以肯定或者否定的确认
+// P/N 对由启动应用功能所请求的激活以肯定或者否定的确认 0: 肯定确认, 1: 否定确认
 type Cause byte
 
-// OriginAddr is originator address
-// See companion standard 101, subclause 7.2.3.
-// The width is controlled by Params.CauseSize.
-// width 2 includes/activates the originator address.
+// OriginAddr is originator address, See companion standard 101, subclause 7.2.3.
+// The width is controlled by Params.CauseSize. width 2 includes/activates the originator address.
 // <0>: 未用
 // <1..255>: 源发地址
 type OriginAddr byte
 
 // The 2 most significant bits are flags.
 const (
-	// NegFlag indicates the negative (or positive) confirmation
-	// of activation requested by the primary application function.
-	NegFlag Cause = 0x40
-
-	// TestFlag marks the cause of transmission for testing.
+	// TestFlag marks the cause of transmission for testing. bit7
 	TestFlag Cause = 0x80
+
+	// NegFlag indicates the negative (or positive) confirmation
+	// of activation requested by the primary application function. bit6
+	NegFlag Cause = 0x40
 )
 
-// Cause of transmission
+// Cause of transmission bit5-bit0
 // <0> 未定义
 // <1..63> 传输原因序号
 // <1..47> 标准定义

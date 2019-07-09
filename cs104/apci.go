@@ -1,8 +1,9 @@
 package cs104
 
 import (
-	"errors"
 	"fmt"
+
+	"github.com/thinkgos/go-iecp5/asdu"
 )
 
 const (
@@ -13,9 +14,8 @@ const (
 const (
 	APCICtlFiledSize = 4 // control filed(4)
 
-	APDUSizeMax      = 255 // start(1) +length(1) + control field(4) + ASDU
-	ASDUSizeMax      = 249 // ASDU
-	APDUFiledSizeMax = 253 // control field(4) + ASDU
+	APDUSizeMax      = 255                                 // start(1) +length(1) + control field(4) + ASDU
+	APDUFiledSizeMax = APCICtlFiledSize + asdu.ASDUSizeMax // control field(4) + ASDU
 )
 
 const (
@@ -92,20 +92,20 @@ func (this APCI) String() string {
 }
 
 // newIFrame 创建I帧 ,返回apdu
-func newIFrame(asdu []byte, sendSN, RcvSN uint16) ([]byte, error) {
-	if len(asdu) > ASDUSizeMax {
-		return nil, errors.New("ASDU filed large than max 249")
+func newIFrame(asdus []byte, sendSN, RcvSN uint16) ([]byte, error) {
+	if len(asdus) > asdu.ASDUSizeMax {
+		return nil, fmt.Errorf("ASDU filed large than max %d", asdu.ASDUSizeMax)
 	}
 
-	b := make([]byte, len(asdu)+6)
+	b := make([]byte, len(asdus)+6)
 
 	b[0] = startFrame
-	b[1] = byte(len(asdu) + 4)
+	b[1] = byte(len(asdus) + 4)
 	b[2] = byte(sendSN << 1)
 	b[3] = byte(sendSN >> 7)
 	b[4] = byte(RcvSN << 1)
 	b[5] = byte(RcvSN >> 7)
-	copy(b[6:], asdu)
+	copy(b[6:], asdus)
 
 	return b, nil
 }
