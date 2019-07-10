@@ -9,7 +9,7 @@ type TypeID uint8
 
 // The standard ASDU type identification.
 // M for monitored information
-// C for control information
+// Coa for control information
 // P for parameter
 // F for file transfer.
 // <0> 未用
@@ -286,19 +286,32 @@ func (this TypeID) String() string {
 // seq, bit7
 // 0: 同一类型，有不同objAddress的信息元素集合 (一个地址+一个元素)
 // 1： 同一类型，相同objAddress信息元素集合 (一个地址,后续连续N个元素)
-type Variable byte
+type VariableStruct struct {
+	Number     byte
+	IsSequence bool
+}
 
-// Variable sequence
-const (
-	VariableSeq = 0x80
-)
+func DecodeVariable(b byte) VariableStruct {
+	return VariableStruct{
+		Number:     b & 0x7f,
+		IsSequence: (b & 0x80) == 0x80,
+	}
+}
+func (this VariableStruct) Value() byte {
+	v := this.Number
+	if this.IsSequence {
+		v |= 0x80
+	}
+	return v
+}
 
 // Cause is the cause of transmission.
 // See companion standard 101, subclause 7.2.3.
-// Cause defined
 // | T | P/N | 5..0 cause |
-// T = test, 0: 未试验, 1：试验
-// P/N 对由启动应用功能所请求的激活以肯定或者否定的确认 0: 肯定确认, 1: 否定确认
+// T = test, the cause of transmission for testing ,0: 未试验, 1：试验
+// P/N indicates the negative (or positive) confirmation,
+// 对由启动应用功能所请求的激活以肯定或者否定的确认 0: 肯定确认, 1: 否定确认
+// Cause of transmission bit5-bit0
 type Cause byte
 
 // OriginAddr is originator address, See companion standard 101, subclause 7.2.3.
@@ -306,23 +319,6 @@ type Cause byte
 // <0>: 未用
 // <1..255>: 源发地址
 type OriginAddr byte
-
-// The 2 most significant bits are flags.
-const (
-	// TestFlag marks the cause of transmission for testing. bit7
-	TestFlag Cause = 0x80
-
-	// NegFlag indicates the negative (or positive) confirmation
-	// of activation requested by the primary application function. bit6
-	NegFlag Cause = 0x40
-)
-
-// CauseOfTransmission is the cause of transmission.
-type CauseOfTransmission struct {
-	Cause      Cause
-	IsTest     bool
-	IsNegative bool
-}
 
 // Cause of transmission bit5-bit0
 // <0> 未定义
@@ -449,19 +445,42 @@ var causeSemantics = []string{
 	"special63",
 }
 
-// String 返回Cause的字符串,包含相应应用的",neg" and ",test"
-func (this Cause) String() string {
-	s := causeSemantics[this&^(NegFlag|TestFlag)]
+// CauseOfTransmission is the cause of transmission.
+type CauseOfTransmission struct {
+	IsTest     bool
+	IsNegative bool
+	Cause      Cause
+}
 
-	switch this & (NegFlag | TestFlag) {
-	case NegFlag:
-		s += ",neg"
-	case TestFlag:
-		s += ",test"
-	case NegFlag | TestFlag:
-		s += ",neg,test"
+func ParseCauseOfTransmission(b byte) CauseOfTransmission {
+	return CauseOfTransmission{
+		IsNegative: (b & 0x40) == 0x40,
+		IsTest:     (b & 0x80) == 0x80,
+		Cause:      Cause(b & 0x3f),
 	}
+}
 
+func (this CauseOfTransmission) Value() byte {
+	v := this.Cause
+	if this.IsNegative {
+		v |= 0x40
+	}
+	if this.IsTest {
+		v |= 0x80
+	}
+	return byte(v)
+}
+
+// String 返回Cause的字符串,包含相应应用的",neg" and ",test"
+func (this CauseOfTransmission) String() string {
+	s := causeSemantics[this.Cause]
+	if this.IsNegative && this.IsTest {
+		s += ",neg,test"
+	} else if this.IsNegative {
+		s += ",neg"
+	} else { //this.IsTest
+		s += ",test"
+	}
 	return s
 }
 

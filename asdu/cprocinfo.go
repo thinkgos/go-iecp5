@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-var errCmdCause = errors.New("iecp5: cause of transmission for command not act(ivate)")
+var errCmdCause = errors.New("asdu: cause of transmission for command not act(deact)")
 
 // SingleCmd sends a type identification C_SC_NA_1 or C_SC_TA_1. subclause 7.3.2.1
 // 单命令
@@ -31,7 +31,7 @@ func SingleCmd(c Connect, typeID TypeID, coa CauseOfTransmission, commonAddr Com
 	if cmd {
 		value |= 0x01
 	}
-	u.InfoObj = append(u.InfoObj, byte(value))
+	u.InfoObj = append(u.InfoObj, value)
 	switch typeID {
 	case C_SC_NA_1:
 	case C_SC_TA_1:

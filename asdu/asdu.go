@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	ASDUSizeMax = 249 // ASDU
+	ASDUSizeMax = 249 // ASDU max size
 )
 
 // ASDU form
@@ -103,9 +103,9 @@ type Identifier struct {
 	// type identification, information content
 	Type TypeID
 	// Variable is variable structure qualifier
-	Variable Variable
+	Variable VariableStruct
 	// cause of transmission submission category
-	Cause Cause
+	Coa CauseOfTransmission
 	// Originator Address [1, 255] or 0 for the default.
 	// The applicability is controlled by Params.CauseSize.
 	OrigAddr OriginAddr
@@ -118,9 +118,9 @@ type Identifier struct {
 // String 返回数据单元标识符的信息like "TypeID Cause OrigAddr@CommonAddr"
 func (id Identifier) String() string {
 	if id.OrigAddr == 0 {
-		return fmt.Sprintf("%s %s @%d", id.Type, id.Cause, id.CommonAddr)
+		return fmt.Sprintf("%s %s @%d", id.Type, id.Coa, id.CommonAddr)
 	}
-	return fmt.Sprintf("%s %s %d@%d ", id.Type, id.Cause, id.OrigAddr, id.CommonAddr)
+	return fmt.Sprintf("%s %s %d@%d ", id.Type, id.Coa, id.OrigAddr, id.CommonAddr)
 }
 
 // ASDU (Application Service Data Unit) is an application message.
@@ -131,26 +131,25 @@ type ASDU struct {
 	bootstrap [ASDUSizeMax]byte // prevents Info malloc
 }
 
+func NewEmptyASDU(p *Params) *ASDU {
+	a := &ASDU{
+		Params: p,
+	}
+	a.InfoObj = a.bootstrap[:0]
+	return a
+}
+
 func NewASDU(p *Params, typeID TypeID, isSequence bool, coa CauseOfTransmission, commonAddr CommonAddr) *ASDU {
-	vars := Variable(0)
-	if isSequence {
-		vars = VariableSeq
-	}
-	if coa.IsTest {
-		coa.Cause |= TestFlag
-	}
-	if coa.IsNegative {
-		coa.Cause |= NegFlag
-	}
 	a := &ASDU{
 		Params: p,
 		Identifier: Identifier{
 			Type:       typeID,
-			Variable:   vars,
-			Cause:      coa.Cause,
+			Variable:   VariableStruct{IsSequence: isSequence},
+			Coa:        coa,
 			CommonAddr: commonAddr,
 		}}
-	a.InfoObj = a.bootstrap[:(2 + a.CauseSize + a.CommonAddrSize)]
+	idSize := a.IdentifierSize()
+	a.InfoObj = a.bootstrap[idSize:idSize]
 	return a
 }
 
@@ -180,15 +179,14 @@ func (u *ASDU) AddInfoObjAddr(addr InfoObjAddr) error {
 
 // See companion standard 101, subclause 7.2.2.
 func (this *ASDU) IncVariableNumber(n int) error {
-	objCount := this.Variable&0x7f + Variable(n)
-	if objCount >= 128 {
+	if n += int(this.Variable.Number); n >= 128 {
 		return errInfoObjIndexFit
 	}
-	this.Variable = (this.Variable & 0x80) | objCount
+	this.Variable.Number = byte(n)
 	return nil
 }
 
-//// Respond returns a new "responding" ASDU which addresses "initiating" u.
+// Respond returns a new "responding" ASDU which addresses "initiating" u.
 //func (u *ASDU) Respond(t TypeID, c Cause) *ASDU {
 //	return NewASDU(u.Params, Identifier{
 //		CommonAddr: u.CommonAddr,
@@ -197,16 +195,16 @@ func (this *ASDU) IncVariableNumber(n int) error {
 //		Cause:      c | u.Cause&TestFlag,
 //	})
 //}
-//
-//// Reply returns a new "responding" ASDU which addresses "initiating" u with a copy of Info.
+
+// Reply returns a new "responding" ASDU which addresses "initiating" u with a copy of Info.
 //func (u *ASDU) Reply(c Cause) *ASDU {
 //	r := NewASDU(u.Params, u.Identifier)
 //	r.Cause = c | u.Cause&TestFlag
-//	r.InfoSeq = u.InfoSeq
+//	r.InfoSeq = u.InfoSequence {
 //	r.InfoObj = append(r.InfoObj, u.InfoObj...)
 //	return r
 //}
-//
+
 //// String returns a full description.
 //func (u *ASDU) String() string {
 //	dataSize, err := GetInfoObjSize(u.Type)
@@ -260,7 +258,7 @@ func (this *ASDU) IncVariableNumber(n int) error {
 // MarshalBinary honors the encoding.BinaryMarshaler interface.
 func (u *ASDU) MarshalBinary() (data []byte, err error) {
 	switch {
-	case u.Cause == Unused:
+	case u.Coa.Cause == Unused:
 		return nil, errCauseZero
 	case !(u.CauseSize == 1 || u.CauseSize == 2):
 		return nil, errParam
@@ -274,30 +272,28 @@ func (u *ASDU) MarshalBinary() (data []byte, err error) {
 		return nil, errParam
 	}
 
-	offset := 0
-	u.InfoObj[offset] = byte(u.Type)
-	offset++
-	u.InfoObj[offset] = byte(u.Variable)
-	offset++
-	u.InfoObj[offset] = byte(u.Cause)
-	offset++
+	raw := u.bootstrap[:(u.IdentifierSize() + len(u.InfoObj))]
+	raw[0] = byte(u.Type)
+	raw[1] = u.Variable.Value()
+	raw[2] = byte(u.Coa.Value())
+	offset := 3
 	if u.CauseSize == 2 {
-		u.InfoObj[offset] = byte(u.OrigAddr)
+		raw[offset] = byte(u.OrigAddr)
 		offset++
 	}
 	if u.CommonAddrSize == 1 {
 		if u.CommonAddr == GlobalCommonAddr {
-			u.InfoObj[offset] = 255
+			raw[offset] = 255
 		} else {
-			u.InfoObj[offset] = byte(u.CommonAddr)
+			raw[offset] = byte(u.CommonAddr)
 		}
 	} else { // 2
-		u.InfoObj[offset] = byte(u.CommonAddr)
+		raw[offset] = byte(u.CommonAddr)
 		offset++
-		u.InfoObj[offset] = byte(u.CommonAddr >> 8)
+		raw[offset] = byte(u.CommonAddr >> 8)
 	}
 
-	return u.InfoObj, nil
+	return raw, nil
 }
 
 // UnmarshalBinary honors the encoding.BinaryUnmarshaler interface.
@@ -308,7 +304,7 @@ func (u *ASDU) UnmarshalBinary(data []byte) error {
 	if lenDUI > len(data) {
 		return io.EOF
 	}
-	u.InfoObj = append(u.bootstrap[:0], data[lenDUI:]...)
+	u.InfoObj = append(u.bootstrap[lenDUI:lenDUI], data[lenDUI:]...)
 
 	u.Type = TypeID(data[0])
 	// fixed element size
@@ -317,13 +313,13 @@ func (u *ASDU) UnmarshalBinary(data []byte) error {
 		return err
 	}
 
-	u.Variable = Variable(data[1])
+	u.Variable = DecodeVariable(data[1])
 	var size int
 	// read the variable structure qualifier
-	if u.Variable&VariableSeq == VariableSeq {
-		size = u.InfoObjAddrSize + (int(u.Variable&0x7f) * objSize)
+	if u.Variable.IsSequence {
+		size = u.InfoObjAddrSize + (int(u.Variable.Number&0x7f) * objSize)
 	} else {
-		size = int(u.Variable) * (u.InfoObjAddrSize + objSize)
+		size = int(u.Variable.Number) * (u.InfoObjAddrSize + objSize)
 	}
 
 	switch {
@@ -335,7 +331,8 @@ func (u *ASDU) UnmarshalBinary(data []byte) error {
 		u.InfoObj = u.InfoObj[:size]
 	}
 
-	u.Cause = Cause(data[2])
+	u.Coa = ParseCauseOfTransmission(data[2])
+
 	switch u.CauseSize {
 	case 1:
 		u.OrigAddr = 0
