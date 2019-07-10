@@ -41,6 +41,10 @@ const (
 	DPIIndeterminate                                  // 不确定或中间状态
 )
 
+func (this DoublePoint) Value() byte {
+	return byte(this & 0x03)
+}
+
 // Quality descriptor flags attribute measured values.
 // See companion standard 101, subclause 7.2.6.3.
 const (
@@ -130,13 +134,11 @@ const (
 	QPMInOperationFlag = 0x80 // bit7 marks parameter operation 参数在运行
 )
 
-// Command is a command.
+// CmdQualifier is a qualifier of qual.
 // 命令限定词
 // See companion standard 101, subclause 7.2.6.26.
-type Command byte
-
 // <0>: 未用
-// Qual returns the qualifier of command.
+//  the qualifier of command.
 //	0: no additional definition
 //	1: short pulse duration (circuit-breaker), duration determined by a system parameter in the outstation
 //	2: long pulse duration, duration determined by a system parameter in the outstation
@@ -144,32 +146,57 @@ type Command byte
 //	4‥8: reserved for standard definitions of this companion standard
 //	9‥15: reserved for the selection of other predefined functions
 //	16‥31: reserved for special use (private range)
-func (this Command) Qual() uint {
-	return uint((this >> 2) & 0x1f)
+type CmdQualifier byte
+
+// QualifierOfCmd is a  qualifier of command.
+type QualifierOfCmd struct {
+	CmdQ CmdQualifier
+	// See section 5, subclause 6.8.
+	// executes(false) (or selects(true)).
+	InExec bool
 }
 
-// Exec 返回命令的 executes(false) (or selects(true)).
-// See section 5, subclause 6.8.
-func (this Command) Exec() bool {
-	return this&0x80 == 0
+func DecodeQualifierOfCmd(b byte) QualifierOfCmd {
+	return QualifierOfCmd{
+		CmdQ:   CmdQualifier((b >> 2) & 0x1f),
+		InExec: b&0x80 == 0,
+	}
 }
 
-// SetpointCmd is the qualifier of a set-point command.
-// 设定命令限定词
+func (this QualifierOfCmd) Value() byte {
+	v := (byte(this.CmdQ) & 0x1f) << 2
+	if !this.InExec {
+		v |= 0x80
+	}
+	return v
+}
+
+// CmdSetPoint is the qualifier of a set-point command qual.
 // See companion standard 101, subclause 7.2.6.39.
-type SetPointCmd uint
-
-// Qual returns the qualifier of set-point command.
-//
 //	0: default
 //	0‥63: reserved for standard definitions of this companion standard (compatible range)
 //	64‥127: reserved for special use (private range)
-func (this SetPointCmd) Qual() uint {
-	return uint(this & 0x7f)
+type CmdSetPoint uint
+
+// QualifierOfCmd is a  qualifier of command.
+type QualifierOfSetpointCmd struct {
+	CmdS CmdSetPoint
+	// See section 5, subclause 6.8.
+	// executes(false) (or selects(true)).
+	InExec bool
 }
 
-// Exec 返回命令的 executes(false) (or selects(true)).
-// See section 5, subclause 6.8.
-func (this SetPointCmd) Exec() bool {
-	return this&0x80 == 0
+func DecodeQualifierOfSetpointCmd(b byte) QualifierOfSetpointCmd {
+	return QualifierOfSetpointCmd{
+		CmdS:   CmdSetPoint(b & 0x7f),
+		InExec: b&0x80 == 0,
+	}
+}
+
+func (this QualifierOfSetpointCmd) Value() byte {
+	v := byte(this.CmdS) & 0x7f
+	if !this.InExec {
+		v |= 0x80
+	}
+	return v
 }

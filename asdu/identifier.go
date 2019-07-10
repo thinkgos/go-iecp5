@@ -317,6 +317,13 @@ const (
 	NegFlag Cause = 0x40
 )
 
+// CauseOfTransmission is the cause of transmission.
+type CauseOfTransmission struct {
+	Cause      Cause
+	IsTest     bool
+	IsNegative bool
+}
+
 // Cause of transmission bit5-bit0
 // <0> 未定义
 // <1..63> 传输原因序号

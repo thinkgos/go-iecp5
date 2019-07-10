@@ -131,23 +131,23 @@ type ASDU struct {
 	bootstrap [ASDUSizeMax]byte // prevents Info malloc
 }
 
-func NewASDU(p *Params, typeID TypeID, isSequence bool, cause Cause, commonAddr CommonAddr, isTest, isNegative bool) *ASDU {
+func NewASDU(p *Params, typeID TypeID, isSequence bool, coa CauseOfTransmission, commonAddr CommonAddr) *ASDU {
 	vars := Variable(0)
 	if isSequence {
 		vars = VariableSeq
 	}
-	if isTest {
-		cause |= TestFlag
+	if coa.IsTest {
+		coa.Cause |= TestFlag
 	}
-	if isNegative {
-		cause |= NegFlag
+	if coa.IsNegative {
+		coa.Cause |= NegFlag
 	}
 	a := &ASDU{
 		Params: p,
 		Identifier: Identifier{
 			Type:       typeID,
 			Variable:   vars,
-			Cause:      cause,
+			Cause:      coa.Cause,
 			CommonAddr: commonAddr,
 		}}
 	a.InfoObj = a.bootstrap[:(2 + a.CauseSize + a.CommonAddrSize)]

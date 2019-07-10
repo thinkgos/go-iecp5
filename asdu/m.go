@@ -12,20 +12,6 @@ type Connect interface {
 	Send(a *ASDU) error
 }
 
-// SinglePointInformation are the measured value attributes.
-type SinglePointInformation struct {
-	InfoObjAddr InfoObjAddr
-	// value of single point
-	Value bool
-
-	// Quality descriptor asdu.OK means no remarks.
-	QualityDescriptor byte
-
-	// The timestamp is nil when the data is invalid or
-	// when the type does not include timing at all.
-	Time *time.Time
-}
-
 var (
 	ErrLengthOutOfRange = fmt.Errorf("asdu: asdu filed length large than max %d", ASDUSizeMax)
 	ErrNotAnyObjInfo    = errors.New("asdu: not any object information")
@@ -55,16 +41,33 @@ func checkValid(c Connect, typeID TypeID, isSequence bool, attrsLen int) error {
 	if asduLen > ASDUSizeMax {
 		return ErrLengthOutOfRange
 	}
+	return nil
+}
+
+// SinglePointInformation are the measured value attributes.
+type SinglePointInformation struct {
+	InfoObjAddr InfoObjAddr
+	// value of single point
+	Value bool
+
+	// Quality descriptor asdu.OK means no remarks.
+	QualityDescriptor byte
+
+	// The timestamp is nil when the data is invalid or
+	// when the type does not include timing at all.
+	Time *time.Time
 }
 
 // Single sends a type identification M_SP_NA_1, M_SP_TA_1 or M_SP_TB_1.
-func Single(c Connect, typeID TypeID, isSequence bool, cause Cause, commonAddr CommonAddr,
-	isTest, isNegative bool, attrs ...SinglePointInformation) error {
+// subclause 7.3.1.1 - 7.3.1.2
+// 单点信息
+func Single(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
+	commonAddr CommonAddr, attrs ...SinglePointInformation) error {
 	if err := checkValid(c, typeID, isSequence, len(attrs)); err != nil {
 		return err
 	}
 
-	u := NewASDU(c.Params(), typeID, isSequence, cause, commonAddr, isTest, isNegative)
+	u := NewASDU(c.Params(), typeID, isSequence, coa, commonAddr)
 	if err := u.IncVariableNumber(len(attrs)); err != nil {
 		return err
 	}
@@ -109,13 +112,15 @@ type DoublePointInformation struct {
 }
 
 // Double sends a type identification M_DP_NA_1, M_DP_TA_1 or M_DP_TB_1.
-func Double(c Connect, typeID TypeID, isSequence bool, cause Cause, commonAddr CommonAddr,
-	isTest, isNegative bool, attrs ...DoublePointInformation) error {
+// subclause 7.3.1.3 - 7.3.1.4
+// 双点信息
+func Double(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
+	commonAddr CommonAddr, attrs ...DoublePointInformation) error {
 	if err := checkValid(c, typeID, isSequence, len(attrs)); err != nil {
 		return err
 	}
 
-	u := NewASDU(c.Params(), typeID, isSequence, cause, commonAddr, isTest, isNegative)
+	u := NewASDU(c.Params(), typeID, isSequence, coa, commonAddr)
 	if err := u.IncVariableNumber(len(attrs)); err != nil {
 		return err
 	}
@@ -156,13 +161,15 @@ type StepPositionInformation struct {
 }
 
 // Step sends a type identification M_ST_NA_1, M_ST_TA_1 or M_ST_TB_1.
-func Step(c Connect, typeID TypeID, isSequence bool, cause Cause, commonAddr CommonAddr,
-	isTest, isNegative bool, attrs ...StepPositionInformation) error {
+// subclause 7.3.1.5 - 7.3.1.6
+// 步位置信息
+func Step(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
+	commonAddr CommonAddr, attrs ...StepPositionInformation) error {
 	panic("TODO: not implemented")
 }
 
-// BitString32 are the measured value attributes.
-type BitString32 struct {
+// BitString32Information are the measured value attributes.
+type BitString32Information struct {
 	InfoObjAddr InfoObjAddr
 
 	Value uint32
@@ -175,8 +182,10 @@ type BitString32 struct {
 }
 
 // Bits sends a type identificationM_BO_NA_1, M_BO_TA_1 or M_BO_TB_1.
-func Bits(c Connect, typeID TypeID, isSequence bool, cause Cause, commonAddr CommonAddr,
-	isTest, isNegative bool, attrs ...BitString32) error {
+// subclause 7.3.1.7 - 7.3.1.8
+// 比特位串
+func BitString32(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
+	commonAddr CommonAddr, attrs ...BitString32Information) error {
 	panic("TODO: not implement ed")
 }
 
@@ -194,9 +203,11 @@ type MeasuredValueNormalized struct {
 }
 
 // Normal sends a type identification M_ME_NA_1, M_ME_TA_1, M_ME_TD_1 or M_ME_ND_1.
+// subclause 7.3.1.9 - 7.3.1.10
 // The quality descriptor must default to info.OK for type M_ME_ND_1.
-func Normal(c Connect, typeID TypeID, isSequence bool, cause Cause, commonAddr CommonAddr,
-	isTest, isNegative bool, attrs ...MeasuredValueNormalized) error {
+// 测量值,规一化值
+func Normal(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
+	commonAddr CommonAddr, attrs ...MeasuredValueNormalized) error {
 	panic("TODO: not implemented")
 }
 
@@ -214,8 +225,9 @@ type MeasuredValueScaled struct {
 }
 
 // Scaled sends a type identification M_ME_NB_1, M_ME_TB_1 or M_ME_TE_1.
-func Scaled(c Connect, typeID TypeID, isSequence bool, cause Cause, commonAddr CommonAddr,
-	isTest, isNegative bool, attrs ...MeasuredValueNormalized) error {
+// subclause 7.3.1.11 - 7.3.1.12
+func Scaled(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
+	commonAddr CommonAddr, attrs ...MeasuredValueNormalized) error {
 	panic("TODO: not implemented")
 }
 
@@ -233,13 +245,15 @@ type MeasuredValueFloat struct {
 }
 
 // Float sends a type identification M_ME_NC_1, M_ME_TC_1 or M_ME_TF_1.
-func Float(c Connect, typeID TypeID, isSequence bool, cause Cause, commonAddr CommonAddr,
-	isTest, isNegative bool, attrs ...MeasuredValueFloat) error {
+// subclause 7.3.1.13 - 7.3.1.14 - 7.3.1.28
+// 测量值,短浮点数
+func Float(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
+	commonAddr CommonAddr, attrs ...MeasuredValueFloat) error {
 	if err := checkValid(c, typeID, isSequence, len(attrs)); err != nil {
 		return err
 	}
 
-	u := NewASDU(c.Params(), typeID, isSequence, cause, commonAddr, isTest, isNegative)
+	u := NewASDU(c.Params(), typeID, isSequence, coa, commonAddr)
 	if err := u.IncVariableNumber(len(attrs)); err != nil {
 		return err
 	}

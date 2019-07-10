@@ -2,6 +2,7 @@ package asdu
 
 import (
 	"math"
+	"reflect"
 	"testing"
 )
 
@@ -69,45 +70,43 @@ func TestNormalize_Float64(t *testing.T) {
 	}
 }
 
-func TestCommand(t *testing.T) {
+func TestDecodeQualifierOfCmd(t *testing.T) {
+	type args struct {
+		b byte
+	}
 	tests := []struct {
-		name     string
-		this     Command
-		wantQual uint
-		wantExec bool
+		name string
+		args args
+		want QualifierOfCmd
 	}{
-		{"with selects", Command(0x84), 1, false},
-		{"with executes", Command(0x0c), 3, true},
+		{"with selects", args{0x84}, QualifierOfCmd{1, false}},
+		{"with executes", args{0x0c}, QualifierOfCmd{3, true}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.this.Qual(); got != tt.wantQual {
-				t.Errorf("Command.Qual() = %v, want %v", got, tt.wantQual)
-			}
-			if got := tt.this.Exec(); got != tt.wantExec {
-				t.Errorf("Command.Exec() = %v, want %v", got, tt.wantExec)
+			if got := DecodeQualifierOfCmd(tt.args.b); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("DecodeQualifierOfCmd() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestSetPointCmd(t *testing.T) {
+func TestDecodeQualifierOfSetpointCmd(t *testing.T) {
+	type args struct {
+		b byte
+	}
 	tests := []struct {
-		name     string
-		this     SetPointCmd
-		wantQual uint
-		wantExec bool
+		name string
+		args args
+		want QualifierOfSetpointCmd
 	}{
-		{"with selects", SetPointCmd(0x87), 7, false},
-		{"with executes", SetPointCmd(0x07), 7, true},
+		{"with selects", args{0x87}, QualifierOfSetpointCmd{7, false}},
+		{"with executes", args{0x07}, QualifierOfSetpointCmd{7, true}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.this.Qual(); got != tt.wantQual {
-				t.Errorf("SetPointCmd.Qual() = %v, want %v", got, tt.wantQual)
-			}
-			if got := tt.this.Exec(); got != tt.wantExec {
-				t.Errorf("SetPointCmd.Exec() = %v, want %v", got, tt.wantExec)
+			if got := DecodeQualifierOfSetpointCmd(tt.args.b); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("DecodeQualifierOfSetpointCmd() = %v, want %v", got, tt.want)
 			}
 		})
 	}
