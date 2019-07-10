@@ -135,7 +135,6 @@ const (
 )
 
 // CmdQualifier is a qualifier of qual.
-// 命令限定词
 // See companion standard 101, subclause 7.2.6.26.
 // <0>: 未用
 //  the qualifier of command.
@@ -149,6 +148,7 @@ const (
 type CmdQualifier byte
 
 // QualifierOfCmd is a  qualifier of command.
+// 命令限定词
 type QualifierOfCmd struct {
 	CmdQ CmdQualifier
 	// See section 5, subclause 6.8.

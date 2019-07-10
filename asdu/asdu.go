@@ -178,15 +178,9 @@ func (u *ASDU) AddInfoObjAddr(addr InfoObjAddr) error {
 	return nil
 }
 
-//if u.InfoSeq {
-//	objCount = (len(u.InfoObj) - u.InfoObjAddrSize) / objSize
-//} else {
-//	objCount = len(u.InfoObj) / (u.InfoObjAddrSize + objSize)
-//}
 // See companion standard 101, subclause 7.2.2.
 func (this *ASDU) IncVariableNumber(n int) error {
-	objCount := this.Variable & 0x7f
-	objCount += Variable(n)
+	objCount := this.Variable&0x7f + Variable(n)
 	if objCount >= 128 {
 		return errInfoObjIndexFit
 	}
@@ -194,23 +188,6 @@ func (this *ASDU) IncVariableNumber(n int) error {
 	return nil
 }
 
-// MustNewInro returns a new interrogation command [C_IC_NA_1].
-// Use group 1 to 16, or 0 for the default.
-//func MustNewInro(p *Params, commonAddr CommonAddr, origAddr OriginAddr, group uint) *ASDU {
-//	if group > 16 {
-//		group = 0
-//	}
-//
-//	u := &ASDU{
-//		Params:     p,
-//		Identifier: Identifier{C_IC_NA_1, Act, origAddr, commonAddr},
-//	}
-//
-//	u.InfoObj = u.bootstrap[:p.InfoObjAddrSize+1]
-//	u.InfoObj[p.InfoObjAddrSize] = byte(group + uint(Inrogen))
-//	return u
-//}
-//
 //// Respond returns a new "responding" ASDU which addresses "initiating" u.
 //func (u *ASDU) Respond(t TypeID, c Cause) *ASDU {
 //	return NewASDU(u.Params, Identifier{
