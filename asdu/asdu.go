@@ -153,8 +153,8 @@ func NewASDU(p *Params, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 	return a
 }
 
-// AddInfoObjAddr appends an information object address to Info.
-func (u *ASDU) AddInfoObjAddr(addr InfoObjAddr) error {
+// AppendInfoObjAddr appends an information object address to Info.
+func (u *ASDU) AppendInfoObjAddr(addr InfoObjAddr) error {
 	switch u.InfoObjAddrSize {
 	case 1:
 		if addr > 255 {

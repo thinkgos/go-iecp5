@@ -75,7 +75,7 @@ func Single(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 	for _, v := range attrs {
 		if !isSequence || !once {
 			once = true
-			if err := u.AddInfoObjAddr(v.InfoObjAddr); err != nil {
+			if err := u.AppendInfoObjAddr(v.InfoObjAddr); err != nil {
 				return err
 			}
 		}
@@ -128,7 +128,7 @@ func Double(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 	for _, v := range attrs {
 		if !isSequence || !once {
 			once = true
-			if err := u.AddInfoObjAddr(v.InfoObjAddr); err != nil {
+			if err := u.AppendInfoObjAddr(v.InfoObjAddr); err != nil {
 				return err
 			}
 		}
@@ -261,7 +261,7 @@ func Float(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 	for _, v := range attrs {
 		if !isSequence || !once {
 			once = true
-			if err := u.AddInfoObjAddr(v.InfoObjAddr); err != nil {
+			if err := u.AppendInfoObjAddr(v.InfoObjAddr); err != nil {
 				return err
 			}
 		}

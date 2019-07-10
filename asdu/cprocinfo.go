@@ -24,7 +24,7 @@ func SingleCmd(c Connect, typeID TypeID, coa CauseOfTransmission, commonAddr Com
 		return err
 	}
 
-	if err := u.AddInfoObjAddr(infoObjAddr); err != nil {
+	if err := u.AppendInfoObjAddr(infoObjAddr); err != nil {
 		return err
 	}
 	value := qoc.Value()
@@ -57,7 +57,7 @@ func DoubleCmd(c Connect, typeID TypeID, coa CauseOfTransmission, commonAddr Com
 		return err
 	}
 
-	if err := u.AddInfoObjAddr(infoObjAddr); err != nil {
+	if err := u.AppendInfoObjAddr(infoObjAddr); err != nil {
 		return err
 	}
 

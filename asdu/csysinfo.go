@@ -17,7 +17,7 @@ func InterrogationCmd(c Connect, coa CauseOfTransmission, commonAddr CommonAddr,
 		return err
 	}
 
-	if err := u.AddInfoObjAddr(InfoObjIrrelevantAddr); err != nil {
+	if err := u.AppendInfoObjAddr(InfoObjIrrelevantAddr); err != nil {
 		return err
 	}
 	u.InfoObj = append(u.InfoObj, group+byte(Inrogen))
