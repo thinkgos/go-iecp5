@@ -19,7 +19,13 @@ func SingleCmd(c Connect, typeID TypeID, coa CauseOfTransmission, commonAddr Com
 		return err
 	}
 
-	u := NewASDU(c.Params(), typeID, false, coa, commonAddr)
+	u := NewASDU(c.Params(), Identifier{
+		typeID,
+		VariableStruct{IsSequence: false},
+		coa,
+		0,
+		commonAddr,
+	})
 	if err := u.IncVariableNumber(1); err != nil {
 		return err
 	}
@@ -52,7 +58,13 @@ func DoubleCmd(c Connect, typeID TypeID, coa CauseOfTransmission, commonAddr Com
 	if err := checkValid(c, typeID, false, 1); err != nil {
 		return err
 	}
-	u := NewASDU(c.Params(), typeID, false, coa, commonAddr)
+	u := NewASDU(c.Params(), Identifier{
+		typeID,
+		VariableStruct{IsSequence: false},
+		coa,
+		0,
+		commonAddr,
+	})
 	if err := u.IncVariableNumber(1); err != nil {
 		return err
 	}
@@ -103,7 +115,13 @@ func SetpointCmdFloat(c Connect, typeID TypeID, coa CauseOfTransmission, commonA
 	if err := checkValid(c, typeID, false, 1); err != nil {
 		return err
 	}
-	u := NewASDU(c.Params(), typeID, false, coa, commonAddr)
+	u := NewASDU(c.Params(), Identifier{
+		typeID,
+		VariableStruct{IsSequence: false},
+		coa,
+		0,
+		commonAddr,
+	})
 	if err := u.IncVariableNumber(1); err != nil {
 		return err
 	}

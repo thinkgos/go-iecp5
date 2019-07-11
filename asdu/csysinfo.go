@@ -12,7 +12,13 @@ func InterrogationCmd(c Connect, coa CauseOfTransmission, commonAddr CommonAddr,
 		return err
 	}
 
-	u := NewASDU(c.Params(), C_IC_NA_1, false, coa, commonAddr)
+	u := NewASDU(c.Params(), Identifier{
+		C_IC_NA_1,
+		VariableStruct{IsSequence: false},
+		coa,
+		0,
+		commonAddr,
+	})
 	if err := u.IncVariableNumber(1); err != nil {
 		return err
 	}

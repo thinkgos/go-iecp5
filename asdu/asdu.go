@@ -120,14 +120,9 @@ func NewEmptyASDU(p *Params) *ASDU {
 	return a
 }
 
-func NewASDU(p *Params, typeID TypeID, isSequence bool, coa CauseOfTransmission, commonAddr CommonAddr) *ASDU {
+func NewASDU(p *Params, identifier Identifier) *ASDU {
 	a := NewEmptyASDU(p)
-	a.Identifier = Identifier{
-		Type:       typeID,
-		Variable:   VariableStruct{IsSequence: isSequence},
-		Coa:        coa,
-		CommonAddr: commonAddr,
-	}
+	a.Identifier = identifier
 	return a
 }
 
@@ -196,12 +191,12 @@ func (this *ASDU) IncVariableNumber(n int) error {
 //}
 
 // Reply returns a new "responding" ASDU which addresses "initiating" u with a copy of Info.
-//func (u *ASDU) Reply(c Cause) *ASDU {
+//func (u *ASDU) Reply(c Cause,addr CommonAddr) *ASDU {
 //	r := NewASDU(u.Params, u.Identifier)
 //	r.Cause = c | u.Cause&TestFlag
 //	r.InfoSeq = u.InfoSequence {
 //	r.InfoObj = append(r.InfoObj, u.InfoObj...)
-//	return r
+////	return r
 //}
 
 //// String returns a full description.

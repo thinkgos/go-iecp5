@@ -58,7 +58,7 @@ type QualityDescriptorFlag byte
 // See companion standard 101, subclause 7.2.6.3.
 const (
 	// QDSOverflow marks whether the value is beyond a predefined range.
-	QDSOverflow QualityDescriptorFlag = 2 << iota
+	QDSOverflow QualityDescriptorFlag = 1 << iota
 
 	_ // reserve
 	_ // reserve

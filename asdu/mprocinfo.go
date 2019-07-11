@@ -67,7 +67,13 @@ func Single(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 		return err
 	}
 
-	u := NewASDU(c.Params(), typeID, isSequence, coa, commonAddr)
+	u := NewASDU(c.Params(), Identifier{
+		typeID,
+		VariableStruct{IsSequence: isSequence},
+		coa,
+		0,
+		commonAddr,
+	})
 	if err := u.IncVariableNumber(len(attrs)); err != nil {
 		return err
 	}
@@ -84,7 +90,7 @@ func Single(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 		if v.Value {
 			value = 0x01
 		}
-		u.InfoObj = append(u.InfoObj, value|(v.QualityDescriptor&0xf0))
+		u.InfoObj = append(u.InfoObj, value|byte(v.QuaDesc&0xf0))
 		switch typeID {
 		case M_SP_NA_1:
 		case M_SP_TA_1:
@@ -120,7 +126,13 @@ func Double(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 		return err
 	}
 
-	u := NewASDU(c.Params(), typeID, isSequence, coa, commonAddr)
+	u := NewASDU(c.Params(), Identifier{
+		typeID,
+		VariableStruct{IsSequence: isSequence},
+		coa,
+		0,
+		commonAddr,
+	})
 	if err := u.IncVariableNumber(len(attrs)); err != nil {
 		return err
 	}
@@ -133,7 +145,7 @@ func Double(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 			}
 		}
 
-		u.InfoObj = append(u.InfoObj, byte(v.Value&0x03)|(v.QualityDescriptor&0xf0))
+		u.InfoObj = append(u.InfoObj, byte(v.Value&0x03)|byte(v.QuaDesc&0xf0))
 		switch typeID {
 		case M_DP_NA_1:
 		case M_DP_TA_1:
@@ -254,7 +266,13 @@ func Float(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 		return err
 	}
 
-	u := NewASDU(c.Params(), typeID, isSequence, coa, commonAddr)
+	u := NewASDU(c.Params(), Identifier{
+		typeID,
+		VariableStruct{IsSequence: isSequence},
+		coa,
+		0,
+		commonAddr,
+	})
 	if err := u.IncVariableNumber(len(attrs)); err != nil {
 		return err
 	}
@@ -268,7 +286,7 @@ func Float(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 		}
 
 		bits := math.Float32bits(v.Value)
-		u.InfoObj = append(u.InfoObj, byte(bits), byte(bits>>8), byte(bits>>16), byte(bits>>24), byte(v.QualityDescriptor&0xf1))
+		u.InfoObj = append(u.InfoObj, byte(bits), byte(bits>>8), byte(bits>>16), byte(bits>>24), byte(v.QuaDesc&0xf1))
 		switch typeID {
 		case M_ME_NC_1:
 		case M_ME_TC_1:
