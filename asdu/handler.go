@@ -6,5 +6,6 @@ func ServerHandler(c Connect, frame []byte) error {
 	if err := adu.UnmarshalBinary(frame); err != nil {
 		return err
 	}
+
 	return nil
 }

@@ -292,60 +292,58 @@ func (this *ASDU) MarshalBinary() (data []byte, err error) {
 // UnmarshalBinary honors the encoding.BinaryUnmarshaler interface.
 // ASDUParams must be set in advance. All other fields are initialized.
 func (this *ASDU) UnmarshalBinary(data []byte) error {
+	if !(this.CauseSize == 1 || this.CauseSize == 2) ||
+		!(this.CommonAddrSize == 1 || this.CommonAddrSize == 2) {
+		return errParam
+	}
+
 	// data unit identifier size check
 	lenDUI := this.IdentifierSize()
 	if lenDUI > len(data) {
 		return io.EOF
 	}
-	this.InfoObj = append(this.bootstrap[lenDUI:lenDUI], data[lenDUI:]...)
 
+	// parse data unit identifier
 	this.Type = TypeID(data[0])
+	this.Variable = ParseVariableStruct(data[1])
+	this.Coa = ParseCauseOfTransmission(data[2])
+	if this.CauseSize == 1 {
+		this.OrigAddr = 0
+	} else {
+		this.OrigAddr = OriginAddr(data[3])
+	}
+	if this.CommonAddrSize == 1 {
+		this.CommonAddr = CommonAddr(data[lenDUI-1])
+		if this.CommonAddr == 255 { // map 8-bit variant to 16-bit equivalent
+			this.CommonAddr = GlobalCommonAddr
+		}
+	} else { // 2
+		this.CommonAddr = CommonAddr(data[lenDUI-2]) | CommonAddr(data[lenDUI-1])<<8
+	}
+
+	// information object
 	// fixed element size
 	objSize, err := GetInfoObjSize(this.Type)
 	if err != nil {
 		return err
 	}
 
-	this.Variable = ParseVariableStruct(data[1])
 	var size int
 	// read the variable structure qualifier
 	if this.Variable.IsSequence {
-		size = this.InfoObjAddrSize + (int(this.Variable.Number&0x7f) * objSize)
+		size = this.InfoObjAddrSize + int(this.Variable.Number)*objSize
 	} else {
 		size = int(this.Variable.Number) * (this.InfoObjAddrSize + objSize)
 	}
-
+	objLen := len(data) - lenDUI
 	switch {
 	case size == 0:
 		return errInfoObjIndexFit
-	case size > len(this.InfoObj):
+	case size > objLen:
 		return io.EOF
-	case size < len(this.InfoObj): // not explicitly prohibited
-		this.InfoObj = this.InfoObj[:size]
+	case size < objLen: // not explicitly prohibited
+		objLen = size
 	}
-
-	this.Coa = ParseCauseOfTransmission(data[2])
-
-	switch this.CauseSize {
-	case 1:
-		this.OrigAddr = 0
-	case 2:
-		this.OrigAddr = OriginAddr(data[3])
-	default:
-		return errParam
-	}
-
-	switch this.CommonAddrSize {
-	case 1:
-		addr := CommonAddr(data[lenDUI-1])
-		if addr == 255 { // map 8-bit variant to 16-bit equivalent
-			addr = GlobalCommonAddr
-		}
-		this.CommonAddr = addr
-	case 2:
-		this.CommonAddr = CommonAddr(data[lenDUI-2]) | CommonAddr(data[lenDUI-1])<<8
-	default:
-		return errParam
-	}
+	this.InfoObj = append(this.bootstrap[lenDUI:lenDUI], data[lenDUI:lenDUI+objLen]...)
 	return nil
 }

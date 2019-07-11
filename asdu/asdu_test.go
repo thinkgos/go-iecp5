@@ -307,19 +307,19 @@ func TestASDU_MarshalBinary(t *testing.T) {
 		}, nil, true},
 		{"ParamsNarrow", fields{
 			ParamsNarrow,
-			Identifier{M_SP_NA_1, VariableStruct{}, CauseOfTransmission{Cause: Act}, 0, 0x80},
-			[]byte{0x01, 0x02, 0x03},
-		}, []byte{0x01, 0x00, 0x06, 0x80, 0x01, 0x02, 0x03}, false},
+			Identifier{M_SP_NA_1, VariableStruct{Number: 1}, CauseOfTransmission{Cause: Act}, 0, 0x80},
+			[]byte{0x00, 0x01, 0x02, 0x03},
+		}, []byte{0x01, 0x01, 0x06, 0x80, 0x00, 0x01, 0x02, 0x03}, false},
 		{"ParamsNarrow global address", fields{
 			ParamsNarrow,
-			Identifier{M_SP_NA_1, VariableStruct{}, CauseOfTransmission{Cause: Act}, 0, GlobalCommonAddr},
-			[]byte{0x01, 0x02, 0x03},
-		}, []byte{0x01, 0x00, 0x06, 0xff, 0x01, 0x02, 0x03}, false},
+			Identifier{M_SP_NA_1, VariableStruct{Number: 1}, CauseOfTransmission{Cause: Act}, 0, GlobalCommonAddr},
+			[]byte{0x00, 0x01, 0x02, 0x03},
+		}, []byte{0x01, 0x01, 0x06, 0xff, 0x00, 0x01, 0x02, 0x03}, false},
 		{"ParamsWide", fields{
 			ParamsWide,
-			Identifier{M_SP_NA_1, VariableStruct{}, CauseOfTransmission{Cause: Act}, 0, 0x6080},
-			[]byte{0x01, 0x02, 0x03},
-		}, []byte{0x01, 0x00, 0x06, 0x00, 0x80, 0x60, 0x01, 0x02, 0x03}, false},
+			Identifier{M_SP_NA_1, VariableStruct{Number: 1}, CauseOfTransmission{Cause: Act}, 0, 0x6080},
+			[]byte{0x00, 0x01, 0x02, 0x03},
+		}, []byte{0x01, 0x01, 0x06, 0x00, 0x80, 0x60, 0x00, 0x01, 0x02, 0x03}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -339,33 +339,40 @@ func TestASDU_MarshalBinary(t *testing.T) {
 }
 
 func TestASDU_UnmarshalBinary(t *testing.T) {
-	type fields struct {
-		Params     *Params
-		Identifier Identifier
-		InfoObj    []byte
-		bootstrap  [ASDUSizeMax]byte
-	}
 	type args struct {
 		data []byte
 	}
 	tests := []struct {
 		name    string
-		fields  fields
+		Params  *Params
 		args    args
+		want    []byte
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{"invalid param", &Params{}, args{}, // 125
+			[]byte{}, true},
+		{"less than data unit identifier size", ParamsWide, args{[]byte{0x0b, 0x01, 0x06, 0x80}},
+			[]byte{}, true},
+		{"type id fix size error", ParamsWide, args{[]byte{0x07d, 0x01, 0x06, 0x00, 0x80, 0x60}},
+			[]byte{}, true},
+
+		{"ParamsNarrow global address", ParamsNarrow, args{[]byte{0x0b, 0x01, 0x06, 0x80, 0x00, 0x01, 0x02, 0x03}},
+			[]byte{0x00, 0x01, 0x02, 0x03}, false},
+		{"ParamsNarrow", ParamsNarrow, args{[]byte{0x0b, 0x01, 0x06, 0xff, 0x00, 0x01, 0x02, 0x03}},
+			[]byte{0x00, 0x01, 0x02, 0x03}, false},
+		{"ParamsWide", ParamsWide, args{[]byte{0x01, 0x01, 0x06, 0x00, 0x80, 0x60, 0x00, 0x01, 0x02, 0x03}},
+			[]byte{0x00, 0x01, 0x02, 0x03}, false},
+		{"ParamsWide sequence", ParamsWide, args{[]byte{0x01, 0x81, 0x06, 0x00, 0x80, 0x60, 0x00, 0x01, 0x02, 0x03}},
+			[]byte{0x00, 0x01, 0x02, 0x03}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			this := &ASDU{
-				Params:     tt.fields.Params,
-				Identifier: tt.fields.Identifier,
-				InfoObj:    tt.fields.InfoObj,
-				bootstrap:  tt.fields.bootstrap,
-			}
+			this := NewEmptyASDU(tt.Params)
 			if err := this.UnmarshalBinary(tt.args.data); (err != nil) != tt.wantErr {
 				t.Errorf("ASDU.UnmarshalBinary() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !reflect.DeepEqual(this.InfoObj, tt.want) {
+				t.Errorf("ASDU.UnmarshalBinary() got % x, want % x", this.InfoObj, tt.want)
 			}
 		})
 	}
