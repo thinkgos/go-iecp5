@@ -128,22 +128,49 @@ func (this Normalize) Float64() float64 {
 	return float64(this) / 32768
 }
 
+type ParamQualifier byte
+
 // Qualifier Of Parameter Of Measured Values
 // 测量值参数限定词
 // See companion standard 101, subclause 7.2.6.24.
 const (
-	_             = iota // 0: not used
-	QPMThreashold        // 1: threshold value
-	QPMSmoothing         // 2: smoothing factor (filter time constant)
-	QPMLowLimit          // 3: low limit for transmission of measured values
-	QPMHighLimit         // 4: high limit for transmission of measured values
+	_             ParamQualifier = iota // 0: not used
+	QPMThreashold                       // 1: threshold value
+	QPMSmoothing                        // 2: smoothing factor (filter time constant)
+	QPMLowLimit                         // 3: low limit for transmission of measured values
+	QPMHighLimit                        // 4: high limit for transmission of measured values
 
 	// 5‥31: reserved for standard definitions of this companion standard (compatible range)
 	// 32‥63: reserved for special use (private range)
 
-	QPMChangeFlag      = 0x40 // bit6 marks local parameter change  当地参数改变
-	QPMInOperationFlag = 0x80 // bit7 marks parameter operation 参数在运行
+	QPMChangeFlag      ParamQualifier = 0x40 // bit6 marks local parameter change  当地参数改变
+	QPMInOperationFlag ParamQualifier = 0x80 // bit7 marks parameter operation 参数在运行
 )
+
+type QualifierOfParam struct {
+	ParamQ        ParamQualifier
+	IsChange      bool
+	IsInOperation bool
+}
+
+func ParseQualifierOfParam(b byte) QualifierOfParam {
+	return QualifierOfParam{
+		ParamQ:        ParamQualifier(b & 0x3f),
+		IsChange:      b&0x40 == 0x40,
+		IsInOperation: b&0x80 == 0x80,
+	}
+}
+
+func (this QualifierOfParam) Value() byte {
+	v := this.ParamQ & 0x3f
+	if this.IsChange {
+		v |= 0x40
+	}
+	if this.IsInOperation {
+		v |= 0x80
+	}
+	return byte(v)
+}
 
 // CmdQualifier is a qualifier of qual.
 // See companion standard 101, subclause 7.2.6.26.

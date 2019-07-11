@@ -76,7 +76,7 @@ func (this Params) ValidCommonAddr(addr CommonAddr) error {
 }
 
 // IdentifierSize the application data unit identifies size
-func (this *Params) IdentifierSize() int {
+func (this Params) IdentifierSize() int {
 	return 2 + int(this.CauseSize) + int(this.CommonAddrSize)
 }
 
@@ -127,23 +127,23 @@ func NewASDU(p *Params, identifier Identifier) *ASDU {
 }
 
 // AppendInfoObjAddr appends an information object address to Info.
-func (u *ASDU) AppendInfoObjAddr(addr InfoObjAddr) error {
-	switch u.InfoObjAddrSize {
+func (this *ASDU) AppendInfoObjAddr(addr InfoObjAddr) error {
+	switch this.InfoObjAddrSize {
 	case 1:
 		if addr > 255 {
 			return errInfoObjAddrFit
 		}
-		u.InfoObj = append(u.InfoObj, byte(addr))
+		this.InfoObj = append(this.InfoObj, byte(addr))
 	case 2:
 		if addr > 65535 {
 			return errInfoObjAddrFit
 		}
-		u.InfoObj = append(u.InfoObj, byte(addr), byte(addr>>8))
+		this.InfoObj = append(this.InfoObj, byte(addr), byte(addr>>8))
 	case 3:
 		if addr > 16777215 {
 			return errInfoObjAddrFit
 		}
-		u.InfoObj = append(u.InfoObj, byte(addr), byte(addr>>8), byte(addr>>16))
+		this.InfoObj = append(this.InfoObj, byte(addr), byte(addr>>8), byte(addr>>16))
 	default:
 		return errParam
 	}
@@ -191,13 +191,13 @@ func (this *ASDU) IncVariableNumber(n int) error {
 //}
 
 // Reply returns a new "responding" ASDU which addresses "initiating" u with a copy of Info.
-//func (u *ASDU) Reply(c Cause,addr CommonAddr) *ASDU {
-//	r := NewASDU(u.Params, u.Identifier)
-//	r.Cause = c | u.Cause&TestFlag
-//	r.InfoSeq = u.InfoSequence {
-//	r.InfoObj = append(r.InfoObj, u.InfoObj...)
-////	return r
-//}
+func (this *ASDU) Reply(c Cause, addr CommonAddr) *ASDU {
+	this.CommonAddr = addr
+	r := NewASDU(this.Params, this.Identifier)
+	r.Coa.Cause = c
+	r.InfoObj = append(r.InfoObj, this.InfoObj...)
+	return r
+}
 
 //// String returns a full description.
 //func (u *ASDU) String() string {
@@ -291,59 +291,59 @@ func (this *ASDU) MarshalBinary() (data []byte, err error) {
 
 // UnmarshalBinary honors the encoding.BinaryUnmarshaler interface.
 // ASDUParams must be set in advance. All other fields are initialized.
-func (u *ASDU) UnmarshalBinary(data []byte) error {
+func (this *ASDU) UnmarshalBinary(data []byte) error {
 	// data unit identifier size check
-	lenDUI := u.IdentifierSize()
+	lenDUI := this.IdentifierSize()
 	if lenDUI > len(data) {
 		return io.EOF
 	}
-	u.InfoObj = append(u.bootstrap[lenDUI:lenDUI], data[lenDUI:]...)
+	this.InfoObj = append(this.bootstrap[lenDUI:lenDUI], data[lenDUI:]...)
 
-	u.Type = TypeID(data[0])
+	this.Type = TypeID(data[0])
 	// fixed element size
-	objSize, err := GetInfoObjSize(u.Type)
+	objSize, err := GetInfoObjSize(this.Type)
 	if err != nil {
 		return err
 	}
 
-	u.Variable = ParseVariableStruct(data[1])
+	this.Variable = ParseVariableStruct(data[1])
 	var size int
 	// read the variable structure qualifier
-	if u.Variable.IsSequence {
-		size = u.InfoObjAddrSize + (int(u.Variable.Number&0x7f) * objSize)
+	if this.Variable.IsSequence {
+		size = this.InfoObjAddrSize + (int(this.Variable.Number&0x7f) * objSize)
 	} else {
-		size = int(u.Variable.Number) * (u.InfoObjAddrSize + objSize)
+		size = int(this.Variable.Number) * (this.InfoObjAddrSize + objSize)
 	}
 
 	switch {
 	case size == 0:
 		return errInfoObjIndexFit
-	case size > len(u.InfoObj):
+	case size > len(this.InfoObj):
 		return io.EOF
-	case size < len(u.InfoObj): // not explicitly prohibited
-		u.InfoObj = u.InfoObj[:size]
+	case size < len(this.InfoObj): // not explicitly prohibited
+		this.InfoObj = this.InfoObj[:size]
 	}
 
-	u.Coa = ParseCauseOfTransmission(data[2])
+	this.Coa = ParseCauseOfTransmission(data[2])
 
-	switch u.CauseSize {
+	switch this.CauseSize {
 	case 1:
-		u.OrigAddr = 0
+		this.OrigAddr = 0
 	case 2:
-		u.OrigAddr = OriginAddr(data[3])
+		this.OrigAddr = OriginAddr(data[3])
 	default:
 		return errParam
 	}
 
-	switch u.CommonAddrSize {
+	switch this.CommonAddrSize {
 	case 1:
 		addr := CommonAddr(data[lenDUI-1])
 		if addr == 255 { // map 8-bit variant to 16-bit equivalent
 			addr = GlobalCommonAddr
 		}
-		u.CommonAddr = addr
+		this.CommonAddr = addr
 	case 2:
-		u.CommonAddr = CommonAddr(data[lenDUI-2]) | CommonAddr(data[lenDUI-1])<<8
+		this.CommonAddr = CommonAddr(data[lenDUI-2]) | CommonAddr(data[lenDUI-1])<<8
 	default:
 		return errParam
 	}
