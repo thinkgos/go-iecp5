@@ -59,7 +59,7 @@ func (this Params) Valid() error {
 		(this.CommonAddrSize < 1 || this.CommonAddrSize > 2) ||
 		(this.InfoObjAddrSize < 1 || this.InfoObjAddrSize > 3) ||
 		(this.InfoObjTimeZone == nil) {
-		return errParam
+		return ErrParam
 	}
 	return nil
 }
@@ -67,10 +67,10 @@ func (this Params) Valid() error {
 // ValidCommonAddr returns the validation result of a station address.
 func (this Params) ValidCommonAddr(addr CommonAddr) error {
 	if addr == InvalidCommonAddr {
-		return errCommonAddrZero
+		return ErrCommonAddrZero
 	}
 	if bits.Len(uint(addr)) > this.CommonAddrSize*8 {
-		return errCommonAddrFit
+		return ErrCommonAddrFit
 	}
 	return nil
 }
@@ -131,21 +131,21 @@ func (this *ASDU) AppendInfoObjAddr(addr InfoObjAddr) error {
 	switch this.InfoObjAddrSize {
 	case 1:
 		if addr > 255 {
-			return errInfoObjAddrFit
+			return ErrInfoObjAddrFit
 		}
 		this.InfoObj = append(this.InfoObj, byte(addr))
 	case 2:
 		if addr > 65535 {
-			return errInfoObjAddrFit
+			return ErrInfoObjAddrFit
 		}
 		this.InfoObj = append(this.InfoObj, byte(addr), byte(addr>>8))
 	case 3:
 		if addr > 16777215 {
-			return errInfoObjAddrFit
+			return ErrInfoObjAddrFit
 		}
 		this.InfoObj = append(this.InfoObj, byte(addr), byte(addr>>8), byte(addr>>16))
 	default:
-		return errParam
+		return ErrParam
 	}
 	return nil
 }
@@ -168,13 +168,13 @@ func (this *ASDU) ParseInfoObjAddr(buf []byte) (InfoObjAddr, error) {
 			return InfoObjAddr(buf[0]) | (InfoObjAddr(buf[1]) << 8) | (InfoObjAddr(buf[2]) << 16), nil
 		}
 	}
-	return 0, errParam
+	return 0, ErrParam
 }
 
 // IncVariableNumber See companion standard 101, subclause 7.2.2.
 func (this *ASDU) IncVariableNumber(n int) error {
 	if n += int(this.Variable.Number); n >= 128 {
-		return errInfoObjIndexFit
+		return ErrInfoObjIndexFit
 	}
 	this.Variable.Number = byte(n)
 	return nil
@@ -253,17 +253,17 @@ func (this *ASDU) Reply(c Cause, addr CommonAddr) *ASDU {
 func (this *ASDU) MarshalBinary() (data []byte, err error) {
 	switch {
 	case this.Coa.Cause == Unused:
-		return nil, errCauseZero
+		return nil, ErrCauseZero
 	case !(this.CauseSize == 1 || this.CauseSize == 2):
-		return nil, errParam
+		return nil, ErrParam
 	case this.CauseSize == 1 && this.OrigAddr != 0:
-		return nil, errOriginAddrFit
+		return nil, ErrOriginAddrFit
 	case this.CommonAddr == InvalidCommonAddr:
-		return nil, errCommonAddrZero
+		return nil, ErrCommonAddrZero
 	case !(this.CommonAddrSize == 1 || this.CommonAddrSize == 2):
-		return nil, errParam
+		return nil, ErrParam
 	case this.CommonAddrSize == 1 && this.CommonAddr != GlobalCommonAddr && this.CommonAddr >= 255:
-		return nil, errParam
+		return nil, ErrParam
 	}
 
 	raw := this.bootstrap[:(this.IdentifierSize() + len(this.InfoObj))]
@@ -294,7 +294,7 @@ func (this *ASDU) MarshalBinary() (data []byte, err error) {
 func (this *ASDU) UnmarshalBinary(data []byte) error {
 	if !(this.CauseSize == 1 || this.CauseSize == 2) ||
 		!(this.CommonAddrSize == 1 || this.CommonAddrSize == 2) {
-		return errParam
+		return ErrParam
 	}
 
 	// data unit identifier size check
@@ -338,7 +338,7 @@ func (this *ASDU) UnmarshalBinary(data []byte) error {
 	objLen := len(data) - lenDUI
 	switch {
 	case size == 0:
-		return errInfoObjIndexFit
+		return ErrInfoObjIndexFit
 	case size > objLen:
 		return io.EOF
 	case size < objLen: // not explicitly prohibited

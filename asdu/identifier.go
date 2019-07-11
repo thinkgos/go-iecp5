@@ -230,7 +230,7 @@ var infoObjSize = [256]int{
 func GetInfoObjSize(id TypeID) (int, error) {
 	size := infoObjSize[id]
 	if size == 0 {
-		return 0, errTypeIdentifier
+		return 0, ErrTypeIdentifier
 	}
 	return size, nil
 }

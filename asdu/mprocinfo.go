@@ -1,8 +1,6 @@
 package asdu
 
 import (
-	"errors"
-	"fmt"
 	"math"
 	"time"
 )
@@ -11,12 +9,6 @@ type Connect interface {
 	Params() *Params
 	Send(a *ASDU) error
 }
-
-var (
-	ErrLengthOutOfRange = fmt.Errorf("asdu: asdu filed length large than max %d", ASDUSizeMax)
-	ErrNotAnyObjInfo    = errors.New("asdu: not any object information")
-	errType             = errors.New("asdu: type identifier doesn't match call or time tag")
-)
 
 func checkValid(c Connect, typeID TypeID, isSequence bool, attrsLen int) error {
 	if attrsLen == 0 {
@@ -98,7 +90,7 @@ func Single(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 		case M_SP_TB_1:
 			panic("TODO: append 56-bit timestamp")
 		default:
-			return errType
+			return ErrTypeIDNotMatch
 		}
 	}
 	return c.Send(u)
@@ -153,7 +145,7 @@ func Double(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 		case M_DP_TB_1:
 			panic("TODO: append 56-bit timestamp")
 		default:
-			return errType
+			return ErrTypeIDNotMatch
 		}
 	}
 	return c.Send(u)
@@ -294,7 +286,7 @@ func Float(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 		case M_ME_TF_1:
 			panic("TODO: append 56-bit timestamp")
 		default:
-			return errType
+			return ErrTypeIDNotMatch
 		}
 	}
 	return c.Send(u)

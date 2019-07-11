@@ -43,7 +43,7 @@ func SingleCmd(c Connect, typeID TypeID, coa CauseOfTransmission, commonAddr Com
 	case C_SC_TA_1:
 		panic("TODO: append 56-bit timestamp")
 	default:
-		return errType
+		return ErrTypeIDNotMatch
 	}
 	return c.Send(u)
 }
@@ -79,7 +79,7 @@ func DoubleCmd(c Connect, typeID TypeID, coa CauseOfTransmission, commonAddr Com
 	case C_DC_TA_1:
 		panic("TODO: append 56-bit timestamp")
 	default:
-		return errType
+		return ErrTypeIDNotMatch
 	}
 	return c.Send(u)
 }
@@ -134,7 +134,7 @@ func SetpointCmdFloat(c Connect, typeID TypeID, coa CauseOfTransmission, commonA
 	case C_SE_TC_1:
 		panic("TODO: append 56-bit timestamp")
 	default:
-		return errType
+		return ErrTypeIDNotMatch
 	}
 
 	return c.Send(u)
