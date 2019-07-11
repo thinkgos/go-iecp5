@@ -2,7 +2,7 @@ package asdu
 
 //
 //func (d *Delegate) singleCmd(req *asdu.ASDU, c *Caller) {
-//	addr := req.DecodeInfoObjAddr(req.InfoObj)
+//	addr := req.ParseInfoObjAddr(req.InfoObj)
 //	f, ok := d.SingleCmds[addr]
 //	if !ok {
 //		f, ok = d.SingleCmds[asdu.InfoObjIrrelevantAddr]
@@ -44,7 +44,7 @@ package asdu
 //}
 //
 //func (d *Delegate) doubleCmd(req *asdu.ASDU, c *Caller) {
-//	addr := req.DecodeInfoObjAddr(req.InfoObj)
+//	addr := req.ParseInfoObjAddr(req.InfoObj)
 //	f, ok := d.DoubleCmds[addr]
 //	if !ok {
 //		f, ok = d.DoubleCmds[asdu.InfoObjIrrelevantAddr]
@@ -86,7 +86,7 @@ package asdu
 //}
 //
 //func (d *Delegate) floatSetpoint(req *asdu.ASDU, c *Caller) {
-//	addr := req.DecodeInfoObjAddr(req.InfoObj)
+//	addr := req.ParseInfoObjAddr(req.InfoObj)
 //	f, ok := d.FloatSetpoints[addr]
 //	if !ok {
 //		f, ok = d.FloatSetpoints[asdu.InfoObjIrrelevantAddr]

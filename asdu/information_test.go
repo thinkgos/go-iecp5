@@ -8,34 +8,33 @@ import (
 
 func TestNewStepPos(t *testing.T) {
 	type args struct {
-		value        int
-		hasTransient bool
+		value byte
 	}
 	tests := []struct {
 		name string
 		args args
-		want StepPos
+		want StepPosition
 	}{
-		{"值-64 处于瞬变状态", args{-64, true}, StepPos(0xc0)},
-		{"值-64 未在瞬变状态", args{-64, false}, StepPos(0x40)},
-		{"值7 处于瞬变状态", args{7, true}, StepPos(0x87)},
-		{"值7 未在瞬变状态", args{7, false}, StepPos(0x07)},
+		{"值0xc0 处于瞬变状态", args{0xc0}, StepPosition{-64, true}},
+		{"值0x40 未在瞬变状态", args{0x40}, StepPosition{-64, false}},
+		{"值0x87 处于瞬变状态", args{0x87}, StepPosition{0x07, true}},
+		{"值0x07 未在瞬变状态", args{0x07}, StepPosition{0x07, false}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewStepPos(tt.args.value, tt.args.hasTransient); got != tt.want {
+			if got := ParseStepPosition(tt.args.value); got != tt.want {
 				t.Errorf("NewStepPos() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestStepPos_Pos(t *testing.T) {
+func TestStepPosition_Value(t *testing.T) {
 	for _, HasTransient := range []bool{false, true} {
 		for value := -64; value <= 63; value++ {
-			gotValue, gotHasTransient := NewStepPos(value, HasTransient).ToPos()
-			if gotValue != value || gotHasTransient != HasTransient {
-				t.Errorf("StepPos(%d, %t) ToPos(%d, %t)", value, HasTransient, gotValue, gotHasTransient)
+			got := ParseStepPosition(StepPosition{value, HasTransient}.Value())
+			if got.Val != value || got.HasTransient != HasTransient {
+				t.Errorf("ParseStepPosition(StepPosition(%d, %t).Value()) = StepPosition(%d, %t)", value, HasTransient, got.Val, got.HasTransient)
 			}
 		}
 	}
@@ -84,8 +83,8 @@ func TestDecodeQualifierOfCmd(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := DecodeQualifierOfCmd(tt.args.b); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("DecodeQualifierOfCmd() = %v, want %v", got, tt.want)
+			if got := ParseQualifierOfCmd(tt.args.b); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ParseQualifierOfCmd() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -105,8 +104,92 @@ func TestDecodeQualifierOfSetpointCmd(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := DecodeQualifierOfSetpointCmd(tt.args.b); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("DecodeQualifierOfSetpointCmd() = %v, want %v", got, tt.want)
+			if got := ParseQualifierOfSetpointCmd(tt.args.b); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ParseQualifierOfSetpointCmd() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSinglePoint_Value(t *testing.T) {
+	tests := []struct {
+		name string
+		this SinglePoint
+		want byte
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.this.Value(); got != tt.want {
+				t.Errorf("SinglePoint.Value() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDoublePoint_Value(t *testing.T) {
+	tests := []struct {
+		name string
+		this DoublePoint
+		want byte
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.this.Value(); got != tt.want {
+				t.Errorf("DoublePoint.Value() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestQualifierOfCmd_Value(t *testing.T) {
+	type fields struct {
+		CmdQ   CmdQualifier
+		InExec bool
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   byte
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			this := QualifierOfCmd{
+				CmdQ:   tt.fields.CmdQ,
+				InExec: tt.fields.InExec,
+			}
+			if got := this.Value(); got != tt.want {
+				t.Errorf("QualifierOfCmd.Value() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestQualifierOfSetpointCmd_Value(t *testing.T) {
+	type fields struct {
+		CmdS   CmdSetPoint
+		InExec bool
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   byte
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			this := QualifierOfSetpointCmd{
+				CmdS:   tt.fields.CmdS,
+				InExec: tt.fields.InExec,
+			}
+			if got := this.Value(); got != tt.want {
+				t.Errorf("QualifierOfSetpointCmd.Value() = %v, want %v", got, tt.want)
 			}
 		})
 	}

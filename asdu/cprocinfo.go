@@ -75,7 +75,7 @@ func DoubleCmd(c Connect, typeID TypeID, coa CauseOfTransmission, commonAddr Com
 // StepCmd sends a type C_RC_NA_1 or C_RC_TA_1. subclause 7.3.2.3
 // 步调节命令
 func StepCmd(c Connect, typeID TypeID, coa CauseOfTransmission, commonAddr CommonAddr,
-	infoObjAddr InfoObjAddr, p StepPos, qoc QualifierOfCmd, Time ...time.Time) {
+	infoObjAddr InfoObjAddr, p StepPosition, qoc QualifierOfCmd, Time ...time.Time) {
 	panic("TODO: not implemented")
 }
 

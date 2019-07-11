@@ -1,6 +1,9 @@
 package asdu
 
-import "strconv"
+import (
+	"fmt"
+	"strconv"
+)
 
 // about data unit identification 应用服务数据单元 - 数据单元标识符
 
@@ -246,63 +249,75 @@ const (
 )
 
 func (this TypeID) String() string {
+	var s string
 	switch {
 	case 1 <= this && this <= 21:
 		this -= 1
-		return _TypeIDName0[this*9 : 9*(this+1)]
+		s = _TypeIDName0[this*9 : 9*(this+1)]
 	case 30 <= this && this <= 41:
 		this -= 30
-		return _TypeIDName1[this*9 : 9*(this+1)]
+		s = _TypeIDName1[this*9 : 9*(this+1)]
 	case 45 <= this && this <= 51:
 		this -= 45
-		return _TypeIDName2[this*9 : 9*(this+1)]
+		s = _TypeIDName2[this*9 : 9*(this+1)]
 	case 58 <= this && this <= 64:
 		this -= 58
-		return _TypeIDName3[this*9 : 9*(this+1)]
+		s = _TypeIDName3[this*9 : 9*(this+1)]
 	case this == 70:
-		return _TypeIDName4
+		s = _TypeIDName4
 	case 81 <= this && this <= 87:
 		this -= 81
-		return _TypeIDName5[this*9 : 9*(this+1)]
+		s = _TypeIDName5[this*9 : 9*(this+1)]
 	case 90 <= this && this <= 95:
 		this -= 90
-		return _TypeIDName6[this*9 : 9*(this+1)]
+		s = _TypeIDName6[this*9 : 9*(this+1)]
 	case 100 <= this && this <= 107:
 		this -= 100
-		return _TypeIDName7[this*9 : 9*(this+1)]
+		s = _TypeIDName7[this*9 : 9*(this+1)]
 	case 110 <= this && this <= 113:
 		this -= 110
-		return _TypeIDName8[this*9 : 9*(this+1)]
+		s = _TypeIDName8[this*9 : 9*(this+1)]
 	case 120 <= this && this <= 127:
 		this -= 120
-		return _TypeIDName9[this*9 : 9*(this+1)]
+		s = _TypeIDName9[this*9 : 9*(this+1)]
 	default:
-		return "TypeID(" + strconv.FormatInt(int64(this), 10) + ")"
+		s = strconv.FormatInt(int64(this), 10)
 	}
+	return "TID<" + s + ">"
 }
 
 // Variable is variable structure qualifier
 // number <0..127>, bit0 - bit6
 // seq, bit7
-// 0: 同一类型，有不同objAddress的信息元素集合 (一个地址+一个元素)
-// 1： 同一类型，相同objAddress信息元素集合 (一个地址,后续连续N个元素)
+// 0: 同一类型，有不同objAddress的信息元素集合 (地址+元素)*N
+// 1： 同一类型，相同objAddress顺序信息元素集合 (一个地址,N元素*N)
 type VariableStruct struct {
 	Number     byte
 	IsSequence bool
 }
 
-func DecodeVariable(b byte) VariableStruct {
+// ParseVariableStruct parse byte to variable structure qualifier
+func ParseVariableStruct(b byte) VariableStruct {
 	return VariableStruct{
 		Number:     b & 0x7f,
 		IsSequence: (b & 0x80) == 0x80,
 	}
 }
+
+// Value encode variable structure to byte
 func (this VariableStruct) Value() byte {
-	v := this.Number
 	if this.IsSequence {
-		v |= 0x80
+		return this.Number | 0x80
 	}
-	return v
+	return this.Number
+}
+
+// String 返回 variable structure 的格式
+func (this VariableStruct) String() string {
+	if this.IsSequence {
+		return fmt.Sprintf("VSQ<sq,%d>", this.Number)
+	}
+	return fmt.Sprintf("VSQ<%d>", this.Number)
 }
 
 // Cause is the cause of transmission.
@@ -333,11 +348,11 @@ const (
 	Spont                 // spontaneous
 	Init                  // initialized
 	Req                   // request or requested
-	Act                   // activation
-	Actcon                // activation confirmation
-	Deact                 // deactivation
-	Deactcon              // deactivation confirmation
-	Actterm               // activation termination
+	Act                   // activation  激活
+	Actcon                // activation confirmation 激活确认
+	Deact                 // deactivation 停止激活
+	Deactcon              // deactivation confirmation 停止激活确认
+	Actterm               // activation termination 激活停止
 	Retrem                // return information caused by a remote command
 	Retloc                // return information caused by a local command
 	File                  // file transfer
@@ -452,6 +467,7 @@ type CauseOfTransmission struct {
 	Cause      Cause
 }
 
+// ParseCauseOfTransmission parse byte to cause of transmission
 func ParseCauseOfTransmission(b byte) CauseOfTransmission {
 	return CauseOfTransmission{
 		IsNegative: (b & 0x40) == 0x40,
@@ -460,6 +476,7 @@ func ParseCauseOfTransmission(b byte) CauseOfTransmission {
 	}
 }
 
+// Value encode cause of transmission to byte
 func (this CauseOfTransmission) Value() byte {
 	v := this.Cause
 	if this.IsNegative {
@@ -473,15 +490,16 @@ func (this CauseOfTransmission) Value() byte {
 
 // String 返回Cause的字符串,包含相应应用的",neg" and ",test"
 func (this CauseOfTransmission) String() string {
-	s := causeSemantics[this.Cause]
-	if this.IsNegative && this.IsTest {
+	s := "COT<" + causeSemantics[this.Cause]
+	switch {
+	case this.IsNegative && this.IsTest:
 		s += ",neg,test"
-	} else if this.IsNegative {
+	case this.IsNegative:
 		s += ",neg"
-	} else { //this.IsTest
+	case this.IsTest:
 		s += ",test"
 	}
-	return s
+	return s + ">"
 }
 
 // CommonAddr is a station address.

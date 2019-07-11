@@ -51,7 +51,7 @@ type SinglePointInformation struct {
 	Value bool
 
 	// Quality descriptor asdu.OK means no remarks.
-	QualityDescriptor byte
+	QuaDesc QualityDescriptorFlag
 
 	// The timestamp is nil when the data is invalid or
 	// when the type does not include timing at all.
@@ -104,7 +104,7 @@ type DoublePointInformation struct {
 
 	Value DoublePoint
 	// Quality descriptor asdu.OK means no remarks.
-	QualityDescriptor byte
+	QuaDesc QualityDescriptorFlag
 
 	// The timestamp is nil when the data is invalid or
 	// when the type does not include timing at all.
@@ -151,9 +151,9 @@ func Double(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 type StepPositionInformation struct {
 	InfoObjAddr InfoObjAddr
 
-	Value StepPos
+	Value StepPosition
 	// Quality descriptor asdu.OK means no remarks.
-	QualityDescriptor byte
+	QuaDesc QualityDescriptorFlag
 
 	// The timestamp is nil when the data is invalid or
 	// when the type does not include timing at all.
@@ -195,7 +195,7 @@ type MeasuredValueNormalized struct {
 
 	Value Normalize
 	// Quality descriptor asdu.OK means no remarks.
-	QualityDescriptor byte
+	QuaDesc QualityDescriptorFlag
 
 	// The timestamp is nil when the data is invalid or
 	// when the type does not include timing at all.
@@ -217,7 +217,7 @@ type MeasuredValueScaled struct {
 
 	Value int16
 	// Quality descriptor asdu.OK means no remarks.
-	QualityDescriptor byte
+	QuaDesc QualityDescriptorFlag
 
 	// The timestamp is nil when the data is invalid or
 	// when the type does not include timing at all.
@@ -226,6 +226,7 @@ type MeasuredValueScaled struct {
 
 // Scaled sends a type identification M_ME_NB_1, M_ME_TB_1 or M_ME_TE_1.
 // subclause 7.3.1.11 - 7.3.1.12
+// 测量值,标度化值
 func Scaled(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 	commonAddr CommonAddr, attrs ...MeasuredValueNormalized) error {
 	panic("TODO: not implemented")
@@ -237,7 +238,7 @@ type MeasuredValueFloat struct {
 
 	Value float32
 	// Quality descriptor asdu.OK means no remarks.
-	QualityDescriptor byte
+	QuaDesc QualityDescriptorFlag
 
 	// The timestamp is nil when the data is invalid or
 	// when the type does not include timing at all.

@@ -29,6 +29,11 @@ const (
 	SPIOn
 )
 
+// Value single point to byte
+func (this SinglePoint) Value() byte {
+	return byte(this & 0x01)
+}
+
 // DoublePoint is a measured value of a determination aware switch.
 // See companion standard 101, subclause 7.2.6.2.
 type DoublePoint byte
@@ -41,15 +46,19 @@ const (
 	DPIIndeterminate                                  // 不确定或中间状态
 )
 
+// Value double point to byte
 func (this DoublePoint) Value() byte {
 	return byte(this & 0x03)
 }
 
 // Quality descriptor flags attribute measured values.
+type QualityDescriptorFlag byte
+
+// Quality descriptor flags attribute measured values.
 // See companion standard 101, subclause 7.2.6.3.
 const (
 	// QDSOverflow marks whether the value is beyond a predefined range.
-	QDSOverflow = 1 << iota
+	QDSOverflow QualityDescriptorFlag = 2 << iota
 
 	_ // reserve
 	_ // reserve
@@ -77,34 +86,36 @@ const (
 	QDSOK = 0
 )
 
-// StepPos is a measured value with transient state indication.
+// StepPosition is a measured value with transient state indication.
 // 带瞬变状态指示的测量值，用于变压器步位置或其它步位置的值
 // See companion standard 101, subclause 7.2.6.5.
-type StepPos int
+type StepPosition struct {
+	Val          int
+	HasTransient bool
+}
 
-// NewStepPos returns a new step position.
+// Value returns step position value.
 // Values range<-64..63>
 // bit[0-6]: <-64..63>
 // NOTE: bit6 为符号位
 // bit7: 0: 设备未在瞬变状态 1： 设备处于瞬变状态
-func NewStepPos(value int, hasTransient bool) StepPos {
-	p := StepPos(value & 0x7f)
-	if hasTransient {
+func (this StepPosition) Value() byte {
+	p := this.Val & 0x7f
+	if this.HasTransient {
 		p |= 0x80
 	}
-	return p
+	return byte(p)
 }
 
-// ToPos 返回 value in [-64, 63] 和 hasTransient 是否瞬变状态.
-func (this StepPos) ToPos() (value int, hasTransient bool) {
-	u := uint(this)
-	if u&0x40 == 0 {
-		value = int(u & 0x3f)
+// ParseStepPosition 返回 val in [-64, 63] 和 HasTransient 是否瞬变状态.
+func ParseStepPosition(b byte) StepPosition {
+	step := StepPosition{HasTransient: (b & 0x80) != 0}
+	if b&0x40 == 0 {
+		step.Val = int(b & 0x3f)
 	} else {
-		value = int(u) | (-1 &^ 0x3f)
+		step.Val = int(b) | (-1 &^ 0x3f)
 	}
-	hasTransient = (u & 0x80) != 0
-	return
+	return step
 }
 
 // Normalize is a 16-bit normalized value.
@@ -156,7 +167,7 @@ type QualifierOfCmd struct {
 	InExec bool
 }
 
-func DecodeQualifierOfCmd(b byte) QualifierOfCmd {
+func ParseQualifierOfCmd(b byte) QualifierOfCmd {
 	return QualifierOfCmd{
 		CmdQ:   CmdQualifier((b >> 2) & 0x1f),
 		InExec: b&0x80 == 0,
@@ -186,7 +197,7 @@ type QualifierOfSetpointCmd struct {
 	InExec bool
 }
 
-func DecodeQualifierOfSetpointCmd(b byte) QualifierOfSetpointCmd {
+func ParseQualifierOfSetpointCmd(b byte) QualifierOfSetpointCmd {
 	return QualifierOfSetpointCmd{
 		CmdS:   CmdSetPoint(b & 0x7f),
 		InExec: b&0x80 == 0,
