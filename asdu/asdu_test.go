@@ -15,21 +15,21 @@ import (
 //		&ASDU{
 //			Params:     ParamsWide,
 //			Identifier: Identifier{M_SP_NA_1, Percyc, 7, 1001},
-//			InfoObj:       []byte{1, 2, 3, 4},
+//			infoObj:       []byte{1, 2, 3, 4},
 //		},
 //		"M_SP_NA_1 percyc 7@1001  197121:0x04",
 //	}, {
 //		&ASDU{
 //			Params:     ParamsNarrow,
 //			Identifier: Identifier{M_DP_NA_1, Back, 0, 42},
-//			InfoObj:       []byte{1, 2, 3, 4},
+//			infoObj:       []byte{1, 2, 3, 4},
 //		},
 //		"M_DP_NA_1 back @42 1:0x02 3:0x04",
 //	}, {
 //		&ASDU{
 //			Params:     ParamsNarrow,
 //			Identifier: Identifier{M_ST_NA_1, Spont, 0, 250},
-//			InfoObj:       []byte{1, 2, 3, 4, 5},
+//			infoObj:       []byte{1, 2, 3, 4, 5},
 //		},
 //		"M_ST_NA_1 spont @250 1:0x0203 4:0x05 <EOF>",
 //	}, {
@@ -37,7 +37,7 @@ import (
 //			Params:     ParamsNarrow,
 //			Identifier: Identifier{M_ME_NC_1, Init, 0, 12},
 //			InfoSeq:    true,
-//			InfoObj:       []byte{99, 0, 1, 2, 3, 4, 5},
+//			infoObj:       []byte{99, 0, 1, 2, 3, 4, 5},
 //		},
 //		"M_ME_NC_1 init @12 99:0x0001020304 100:0x05 <EOF>",
 //	},
@@ -181,7 +181,7 @@ func TestASDU_ParseInfoObjAddr(t *testing.T) {
 			this := &ASDU{
 				Params:     tt.fields.Params,
 				Identifier: tt.fields.Identifier,
-				InfoObj:    tt.fields.InfoObj,
+				infoObj:    tt.fields.InfoObj,
 				bootstrap:  tt.fields.bootstrap,
 			}
 			got, err := this.ParseInfoObjAddr(tt.args.buf)
@@ -219,7 +219,7 @@ func TestASDU_IncVariableNumber(t *testing.T) {
 			this := &ASDU{
 				Params:     tt.fields.Params,
 				Identifier: tt.fields.Identifier,
-				InfoObj:    tt.fields.InfoObj,
+				infoObj:    tt.fields.InfoObj,
 				bootstrap:  tt.fields.bootstrap,
 			}
 			if err := this.IncVariableNumber(tt.args.n); (err != nil) != tt.wantErr {
@@ -253,7 +253,7 @@ func TestASDU_Reply(t *testing.T) {
 			this := &ASDU{
 				Params:     tt.fields.Params,
 				Identifier: tt.fields.Identifier,
-				InfoObj:    tt.fields.InfoObj,
+				infoObj:    tt.fields.InfoObj,
 				bootstrap:  tt.fields.bootstrap,
 			}
 			if got := this.Reply(tt.args.c, tt.args.addr); !reflect.DeepEqual(got, tt.want) {
@@ -324,7 +324,7 @@ func TestASDU_MarshalBinary(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			this := NewASDU(tt.fields.Params, tt.fields.Identifier)
-			this.InfoObj = append(this.InfoObj, tt.fields.InfoObj...)
+			this.infoObj = append(this.infoObj, tt.fields.InfoObj...)
 
 			gotData, err := this.MarshalBinary()
 			if (err != nil) != tt.wantErr {
@@ -371,8 +371,8 @@ func TestASDU_UnmarshalBinary(t *testing.T) {
 			if err := this.UnmarshalBinary(tt.args.data); (err != nil) != tt.wantErr {
 				t.Errorf("ASDU.UnmarshalBinary() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if !reflect.DeepEqual(this.InfoObj, tt.want) {
-				t.Errorf("ASDU.UnmarshalBinary() got % x, want % x", this.InfoObj, tt.want)
+			if !reflect.DeepEqual(this.infoObj, tt.want) {
+				t.Errorf("ASDU.UnmarshalBinary() got % x, want % x", this.infoObj, tt.want)
 			}
 		})
 	}

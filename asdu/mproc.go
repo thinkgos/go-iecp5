@@ -1,6 +1,7 @@
 package asdu
 
 import (
+	"encoding/binary"
 	"math"
 	"time"
 )
@@ -84,13 +85,19 @@ func Single(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 		if v.Value {
 			value = 0x01
 		}
-		u.InfoObj = append(u.InfoObj, value|byte(v.QuaDesc&0xf0))
+		u.infoObj = append(u.infoObj, value|byte(v.QuaDesc&0xf0))
 		switch typeID {
 		case M_SP_NA_1:
 		case M_SP_TA_1:
-			panic("TODO: append 24-bit timestamp")
+			if v.Time == nil {
+				return ErrInvalidTimeTag
+			}
+			u.infoObj = append(u.infoObj, CP24Time2a(v.Time, u.InfoObjTimeZone)...)
 		case M_SP_TB_1:
-			panic("TODO: append 56-bit timestamp")
+			if v.Time == nil {
+				return ErrInvalidTimeTag
+			}
+			u.infoObj = append(u.infoObj, CP56Time2a(v.Time, u.InfoObjTimeZone)...)
 		default:
 			return ErrTypeIDNotMatch
 		}
@@ -139,13 +146,19 @@ func Double(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 			}
 		}
 
-		u.InfoObj = append(u.InfoObj, byte(v.Value&0x03)|byte(v.QuaDesc&0xf0))
+		u.infoObj = append(u.infoObj, byte(v.Value&0x03)|byte(v.QuaDesc&0xf0))
 		switch typeID {
 		case M_DP_NA_1:
 		case M_DP_TA_1:
-			panic("TODO: append 24-bit timestamp")
+			if v.Time == nil {
+				return ErrInvalidTimeTag
+			}
+			u.infoObj = append(u.infoObj, CP24Time2a(v.Time, u.InfoObjTimeZone)...)
 		case M_DP_TB_1:
-			panic("TODO: append 56-bit timestamp")
+			if v.Time == nil {
+				return ErrInvalidTimeTag
+			}
+			u.infoObj = append(u.infoObj, CP56Time2a(v.Time, u.InfoObjTimeZone)...)
 		default:
 			return ErrTypeIDNotMatch
 		}
@@ -280,13 +293,19 @@ func Float(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 		}
 
 		bits := math.Float32bits(v.Value)
-		u.InfoObj = append(u.InfoObj, byte(bits), byte(bits>>8), byte(bits>>16), byte(bits>>24), byte(v.QuaDesc&0xf1))
+		u.infoObj = append(u.infoObj, byte(bits), byte(bits>>8), byte(bits>>16), byte(bits>>24), byte(v.QuaDesc&0xf1))
 		switch typeID {
 		case M_ME_NC_1:
 		case M_ME_TC_1:
-			panic("TODO: append 24-bit timestamp")
+			if v.Time == nil {
+				return ErrInvalidTimeTag
+			}
+			u.infoObj = append(u.infoObj, CP24Time2a(v.Time, u.InfoObjTimeZone)...)
 		case M_ME_TF_1:
-			panic("TODO: append 56-bit timestamp")
+			if v.Time == nil {
+				return ErrInvalidTimeTag
+			}
+			u.infoObj = append(u.infoObj, CP56Time2a(v.Time, u.InfoObjTimeZone)...)
 		default:
 			return ErrTypeIDNotMatch
 		}
@@ -302,7 +321,7 @@ func (this *ASDU) GetSinglePointInformation() ([]SinglePointInformation, error) 
 	for i, once, offset := 0, false, 0; i < int(this.Variable.Number); i++ {
 		if !this.Variable.IsSequence || !once {
 			once = true
-			infoObjAddr, err = this.ParseInfoObjAddr(this.InfoObj)
+			infoObjAddr, err = this.ParseInfoObjAddr(this.infoObj)
 			if err != nil {
 				return nil, err
 			}
@@ -311,26 +330,26 @@ func (this *ASDU) GetSinglePointInformation() ([]SinglePointInformation, error) 
 			infoObjAddr++
 			offset = 0
 		}
-		value := this.InfoObj[offset]
+		value := this.infoObj[offset]
 		offset++
 
 		var t *time.Time
 		switch this.Type {
 		case M_SP_NA_1:
 		case M_SP_TA_1:
-			if t = ParseCP24Time2a(this.InfoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
+			if t = ParseCP24Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
 				return nil, ErrInvalidTimeTag
 			}
 			offset += 3
 		case M_SP_TB_1:
-			if t = ParseCP56Time2a(this.InfoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
+			if t = ParseCP56Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
 				return nil, ErrInvalidTimeTag
 			}
 			offset += 7
 		default:
 			return nil, ErrTypeIDNotMatch
 		}
-		this.InfoObj = this.InfoObj[offset:]
+		this.infoObj = this.infoObj[offset:]
 		info = append(info, SinglePointInformation{
 			InfoObjAddr: infoObjAddr,
 			Value:       value&0x01 == 0x01,
@@ -349,7 +368,7 @@ func (this *ASDU) GetDoublePointInformation() ([]DoublePointInformation, error) 
 	for i, once, offset := 0, false, 0; i < int(this.Variable.Number); i++ {
 		if !this.Variable.IsSequence || !once {
 			once = true
-			infoObjAddr, err = this.ParseInfoObjAddr(this.InfoObj)
+			infoObjAddr, err = this.ParseInfoObjAddr(this.infoObj)
 			if err != nil {
 				return nil, err
 			}
@@ -358,26 +377,26 @@ func (this *ASDU) GetDoublePointInformation() ([]DoublePointInformation, error) 
 			infoObjAddr++
 			offset = 0
 		}
-		value := this.InfoObj[offset]
+		value := this.infoObj[offset]
 		offset++
 
 		var t *time.Time
 		switch this.Type {
 		case M_DP_NA_1:
 		case M_DP_TA_1:
-			if t = ParseCP24Time2a(this.InfoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
+			if t = ParseCP24Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
 				return nil, ErrInvalidTimeTag
 			}
 			offset += 3
 		case M_DP_TB_1:
-			if t = ParseCP56Time2a(this.InfoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
+			if t = ParseCP56Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
 				return nil, ErrInvalidTimeTag
 			}
 			offset += 7
 		default:
 			return nil, ErrTypeIDNotMatch
 		}
-		this.InfoObj = this.InfoObj[offset:]
+		this.infoObj = this.infoObj[offset:]
 		info = append(info, DoublePointInformation{
 			InfoObjAddr: infoObjAddr,
 			Value:       DoublePoint(value & 0x03),
@@ -412,7 +431,7 @@ func (this *ASDU) GetMeasuredValueFloat() ([]MeasuredValueFloat, error) {
 	for i, once, offset := 0, false, 0; i < int(this.Variable.Number); i++ {
 		if !this.Variable.IsSequence || !once {
 			once = true
-			infoObjAddr, err = this.ParseInfoObjAddr(this.InfoObj)
+			infoObjAddr, err = this.ParseInfoObjAddr(this.infoObj)
 			if err != nil {
 				return nil, err
 			}
@@ -422,29 +441,27 @@ func (this *ASDU) GetMeasuredValueFloat() ([]MeasuredValueFloat, error) {
 			offset = 0
 		}
 
-		bits := uint32(this.InfoObj[offset]) | uint32(this.InfoObj[offset+1]<<8) |
-			uint32(this.InfoObj[offset+2]<<16) | uint32(this.InfoObj[offset+3]<<24)
-		value := math.Float32frombits(bits)
-		qua := this.InfoObj[offset+4] & 0xf1
+		value := math.Float32frombits(binary.LittleEndian.Uint32(this.infoObj[offset:]))
+		qua := this.infoObj[offset+4] & 0xf1
 		offset += 5
 
 		var t *time.Time
 		switch this.Type {
 		case M_ME_NC_1:
 		case M_ME_TC_1:
-			if t = ParseCP24Time2a(this.InfoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
+			if t = ParseCP24Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
 				return nil, ErrInvalidTimeTag
 			}
 			offset += 3
 		case M_ME_TF_1:
-			if t = ParseCP56Time2a(this.InfoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
+			if t = ParseCP56Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
 				return nil, ErrInvalidTimeTag
 			}
 			offset += 7
 		default:
 			return nil, ErrTypeIDNotMatch
 		}
-		this.InfoObj = this.InfoObj[offset:]
+		this.infoObj = this.infoObj[offset:]
 		info = append(info, MeasuredValueFloat{
 			InfoObjAddr: infoObjAddr,
 			Value:       value,

@@ -2,13 +2,13 @@ package asdu
 
 import "time"
 
-func CP56Time2a(t time.Time, loc *time.Location) []byte {
+func CP56Time2a(t *time.Time, loc *time.Location) []byte {
 	if loc == nil {
 		loc = time.UTC
 	}
-	t = t.In(loc)
-	return []byte{byte(t.Nanosecond() / int(time.Millisecond)), byte(t.Second()), byte(t.Minute()),
-		byte(t.Hour()), byte(t.Month()), byte(t.Year() - 2000)}
+	ts := t.In(loc)
+	return []byte{byte(ts.Nanosecond() / int(time.Millisecond)), byte(ts.Second()), byte(ts.Minute()),
+		byte(ts.Hour()), byte(ts.Month()), byte(ts.Year() - 2000)}
 }
 
 // 7个八位位组二进制时间，建议所有时标采用UTC
@@ -41,12 +41,12 @@ func ParseCP56Time2a(bytes []byte, loc *time.Location) *time.Time {
 	return &val
 }
 
-func CP24Time2a(t time.Time, loc *time.Location) []byte {
+func CP24Time2a(t *time.Time, loc *time.Location) []byte {
 	if loc == nil {
 		loc = time.UTC
 	}
-	t = t.In(loc)
-	return []byte{byte(t.Nanosecond() / int(time.Millisecond)), byte(t.Second()), byte(t.Minute())}
+	ts := t.In(loc)
+	return []byte{byte(ts.Nanosecond() / int(time.Millisecond)), byte(ts.Second()), byte(ts.Minute())}
 }
 
 // 3个八位位组二进制时间，建议所有时标采用UTC

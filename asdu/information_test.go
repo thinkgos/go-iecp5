@@ -114,15 +114,15 @@ func TestParseQualifierOfCmd(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want QualifierOfCmd
+		want QualifierOfCommand
 	}{
-		{"with selects", args{0x84}, QualifierOfCmd{1, false}},
-		{"with executes", args{0x0c}, QualifierOfCmd{3, true}},
+		{"with selects", args{0x84}, QualifierOfCommand{1, false}},
+		{"with executes", args{0x0c}, QualifierOfCommand{3, true}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := ParseQualifierOfCmd(tt.args.b); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ParseQualifierOfCmd() = %v, want %v", got, tt.want)
+			if got := ParseQualifierOfCommand(tt.args.b); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ParseQualifierOfCommand() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -151,7 +151,7 @@ func TestParseQualifierOfSetpointCmd(t *testing.T) {
 
 func TestQualifierOfCmd_Value(t *testing.T) {
 	type fields struct {
-		CmdQ   CmdQualifier
+		CmdQ   QOCQual
 		InExec bool
 	}
 	tests := []struct {
@@ -163,12 +163,12 @@ func TestQualifierOfCmd_Value(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			this := QualifierOfCmd{
-				CmdQ:   tt.fields.CmdQ,
+			this := QualifierOfCommand{
+				Qual:   tt.fields.CmdQ,
 				InExec: tt.fields.InExec,
 			}
 			if got := this.Value(); got != tt.want {
-				t.Errorf("QualifierOfCmd.Value() = %v, want %v", got, tt.want)
+				t.Errorf("QualifierOfCommand.Value() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -206,14 +206,14 @@ func TestParseQualifierOfParam(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want QualifierOfParam
+		want QualifierOfParameterMV
 	}{
 		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := ParseQualifierOfParam(tt.args.b); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ParseQualifierOfParam() = %v, want %v", got, tt.want)
+			if got := ParseQualifierOfParamMV(tt.args.b); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ParseQualifierOfParamMV() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -221,7 +221,7 @@ func TestParseQualifierOfParam(t *testing.T) {
 
 func TestQualifierOfParam_Value(t *testing.T) {
 	type fields struct {
-		ParamQ        ParamQualifier
+		ParamQ        QPMCategory
 		IsChange      bool
 		IsInOperation bool
 	}
@@ -234,13 +234,13 @@ func TestQualifierOfParam_Value(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			this := QualifierOfParam{
-				ParamQ:        tt.fields.ParamQ,
+			this := QualifierOfParameterMV{
+				Category:      tt.fields.ParamQ,
 				IsChange:      tt.fields.IsChange,
 				IsInOperation: tt.fields.IsInOperation,
 			}
 			if got := this.Value(); got != tt.want {
-				t.Errorf("QualifierOfParam.Value() = %v, want %v", got, tt.want)
+				t.Errorf("QualifierOfParameterMV.Value() = %v, want %v", got, tt.want)
 			}
 		})
 	}

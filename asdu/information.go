@@ -2,7 +2,7 @@ package asdu
 
 // about information object 应用服务数据单元 - 信息对象
 
-// InfoObjAddr is the information object address.
+// Ioa is the information object address.
 // The width is controlled by Params.InfoObjAddrSize.
 // See companion standard 101, subclause 7.2.5.
 // - width 1
@@ -128,41 +128,147 @@ func (this Normalize) Float64() float64 {
 	return float64(this) / 32768
 }
 
-type ParamQualifier byte
+// See companion standard 101, subclause 7.2.6.21.
+// COICause COI cause
+type COICause byte
 
-// Qualifier Of Parameter Of Measured Values
-// 测量值参数限定词
-// See companion standard 101, subclause 7.2.6.24.
+// 0: 当地电源合上
+// 1： 当地手动复位
+// 2： 远方复位
+// <3..31>: 本配讨标准备的标准定义保留
+// <32...127>: 为特定使用保留
 const (
-	_             ParamQualifier = iota // 0: not used
-	QPMThreashold                       // 1: threshold value
-	QPMSmoothing                        // 2: smoothing factor (filter time constant)
-	QPMLowLimit                         // 3: low limit for transmission of measured values
-	QPMHighLimit                        // 4: high limit for transmission of measured values
+	COIlocalPowerOn COICause = iota
+	COIlocalHandReset
+	COIremoteReset
+)
+
+// CauseOfInitial cause of initial
+type CauseOfInitial struct {
+	Cause         COICause
+	IsLocalChange bool
+}
+
+// ParseCauseOfInitial parse byte to cause of initial
+func ParseCauseOfInitial(b byte) CauseOfInitial {
+	return CauseOfInitial{
+		Cause:         COICause(b & 0x7f),
+		IsLocalChange: b&0x80 == 0x80,
+	}
+}
+
+// Value CauseOfInitial to byte
+func (this CauseOfInitial) Value() byte {
+	if this.IsLocalChange {
+		return byte(this.Cause | 0x80)
+	}
+	return byte(this.Cause)
+}
+
+// See companion standard 101, subclause 7.2.6.22.
+// QualifierOfInterrogation Qualifier Of Interrogation
+type QualifierOfInterrogation byte
+
+const (
+	// <1..19>: 为标准定义保留
+	QOIInrogen QualifierOfInterrogation = 20 + iota // interrogated by station interrogation
+	QOIInro1                                        // interrogated by group 1 interrogation
+	QOIInro2                                        // interrogated by group 2 interrogation
+	QOIInro3                                        // interrogated by group 3 interrogation
+	QOIInro4                                        // interrogated by group 4 interrogation
+	QOIInro5                                        // interrogated by group 5 interrogation
+	QOIInro6                                        // interrogated by group 6 interrogation
+	QOIInro7                                        // interrogated by group 7 interrogation
+	QOIInro8                                        // interrogated by group 8 interrogation
+	QOIInro9                                        // interrogated by group 9 interrogation
+	QOIInro10                                       // interrogated by group 10 interrogation
+	QOIInro11                                       // interrogated by group 11 interrogation
+	QOIInro12                                       // interrogated by group 12 interrogation
+	QOIInro13                                       // interrogated by group 13 interrogation
+	QOIInro14                                       // interrogated by group 14 interrogation
+	QOIInro15                                       // interrogated by group 15 interrogation
+	QOIInro16                                       // interrogated by group 16 interrogation
+
+	// <37..63>：为标准定义保留
+	// <64..255>: 为特定使用保留
+	// 0:未使用
+	QOIUnused QualifierOfInterrogation = 0
+)
+
+// See companion standard 101, subclause 7.2.6.23.
+type QCCRequest byte
+type QCCFreeze byte
+
+const (
+	QCCUnused QCCRequest = iota
+	QCCGroup1
+	QCCGroup2
+	QCCGroup3
+	QCCGroup4
+	QCCTotal
+	// <6..31>: 为标准定义
+	// <32..63>： 为特定使用保留
+	QCCFzeRead       = 0x00
+	QCCFzeFzeNoReset = 0x40
+	QCCFzeFzeReset   = 0x80
+	QCCFzeReset      = 0xc0
+)
+
+type QualifierCountCall struct {
+	Request QCCRequest
+	Freeze  QCCFreeze
+}
+
+func ParseQualifierCountCall(b byte) QualifierCountCall {
+	return QualifierCountCall{
+		Request: QCCRequest(b & 0x3f),
+		Freeze:  QCCFreeze(b & 0xc0),
+	}
+}
+
+// Value Qualifier Count Call to byte
+func (this QualifierCountCall) Value() byte {
+	return byte(this.Request&0x3f) | byte(this.Freeze&0xc0)
+}
+
+// See companion standard 101, subclause 7.2.6.24.
+// QPMCategory 测量参数类别
+type QPMCategory byte
+
+const (
+	_             QPMCategory = iota // 0: not used
+	QPMThreashold                    // 1: threshold value
+	QPMSmoothing                     // 2: smoothing factor (filter time constant)
+	QPMLowLimit                      // 3: low limit for transmission of measured values
+	QPMHighLimit                     // 4: high limit for transmission of measured values
 
 	// 5‥31: reserved for standard definitions of this companion standard (compatible range)
 	// 32‥63: reserved for special use (private range)
 
-	QPMChangeFlag      ParamQualifier = 0x40 // bit6 marks local parameter change  当地参数改变
-	QPMInOperationFlag ParamQualifier = 0x80 // bit7 marks parameter operation 参数在运行
+	QPMChangeFlag      QPMCategory = 0x40 // bit6 marks local parameter change  当地参数改变
+	QPMInOperationFlag QPMCategory = 0x80 // bit7 marks parameter operation 参数在运行
 )
 
-type QualifierOfParam struct {
-	ParamQ        ParamQualifier
+// QualifierOfParameterMV Qualifier Of Parameter Of Measured Values
+// 测量值参数限定词
+type QualifierOfParameterMV struct {
+	Category      QPMCategory
 	IsChange      bool
 	IsInOperation bool
 }
 
-func ParseQualifierOfParam(b byte) QualifierOfParam {
-	return QualifierOfParam{
-		ParamQ:        ParamQualifier(b & 0x3f),
+// ParseQualifierOfParamMV
+func ParseQualifierOfParamMV(b byte) QualifierOfParameterMV {
+	return QualifierOfParameterMV{
+		Category:      QPMCategory(b & 0x3f),
 		IsChange:      b&0x40 == 0x40,
 		IsInOperation: b&0x80 == 0x80,
 	}
 }
 
-func (this QualifierOfParam) Value() byte {
-	v := this.ParamQ & 0x3f
+// Value
+func (this QualifierOfParameterMV) Value() byte {
+	v := this.Category & 0x3f
 	if this.IsChange {
 		v |= 0x40
 	}
@@ -172,7 +278,18 @@ func (this QualifierOfParam) Value() byte {
 	return byte(v)
 }
 
-// CmdQualifier is a qualifier of qual.
+// Qualifier Of Parameter Activation
+// 参数激活限定词
+// See companion standard 101, subclause 7.2.6.25.
+type QualifierOfParameterAct byte
+
+const (
+	QPAUnused QualifierOfParameterAct = iota
+
+	// TODO: do it
+)
+
+// QOCQual is a qualifier of qual.
 // See companion standard 101, subclause 7.2.6.26.
 // <0>: 未用
 //  the qualifier of command.
@@ -183,26 +300,26 @@ func (this QualifierOfParam) Value() byte {
 //	4‥8: reserved for standard definitions of this companion standard
 //	9‥15: reserved for the selection of other predefined functions
 //	16‥31: reserved for special use (private range)
-type CmdQualifier byte
+type QOCQual byte
 
-// QualifierOfCmd is a  qualifier of command.
+// QualifierOfCommand is a  qualifier of command.
 // 命令限定词
-type QualifierOfCmd struct {
-	CmdQ CmdQualifier
+type QualifierOfCommand struct {
+	Qual QOCQual
 	// See section 5, subclause 6.8.
 	// executes(false) (or selects(true)).
 	InExec bool
 }
 
-func ParseQualifierOfCmd(b byte) QualifierOfCmd {
-	return QualifierOfCmd{
-		CmdQ:   CmdQualifier((b >> 2) & 0x1f),
+func ParseQualifierOfCommand(b byte) QualifierOfCommand {
+	return QualifierOfCommand{
+		Qual:   QOCQual((b >> 2) & 0x1f),
 		InExec: b&0x80 == 0,
 	}
 }
 
-func (this QualifierOfCmd) Value() byte {
-	v := (byte(this.CmdQ) & 0x1f) << 2
+func (this QualifierOfCommand) Value() byte {
+	v := (byte(this.Qual) & 0x1f) << 2
 	if !this.InExec {
 		v |= 0x80
 	}
@@ -216,7 +333,7 @@ func (this QualifierOfCmd) Value() byte {
 //	64‥127: reserved for special use (private range)
 type CmdSetPoint uint
 
-// QualifierOfCmd is a  qualifier of command.
+// QualifierOfCommand is a  qualifier of command.
 type QualifierOfSetpointCmd struct {
 	CmdS CmdSetPoint
 	// See section 5, subclause 6.8.

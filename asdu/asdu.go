@@ -109,14 +109,14 @@ func (id Identifier) String() string {
 type ASDU struct {
 	*Params
 	Identifier
-	InfoObj   []byte            // information object serial
+	infoObj   []byte            // information object serial
 	bootstrap [ASDUSizeMax]byte // prevents Info malloc
 }
 
 func NewEmptyASDU(p *Params) *ASDU {
 	a := &ASDU{Params: p}
 	lenDUI := a.IdentifierSize()
-	a.InfoObj = a.bootstrap[lenDUI:lenDUI]
+	a.infoObj = a.bootstrap[lenDUI:lenDUI]
 	return a
 }
 
@@ -133,17 +133,17 @@ func (this *ASDU) AppendInfoObjAddr(addr InfoObjAddr) error {
 		if addr > 255 {
 			return ErrInfoObjAddrFit
 		}
-		this.InfoObj = append(this.InfoObj, byte(addr))
+		this.infoObj = append(this.infoObj, byte(addr))
 	case 2:
 		if addr > 65535 {
 			return ErrInfoObjAddrFit
 		}
-		this.InfoObj = append(this.InfoObj, byte(addr), byte(addr>>8))
+		this.infoObj = append(this.infoObj, byte(addr), byte(addr>>8))
 	case 3:
 		if addr > 16777215 {
 			return ErrInfoObjAddrFit
 		}
-		this.InfoObj = append(this.InfoObj, byte(addr), byte(addr>>8), byte(addr>>16))
+		this.infoObj = append(this.infoObj, byte(addr), byte(addr>>8), byte(addr>>16))
 	default:
 		return ErrParam
 	}
@@ -195,7 +195,7 @@ func (this *ASDU) Reply(c Cause, addr CommonAddr) *ASDU {
 	this.CommonAddr = addr
 	r := NewASDU(this.Params, this.Identifier)
 	r.Coa.Cause = c
-	r.InfoObj = append(r.InfoObj, this.InfoObj...)
+	r.infoObj = append(r.infoObj, this.infoObj...)
 	return r
 }
 
@@ -204,20 +204,20 @@ func (this *ASDU) Reply(c Cause, addr CommonAddr) *ASDU {
 //	dataSize, err := GetInfoObjSize(u.Type)
 //	if err != nil {
 //		if !u.InfoSeq {
-//			return fmt.Sprintf("%s: %#x", u.Identifier, u.InfoObj)
+//			return fmt.Sprintf("%s: %#x", u.Identifier, u.infoObj)
 //		}
-//		return fmt.Sprintf("%s seq: %#x", u.Identifier, u.InfoObj)
+//		return fmt.Sprintf("%s seq: %#x", u.Identifier, u.infoObj)
 //	}
 //
-//	end := len(u.InfoObj)
+//	end := len(u.infoObj)
 //	addrSize := u.InfoObjAddrSize
 //	if end < addrSize {
 //		if !u.InfoSeq {
-//			return fmt.Sprintf("%s: %#x <EOF>", u.Identifier, u.InfoObj)
+//			return fmt.Sprintf("%s: %#x <EOF>", u.Identifier, u.infoObj)
 //		}
-//		return fmt.Sprintf("%s seq: %#x <EOF>", u.Identifier, u.InfoObj)
+//		return fmt.Sprintf("%s seq: %#x <EOF>", u.Identifier, u.infoObj)
 //	}
-//	addr := u.ParseInfoObjAddr(u.InfoObj)
+//	addr := u.ParseInfoObjAddr(u.infoObj)
 //
 //	buf := bytes.NewBufferString(u.Identifier.String())
 //
@@ -225,10 +225,10 @@ func (this *ASDU) Reply(c Cause, addr CommonAddr) *ASDU {
 //		start := i
 //		i += dataSize
 //		if i > end {
-//			fmt.Fprintf(buf, " %d:%#x <EOF>", addr, u.InfoObj[start:])
+//			fmt.Fprintf(buf, " %d:%#x <EOF>", addr, u.infoObj[start:])
 //			break
 //		}
-//		fmt.Fprintf(buf, " %d:%#x", addr, u.InfoObj[start:i])
+//		fmt.Fprintf(buf, " %d:%#x", addr, u.infoObj[start:i])
 //		if i == end {
 //			break
 //		}
@@ -239,10 +239,10 @@ func (this *ASDU) Reply(c Cause, addr CommonAddr) *ASDU {
 //			start = i
 //			i += addrSize
 //			if i > end {
-//				fmt.Fprintf(buf, " %#x <EOF>", u.InfoObj[start:i])
+//				fmt.Fprintf(buf, " %#x <EOF>", u.infoObj[start:i])
 //				break
 //			}
-//			addr = u.ParseInfoObjAddr(u.InfoObj[start:])
+//			addr = u.ParseInfoObjAddr(u.infoObj[start:])
 //		}
 //	}
 //
@@ -266,7 +266,7 @@ func (this *ASDU) MarshalBinary() (data []byte, err error) {
 		return nil, ErrParam
 	}
 
-	raw := this.bootstrap[:(this.IdentifierSize() + len(this.InfoObj))]
+	raw := this.bootstrap[:(this.IdentifierSize() + len(this.infoObj))]
 	raw[0] = byte(this.Type)
 	raw[1] = this.Variable.Value()
 	raw[2] = byte(this.Coa.Value())
@@ -321,7 +321,7 @@ func (this *ASDU) UnmarshalBinary(data []byte) error {
 		this.CommonAddr = CommonAddr(data[lenDUI-2]) | CommonAddr(data[lenDUI-1])<<8
 	}
 	// information object
-	this.InfoObj = append(this.bootstrap[lenDUI:lenDUI], data[lenDUI:]...)
+	this.infoObj = append(this.bootstrap[lenDUI:lenDUI], data[lenDUI:]...)
 	return this.fixInfoObjSize()
 }
 
@@ -343,10 +343,10 @@ func (this *ASDU) fixInfoObjSize() error {
 	switch {
 	case size == 0:
 		return ErrInfoObjIndexFit
-	case size > len(this.InfoObj):
+	case size > len(this.infoObj):
 		return io.EOF
-	case size < len(this.InfoObj): // not explicitly prohibited
-		this.InfoObj = this.InfoObj[:size]
+	case size < len(this.infoObj): // not explicitly prohibited
+		this.infoObj = this.infoObj[:size]
 	}
 
 	return nil

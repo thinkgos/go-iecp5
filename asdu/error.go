@@ -21,4 +21,6 @@ var (
 	ErrLengthOutOfRange = fmt.Errorf("asdu: asdu filed length large than max %d", ASDUSizeMax)
 	ErrNotAnyObjInfo    = errors.New("asdu: not any object information")
 	ErrTypeIDNotMatch   = errors.New("asdu: type identifier doesn't match call or time tag")
+
+	ErrCmdCause = errors.New("asdu: cause of transmission for command not standard requirement")
 )
