@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+// 在监视方向过程信息的应用服务数据单元
+
 type Connect interface {
 	Params() *Params
 	Send(a *ASDU) error
@@ -290,4 +292,165 @@ func Float(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 		}
 	}
 	return c.Send(u)
+}
+
+func (this *ASDU) GetSinglePointInformation() ([]SinglePointInformation, error) {
+	var err error
+
+	info := make([]SinglePointInformation, 0, this.Variable.Number)
+	infoObjAddr := InfoObjAddr(0)
+	for i, once, offset := 0, false, 0; i < int(this.Variable.Number); i++ {
+		if !this.Variable.IsSequence || !once {
+			once = true
+			infoObjAddr, err = this.ParseInfoObjAddr(this.InfoObj)
+			if err != nil {
+				return nil, err
+			}
+			offset = this.InfoObjAddrSize
+		} else {
+			infoObjAddr++
+			offset = 0
+		}
+		value := this.InfoObj[offset]
+		offset++
+
+		var t *time.Time
+		switch this.Type {
+		case M_SP_NA_1:
+		case M_SP_TA_1:
+			if t = ParseCP24Time2a(this.InfoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
+				return nil, ErrInvalidTimeTag
+			}
+			offset += 3
+		case M_SP_TB_1:
+			if t = ParseCP56Time2a(this.InfoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
+				return nil, ErrInvalidTimeTag
+			}
+			offset += 7
+		default:
+			return nil, ErrTypeIDNotMatch
+		}
+		this.InfoObj = this.InfoObj[offset:]
+		info = append(info, SinglePointInformation{
+			InfoObjAddr: infoObjAddr,
+			Value:       value&0x01 == 0x01,
+			QuaDesc:     QualityDescriptorFlag(value & 0xf0),
+			Time:        t,
+		})
+	}
+	return info, nil
+}
+
+func (this *ASDU) GetDoublePointInformation() ([]DoublePointInformation, error) {
+	var err error
+
+	info := make([]DoublePointInformation, 0, this.Variable.Number)
+	infoObjAddr := InfoObjAddr(0)
+	for i, once, offset := 0, false, 0; i < int(this.Variable.Number); i++ {
+		if !this.Variable.IsSequence || !once {
+			once = true
+			infoObjAddr, err = this.ParseInfoObjAddr(this.InfoObj)
+			if err != nil {
+				return nil, err
+			}
+			offset = this.InfoObjAddrSize
+		} else {
+			infoObjAddr++
+			offset = 0
+		}
+		value := this.InfoObj[offset]
+		offset++
+
+		var t *time.Time
+		switch this.Type {
+		case M_DP_NA_1:
+		case M_DP_TA_1:
+			if t = ParseCP24Time2a(this.InfoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
+				return nil, ErrInvalidTimeTag
+			}
+			offset += 3
+		case M_DP_TB_1:
+			if t = ParseCP56Time2a(this.InfoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
+				return nil, ErrInvalidTimeTag
+			}
+			offset += 7
+		default:
+			return nil, ErrTypeIDNotMatch
+		}
+		this.InfoObj = this.InfoObj[offset:]
+		info = append(info, DoublePointInformation{
+			InfoObjAddr: infoObjAddr,
+			Value:       DoublePoint(value & 0x03),
+			QuaDesc:     QualityDescriptorFlag(value & 0xf0),
+			Time:        t,
+		})
+	}
+	return info, nil
+}
+
+func (this *ASDU) GetStepPositionInformation() ([]StepPositionInformation, error) {
+	panic("TODO: not implemented")
+}
+
+func (this *ASDU) GetBitString32Information() ([]BitString32Information, error) {
+	panic("TODO: not implemented")
+}
+
+func (this *ASDU) GetMeasuredValueNormalized() ([]MeasuredValueNormalized, error) {
+	panic("TODO: not implemented")
+}
+
+func (this *ASDU) GetMeasuredValueScaled() ([]MeasuredValueScaled, error) {
+	panic("TODO: not implemented")
+}
+
+func (this *ASDU) GetMeasuredValueFloat() ([]MeasuredValueFloat, error) {
+	var err error
+
+	info := make([]MeasuredValueFloat, 0, this.Variable.Number)
+	infoObjAddr := InfoObjAddr(0)
+	for i, once, offset := 0, false, 0; i < int(this.Variable.Number); i++ {
+		if !this.Variable.IsSequence || !once {
+			once = true
+			infoObjAddr, err = this.ParseInfoObjAddr(this.InfoObj)
+			if err != nil {
+				return nil, err
+			}
+			offset = this.InfoObjAddrSize
+		} else {
+			infoObjAddr++
+			offset = 0
+		}
+
+		bits := uint32(this.InfoObj[offset]) | uint32(this.InfoObj[offset+1]<<8) |
+			uint32(this.InfoObj[offset+2]<<16) | uint32(this.InfoObj[offset+3]<<24)
+		value := math.Float32frombits(bits)
+		qua := this.InfoObj[offset+4] & 0xf1
+		offset += 5
+
+		var t *time.Time
+		switch this.Type {
+		case M_ME_NC_1:
+		case M_ME_TC_1:
+			if t = ParseCP24Time2a(this.InfoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
+				return nil, ErrInvalidTimeTag
+			}
+			offset += 3
+		case M_ME_TF_1:
+			if t = ParseCP56Time2a(this.InfoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
+				return nil, ErrInvalidTimeTag
+			}
+			offset += 7
+		default:
+			return nil, ErrTypeIDNotMatch
+		}
+		this.InfoObj = this.InfoObj[offset:]
+		info = append(info, MeasuredValueFloat{
+			InfoObjAddr: infoObjAddr,
+			Value:       value,
+			QuaDesc:     QualityDescriptorFlag(qua),
+			Time:        t,
+		})
+	}
+	return info, nil
 }

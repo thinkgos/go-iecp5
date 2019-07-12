@@ -11,6 +11,7 @@ var (
 	ErrCommonAddrZero = errors.New("asdu: common address 0 is not used")
 
 	ErrParam           = errors.New("asdu: system parameter out of range")
+	ErrInvalidTimeTag  = errors.New("asdu: invalid time tag")
 	ErrOriginAddrFit   = errors.New("asdu: originator address not allowed with cause size 1 system parameter")
 	ErrCommonAddrFit   = errors.New("asdu: common address exceeds size system parameter")
 	ErrInfoObjAddrFit  = errors.New("asdu: information object address exceeds size system parameter")

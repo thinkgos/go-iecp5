@@ -1,5 +1,7 @@
 package asdu
 
+// 在控制方向系统信息的应用服务数据单元
+
 // InterrogationCmd send a new interrogation command [C_IC_NA_1].
 // subclause 7.3.4.1
 // Use group 1 to 16, or 0 for the default.

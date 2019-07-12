@@ -320,8 +320,12 @@ func (this *ASDU) UnmarshalBinary(data []byte) error {
 	} else { // 2
 		this.CommonAddr = CommonAddr(data[lenDUI-2]) | CommonAddr(data[lenDUI-1])<<8
 	}
-
 	// information object
+	this.InfoObj = append(this.bootstrap[lenDUI:lenDUI], data[lenDUI:]...)
+	return this.fixInfoObjSize()
+}
+
+func (this *ASDU) fixInfoObjSize() error {
 	// fixed element size
 	objSize, err := GetInfoObjSize(this.Type)
 	if err != nil {
@@ -335,15 +339,15 @@ func (this *ASDU) UnmarshalBinary(data []byte) error {
 	} else {
 		size = int(this.Variable.Number) * (this.InfoObjAddrSize + objSize)
 	}
-	objLen := len(data) - lenDUI
+
 	switch {
 	case size == 0:
 		return ErrInfoObjIndexFit
-	case size > objLen:
+	case size > len(this.InfoObj):
 		return io.EOF
-	case size < objLen: // not explicitly prohibited
-		objLen = size
+	case size < len(this.InfoObj): // not explicitly prohibited
+		this.InfoObj = this.InfoObj[:size]
 	}
-	this.InfoObj = append(this.bootstrap[lenDUI:lenDUI], data[lenDUI:lenDUI+objLen]...)
+
 	return nil
 }

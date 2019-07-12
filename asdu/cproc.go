@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+// 在控制方向过程信息的应用服务数据单元
+
 var errCmdCause = errors.New("asdu: cause of transmission for command not act(deact)")
 
 // SingleCmd sends a type identification C_SC_NA_1 or C_SC_TA_1. subclause 7.3.2.1
