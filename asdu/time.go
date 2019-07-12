@@ -1,6 +1,9 @@
 package asdu
 
-import "time"
+import (
+	"encoding/binary"
+	"time"
+)
 
 func CP56Time2a(t *time.Time, loc *time.Location) []byte {
 	if loc == nil {
@@ -84,11 +87,10 @@ func ParseCP24Time2a(bytes []byte, loc *time.Location) *time.Time {
 	return &val
 }
 
-func CP16Time2a(msec time.Duration) []byte {
-	v := uint16(msec / time.Millisecond)
-	return []byte{byte(v), byte(v >> 8)}
+func CP16Time2a(msec uint16) []byte {
+	return []byte{byte(msec), byte(msec >> 8)}
 }
 
-func ParseCP16Time2a(b []byte) time.Duration {
-	return time.Millisecond * time.Duration((uint16(b[1])<<8)|uint16(b[0]))
+func ParseCP16Time2a(b []byte) uint16 {
+	return binary.LittleEndian.Uint16(b)
 }

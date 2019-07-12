@@ -345,7 +345,7 @@ const (
 	Unused   Cause = iota // unused
 	Percyc                // periodic, cyclic
 	Back                  // background scan
-	Spont                 // spontaneous
+	Spont                 // spontaneous 突发
 	Init                  // initialized
 	Req                   // request or requested
 	Act                   // activation  激活

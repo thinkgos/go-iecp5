@@ -7,7 +7,7 @@ import (
 
 // 在控制方向过程信息的应用服务数据单元
 
-type SingleCommand struct {
+type SingleCommandObject struct {
 	Ioa   InfoObjAddr
 	Value bool
 	Qoc   QualifierOfCommand
@@ -17,24 +17,21 @@ type SingleCommand struct {
 // SingleCmd sends a type identification C_SC_NA_1 or C_SC_TA_1. subclause 7.3.2.1
 // 单命令
 func SingleCmd(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
-	cmd SingleCommand) error {
+	cmd SingleCommandObject) error {
 	if !(coa.Cause == Act || coa.Cause == Deact) {
 		return ErrCmdCause
 	}
-	if err := checkValid(c, typeID, false, 1); err != nil {
+	if err := c.Params().Valid(); err != nil {
 		return err
 	}
 
 	u := NewASDU(c.Params(), Identifier{
 		typeID,
-		VariableStruct{IsSequence: false},
+		VariableStruct{IsSequence: false, Number: 1},
 		coa,
 		0,
 		ca,
 	})
-	if err := u.IncVariableNumber(1); err != nil {
-		return err
-	}
 
 	if err := u.AppendInfoObjAddr(cmd.Ioa); err != nil {
 		return err
@@ -57,39 +54,36 @@ func SingleCmd(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
 	return c.Send(u)
 }
 
-type DoubleCommand struct {
+type DoubleCommandObject struct {
 	Ioa   InfoObjAddr
-	Value DoublePoint
+	Value DoubleCommand
 	Qoc   QualifierOfCommand
 	Time  *time.Time
 }
 
 // DoubleCmd sends a type identification C_DC_NA_1 or C_DC_TA_1. subclause 7.3.2.2
 // 双命令
-func DoubleCmd(c Connect, typeID TypeID, coa CauseOfTransmission, commonAddr CommonAddr,
-	cmd DoubleCommand) error {
+func DoubleCmd(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
+	cmd DoubleCommandObject) error {
 	if !(coa.Cause == Act || coa.Cause == Deact) {
 		return ErrCmdCause
 	}
-	if err := checkValid(c, typeID, false, 1); err != nil {
+	if err := c.Params().Valid(); err != nil {
 		return err
 	}
 	u := NewASDU(c.Params(), Identifier{
 		typeID,
-		VariableStruct{IsSequence: false},
+		VariableStruct{IsSequence: false, Number: 1},
 		coa,
 		0,
-		commonAddr,
+		ca,
 	})
-	if err := u.IncVariableNumber(1); err != nil {
-		return err
-	}
 
 	if err := u.AppendInfoObjAddr(cmd.Ioa); err != nil {
 		return err
 	}
 
-	u.infoObj = append(u.infoObj, cmd.Qoc.Value()|cmd.Value.Value())
+	u.infoObj = append(u.infoObj, cmd.Qoc.Value()|byte(cmd.Value&0x03))
 	switch typeID {
 	case C_DC_NA_1:
 	case C_DC_TA_1:
@@ -103,21 +97,50 @@ func DoubleCmd(c Connect, typeID TypeID, coa CauseOfTransmission, commonAddr Com
 	return c.Send(u)
 }
 
-type StepCommand struct {
+type StepCommandObject struct {
 	Ioa   InfoObjAddr
-	Value StepPosition
+	Value StepCommand
 	Qoc   QualifierOfCommand
 	Time  *time.Time
 }
 
 // StepCmd sends a type C_RC_NA_1 or C_RC_TA_1. subclause 7.3.2.3
 // 步调节命令
-func StepCmd(c Connect, typeID TypeID, coa CauseOfTransmission, commonAddr CommonAddr,
-	cmd StepCommand) {
-	panic("TODO: not implemented")
+func StepCmd(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
+	cmd StepCommandObject) error {
+	if !(coa.Cause == Act || coa.Cause == Deact) {
+		return ErrCmdCause
+	}
+	if err := c.Params().Valid(); err != nil {
+		return err
+	}
+	u := NewASDU(c.Params(), Identifier{
+		typeID,
+		VariableStruct{IsSequence: false, Number: 1},
+		coa,
+		0,
+		ca,
+	})
+
+	if err := u.AppendInfoObjAddr(cmd.Ioa); err != nil {
+		return err
+	}
+
+	u.infoObj = append(u.infoObj, cmd.Qoc.Value()|byte(cmd.Value&0x03))
+	switch typeID {
+	case C_RC_NA_1:
+	case C_RC_TA_1:
+		if cmd.Time == nil {
+			return ErrInvalidTimeTag
+		}
+		u.infoObj = append(u.infoObj, CP56Time2a(cmd.Time, u.InfoObjTimeZone)...)
+	default:
+		return ErrTypeIDNotMatch
+	}
+	return c.Send(u)
 }
 
-type SetpointNormalCommand struct {
+type SetpointNormalCommandObject struct {
 	Ioa   InfoObjAddr
 	Value Normalize
 	Qoc   QualifierOfSetpointCmd
@@ -126,12 +149,42 @@ type SetpointNormalCommand struct {
 
 // SetpointCmdNormal sends a type C_SE_NA_1 or C_SE_TA_1. subclause 7.3.2.4
 // 设定命令，归一化值
-func SetpointCmdNormal(c Connect, typeID TypeID, coa CauseOfTransmission, commonAddr CommonAddr,
-	cmd SetpointNormalCommand) {
-	panic("TODO: not implemented")
+// TODO: check normal
+func SetpointCmdNormal(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
+	cmd SetpointNormalCommandObject) error {
+	if !(coa.Cause == Act || coa.Cause == Deact) {
+		return ErrCmdCause
+	}
+	if err := c.Params().Valid(); err != nil {
+		return err
+	}
+	u := NewASDU(c.Params(), Identifier{
+		typeID,
+		VariableStruct{IsSequence: false, Number: 1},
+		coa,
+		0,
+		ca,
+	})
+
+	if err := u.AppendInfoObjAddr(cmd.Ioa); err != nil {
+		return err
+	}
+
+	u.infoObj = append(u.infoObj, byte(cmd.Value), byte(cmd.Value>>8), cmd.Qoc.Value())
+	switch typeID {
+	case C_SE_NA_1:
+	case C_SE_TA_1:
+		if cmd.Time == nil {
+			return ErrInvalidTimeTag
+		}
+		u.infoObj = append(u.infoObj, CP56Time2a(cmd.Time, u.InfoObjTimeZone)...)
+	default:
+		return ErrTypeIDNotMatch
+	}
+	return c.Send(u)
 }
 
-type SetpointScaledCommand struct {
+type SetpointScaledCommandObject struct {
 	Ioa   InfoObjAddr
 	Value int16
 	Qoc   QualifierOfSetpointCmd
@@ -140,12 +193,41 @@ type SetpointScaledCommand struct {
 
 // SetpointCmdScaled sends a type C_SE_NB_1 or C_SE_TB_1.  subclause 7.3.2.5
 // 设定命令,标度化值
-func SetpointCmdScaled(c Connect, typeID TypeID, coa CauseOfTransmission, commonAddr CommonAddr,
-	cmd SetpointScaledCommand) {
-	panic("TODO: not implemented")
+func SetpointCmdScaled(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
+	cmd SetpointScaledCommandObject) error {
+	if !(coa.Cause == Act || coa.Cause == Deact) {
+		return ErrCmdCause
+	}
+	if err := c.Params().Valid(); err != nil {
+		return err
+	}
+	u := NewASDU(c.Params(), Identifier{
+		typeID,
+		VariableStruct{IsSequence: false, Number: 1},
+		coa,
+		0,
+		ca,
+	})
+
+	if err := u.AppendInfoObjAddr(cmd.Ioa); err != nil {
+		return err
+	}
+
+	u.infoObj = append(u.infoObj, byte(cmd.Value), byte(cmd.Value>>8), cmd.Qoc.Value())
+	switch typeID {
+	case C_SE_NB_1:
+	case C_SE_TB_1:
+		if cmd.Time == nil {
+			return ErrInvalidTimeTag
+		}
+		u.infoObj = append(u.infoObj, CP56Time2a(cmd.Time, u.InfoObjTimeZone)...)
+	default:
+		return ErrTypeIDNotMatch
+	}
+	return c.Send(u)
 }
 
-type SetpointFloatCommand struct {
+type SetpointFloatCommandObject struct {
 	Ioa   InfoObjAddr
 	Value float32
 	Qos   QualifierOfSetpointCmd
@@ -154,24 +236,21 @@ type SetpointFloatCommand struct {
 
 // SetpointCmdFloat sends a type C_SE_NC_1 or C_SE_TC_1.  subclause 7.3.2.6
 // 设定命令,短浮点数
-func SetpointCmdFloat(c Connect, typeID TypeID, coa CauseOfTransmission, commonAddr CommonAddr,
-	cmd SetpointFloatCommand) error {
+func SetpointCmdFloat(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
+	cmd SetpointFloatCommandObject) error {
 	if !(coa.Cause == Act || coa.Cause == Deact) {
 		return ErrCmdCause
 	}
-	if err := checkValid(c, typeID, false, 1); err != nil {
+	if err := c.Params().Valid(); err != nil {
 		return err
 	}
 	u := NewASDU(c.Params(), Identifier{
 		typeID,
-		VariableStruct{IsSequence: false},
+		VariableStruct{IsSequence: false, Number: 1},
 		coa,
 		0,
-		commonAddr,
+		ca,
 	})
-	if err := u.IncVariableNumber(1); err != nil {
-		return err
-	}
 
 	bits := math.Float32bits(cmd.Value)
 	u.infoObj = append(u.infoObj, byte(bits), byte(bits>>8), byte(bits>>16), byte(bits>>24), cmd.Qos.Value())
@@ -191,23 +270,51 @@ func SetpointCmdFloat(c Connect, typeID TypeID, coa CauseOfTransmission, commonA
 	return c.Send(u)
 }
 
-type BitsString32Command struct {
+type BitsString32CommandObject struct {
 	Ioa   InfoObjAddr
 	Value uint32
 	Qos   QualifierOfSetpointCmd
 	Time  *time.Time
 }
 
-// BitsString32Cmd sends a type C_BO_NA_1 or C_BO_TA_1.   subclause 7.3.2.7
+// BitsString32Cmd sends a type C_BO_NA_1 or C_BO_TA_1. subclause 7.3.2.7
 // 比特串
 func BitsString32Cmd(c Connect, typeID TypeID, coa CauseOfTransmission, commonAddr CommonAddr,
-	cmd BitsString32Command) {
-	panic("TODO: not implemented")
+	cmd BitsString32CommandObject) error {
+	if !(coa.Cause == Act || coa.Cause == Deact) {
+		return ErrCmdCause
+	}
+	if err := c.Params().Valid(); err != nil {
+		return err
+	}
+	u := NewASDU(c.Params(), Identifier{
+		typeID,
+		VariableStruct{IsSequence: false, Number: 1},
+		coa,
+		0,
+		commonAddr,
+	})
+
+	u.infoObj = append(u.infoObj, byte(cmd.Value), byte(cmd.Value>>8), byte(cmd.Value>>16), byte(cmd.Value>>24))
+
+	switch typeID {
+	case C_BO_NA_1:
+	case C_BO_TA_1:
+		if cmd.Time == nil {
+			return ErrInvalidTimeTag
+		}
+		u.infoObj = append(u.infoObj, CP56Time2a(cmd.Time, u.InfoObjTimeZone)...)
+
+	default:
+		return ErrTypeIDNotMatch
+	}
+
+	return c.Send(u)
 }
 
-func (this *ASDU) GetSingleCmd() (SingleCommand, error) {
+func (this *ASDU) GetSingleCmd() (SingleCommandObject, error) {
 	var err error
-	var s SingleCommand
+	var s SingleCommandObject
 
 	if s.Ioa, err = this.ParseInfoObjAddr(this.infoObj); err != nil {
 		return s, err
@@ -230,15 +337,15 @@ func (this *ASDU) GetSingleCmd() (SingleCommand, error) {
 	return s, nil
 }
 
-func (this *ASDU) GetDoubleCmd() (DoubleCommand, error) {
+func (this *ASDU) GetDoubleCmd() (DoubleCommandObject, error) {
 	var err error
-	var cmd DoubleCommand
+	var cmd DoubleCommandObject
 
 	if cmd.Ioa, err = this.ParseInfoObjAddr(this.infoObj); err != nil {
 		return cmd, err
 	}
 	value := this.infoObj[this.InfoObjAddrSize]
-	cmd.Value = DoublePoint(value & 0x03)
+	cmd.Value = DoubleCommand(value & 0x03)
 	cmd.Qoc = ParseQualifierOfCommand(value & 0xfc)
 
 	switch this.Type {
@@ -255,26 +362,26 @@ func (this *ASDU) GetDoubleCmd() (DoubleCommand, error) {
 	return cmd, nil
 }
 
-func (this *ASDU) GetStepCmd() (StepCommand, error) {
-	var cmd StepCommand
+func (this *ASDU) GetStepCmd() (StepCommandObject, error) {
+	var cmd StepCommandObject
 	return cmd, nil
 }
 
-func (this *ASDU) GetSetpointNormalCmd() (SetpointNormalCommand, error) {
-	var cmd SetpointNormalCommand
+func (this *ASDU) GetSetpointNormalCmd() (SetpointNormalCommandObject, error) {
+	var cmd SetpointNormalCommandObject
 	return cmd, nil
 }
 
-func (this *ASDU) GetSetpointCmdScaled() (SetpointScaledCommand, error) {
-	var cmd SetpointScaledCommand
+func (this *ASDU) GetSetpointCmdScaled() (SetpointScaledCommandObject, error) {
+	var cmd SetpointScaledCommandObject
 	return cmd, nil
 }
-func (this *ASDU) GetSetpointFloatCmd() (SetpointFloatCommand, error) {
-	var cmd SetpointFloatCommand
+func (this *ASDU) GetSetpointFloatCmd() (SetpointFloatCommandObject, error) {
+	var cmd SetpointFloatCommandObject
 	return cmd, nil
 }
 
-func (this *ASDU) GetBitsString32Cmd() (BitsString32Command, error) {
-	var cmd BitsString32Command
+func (this *ASDU) GetBitsString32Cmd() (BitsString32CommandObject, error) {
+	var cmd BitsString32CommandObject
 	return cmd, nil
 }

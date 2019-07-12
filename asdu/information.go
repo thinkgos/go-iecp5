@@ -52,13 +52,13 @@ func (this DoublePoint) Value() byte {
 }
 
 // Quality descriptor flags attribute measured values.
-type QualityDescriptorFlag byte
+type QualityDescriptor byte
 
 // Quality descriptor flags attribute measured values.
 // See companion standard 101, subclause 7.2.6.3.
 const (
 	// QDSOverflow marks whether the value is beyond a predefined range.
-	QDSOverflow QualityDescriptorFlag = 1 << iota
+	QDSOverflow QualityDescriptor = 1 << iota
 
 	_ // reserve
 	_ // reserve
@@ -127,6 +127,30 @@ type Normalize int16
 func (this Normalize) Float64() float64 {
 	return float64(this) / 32768
 }
+
+// See companion standard 101, subclause 7.2.6.14.
+const FBPTestWord uint16 = 0x55aa
+
+/**************************************************/
+// See companion standard 101, subclause 7.2.6.16.
+type DoubleCommand byte
+
+const (
+	DCONotAllow0 DoubleCommand = iota
+	DCOOn
+	DCOOff
+	DCONotAllow3
+)
+
+// See companion standard 101, subclause 7.2.6.17.
+type StepCommand byte
+
+const (
+	SCONotAllow0 StepCommand = iota
+	SCOStepDown
+	SCOStepUP
+	SCONotAllow3
+)
 
 // See companion standard 101, subclause 7.2.6.21.
 // COICause COI cause
@@ -208,10 +232,10 @@ const (
 	QCCTotal
 	// <6..31>: 为标准定义
 	// <32..63>： 为特定使用保留
-	QCCFzeRead       = 0x00
-	QCCFzeFzeNoReset = 0x40
-	QCCFzeFzeReset   = 0x80
-	QCCFzeReset      = 0xc0
+	QCCFzeRead       QCCFreeze = 0x00
+	QCCFzeFzeNoReset QCCFreeze = 0x40
+	QCCFzeFzeReset   QCCFreeze = 0x80
+	QCCFzeReset      QCCFreeze = 0xc0
 )
 
 type QualifierCountCall struct {
@@ -325,6 +349,18 @@ func (this QualifierOfCommand) Value() byte {
 	}
 	return v
 }
+
+// See companion standard 101, subclause 7.2.6.27.
+// 复位进程命令限定词
+type QualifierOfResetProcessCmd byte
+
+const (
+	QRPUnused QualifierOfResetProcessCmd = iota
+	QPRTotal
+	QPREventBufferWaitTimeInfo
+	// <3..127>: 为标准保留
+	//<128..255>: 为特定使用保留
+)
 
 // CmdSetPoint is the qualifier of a set-point command qual.
 // See companion standard 101, subclause 7.2.6.39.
