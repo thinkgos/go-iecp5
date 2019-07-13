@@ -14,7 +14,7 @@ type SingleCommandObject struct {
 	Time  *time.Time
 }
 
-// SingleCmd sends a type identification C_SC_NA_1 or C_SC_TA_1. subclause 7.3.2.1
+// SingleCmd sends a type identification C_SC_NA_1 or C_SC_TA_1. subclass 7.3.2.1
 // 单命令
 func SingleCmd(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
 	cmd SingleCommandObject) error {
@@ -61,7 +61,7 @@ type DoubleCommandObject struct {
 	Time  *time.Time
 }
 
-// DoubleCmd sends a type identification C_DC_NA_1 or C_DC_TA_1. subclause 7.3.2.2
+// DoubleCmd sends a type identification C_DC_NA_1 or C_DC_TA_1. subclass 7.3.2.2
 // 双命令
 func DoubleCmd(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
 	cmd DoubleCommandObject) error {
@@ -104,7 +104,7 @@ type StepCommandObject struct {
 	Time  *time.Time
 }
 
-// StepCmd sends a type C_RC_NA_1 or C_RC_TA_1. subclause 7.3.2.3
+// StepCmd sends a type C_RC_NA_1 or C_RC_TA_1. subclass 7.3.2.3
 // 步调节命令
 func StepCmd(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
 	cmd StepCommandObject) error {
@@ -147,9 +147,8 @@ type SetpointNormalCommandObject struct {
 	Time  *time.Time
 }
 
-// SetpointCmdNormal sends a type C_SE_NA_1 or C_SE_TA_1. subclause 7.3.2.4
-// 设定命令，归一化值
-// TODO: check normal
+// SetpointCmdNormal sends a type C_SE_NA_1 or C_SE_TA_1. subclass 7.3.2.4
+// 设定命令，规一化值
 func SetpointCmdNormal(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
 	cmd SetpointNormalCommandObject) error {
 	if !(coa.Cause == Act || coa.Cause == Deact) {
@@ -191,7 +190,7 @@ type SetpointScaledCommandObject struct {
 	Time  *time.Time
 }
 
-// SetpointCmdScaled sends a type C_SE_NB_1 or C_SE_TB_1.  subclause 7.3.2.5
+// SetpointCmdScaled sends a type C_SE_NB_1 or C_SE_TB_1.  subclass 7.3.2.5
 // 设定命令,标度化值
 func SetpointCmdScaled(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
 	cmd SetpointScaledCommandObject) error {
@@ -234,7 +233,7 @@ type SetpointFloatCommandObject struct {
 	Time  *time.Time
 }
 
-// SetpointCmdFloat sends a type C_SE_NC_1 or C_SE_TC_1.  subclause 7.3.2.6
+// SetpointCmdFloat sends a type C_SE_NC_1 or C_SE_TC_1.  subclass 7.3.2.6
 // 设定命令,短浮点数
 func SetpointCmdFloat(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
 	cmd SetpointFloatCommandObject) error {
@@ -277,7 +276,7 @@ type BitsString32CommandObject struct {
 	Time  *time.Time
 }
 
-// BitsString32Cmd sends a type C_BO_NA_1 or C_BO_TA_1. subclause 7.3.2.7
+// BitsString32Cmd sends a type C_BO_NA_1 or C_BO_TA_1. subclass 7.3.2.7
 // 比特串
 func BitsString32Cmd(c Connect, typeID TypeID, coa CauseOfTransmission, commonAddr CommonAddr,
 	cmd BitsString32CommandObject) error {

@@ -13,7 +13,7 @@ import (
 )
 
 // TimeoutResolution is seconds according to companion standard 104,
-// subclause 6.9, caption "Definition of time outs". However, thenths
+// subclass 6.9, caption "Definition of time outs". However, thenths
 // of a second make this system much more responsive i.c.w. S-frames.
 const timeoutResolution = 100 * time.Millisecond
 
@@ -36,7 +36,7 @@ type Server struct {
 	recv chan []byte // for recvLoop
 	send chan []byte // for sendLoop
 
-	// see subclause 5.1 — Protection against loss and duplication of messages
+	// see subclass 5.1 — Protection against loss and duplication of messages
 	seqNoOut uint16 // sequence number of next outbound I-frame
 	ackNoOut uint16 // outbound sequence number yet to be confirmed
 	seqNoIn  uint16 // sequence number of next inbound I-frame

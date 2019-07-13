@@ -4,7 +4,7 @@ package asdu
 
 // Ioa is the information object address.
 // The width is controlled by Params.InfoObjAddrSize.
-// See companion standard 101, subclause 7.2.5.
+// See companion standard 101, subclass 7.2.5.
 // - width 1
 // <0>: 无关的信息对象地址
 // <1..255>: 信息对象地址
@@ -20,7 +20,7 @@ type InfoObjAddr uint
 const InfoObjIrrelevantAddr InfoObjAddr = 0
 
 // SinglePoint is a measured value of a switch.
-// See companion standard 101, subclause 7.2.6.1.
+// See companion standard 101, subclass 7.2.6.1.
 type SinglePoint byte
 
 // 单点信息
@@ -35,7 +35,7 @@ func (this SinglePoint) Value() byte {
 }
 
 // DoublePoint is a measured value of a determination aware switch.
-// See companion standard 101, subclause 7.2.6.2.
+// See companion standard 101, subclass 7.2.6.2.
 type DoublePoint byte
 
 // 双点信息
@@ -55,7 +55,7 @@ func (this DoublePoint) Value() byte {
 type QualityDescriptor byte
 
 // Quality descriptor flags attribute measured values.
-// See companion standard 101, subclause 7.2.6.3.
+// See companion standard 101, subclass 7.2.6.3.
 const (
 	// QDSOverflow marks whether the value is beyond a predefined range.
 	QDSOverflow QualityDescriptor = 1 << iota
@@ -65,7 +65,7 @@ const (
 
 	// QDSTimeInvalid flags that the elapsed time was incorrectly acquired.
 	// This attribute is only valid for events of protection equipment.
-	// See companion standard 101, subclause 7.2.6.4.
+	// See companion standard 101, subclass 7.2.6.4.
 	QDSTimeInvalid
 
 	// QDSBlocked flags that the value is blocked for transmission; the
@@ -88,7 +88,7 @@ const (
 
 // StepPosition is a measured value with transient state indication.
 // 带瞬变状态指示的测量值，用于变压器步位置或其它步位置的值
-// See companion standard 101, subclause 7.2.6.5.
+// See companion standard 101, subclass 7.2.6.5.
 type StepPosition struct {
 	Val          int
 	HasTransient bool
@@ -118,9 +118,9 @@ func ParseStepPosition(b byte) StepPosition {
 	return step
 }
 
-// Normalize is a 16-bit normalized value.
-// 规一化值
-// See companion standard 101, subclause 7.2.6.6.
+// Normalize is a 16-bit normalized value in[-1, 1 − 2⁻¹⁵]..
+// 规一化值 f归一= 32768 * f真实 / 满码值
+// See companion standard 101, subclass 7.2.6.6.
 type Normalize int16
 
 // Float64 returns the value in [-1, 1 − 2⁻¹⁵].
@@ -128,11 +128,11 @@ func (this Normalize) Float64() float64 {
 	return float64(this) / 32768
 }
 
-// See companion standard 101, subclause 7.2.6.14.
+// See companion standard 101, subclass 7.2.6.14.
 const FBPTestWord uint16 = 0x55aa
 
 /**************************************************/
-// See companion standard 101, subclause 7.2.6.16.
+// See companion standard 101, subclass 7.2.6.16.
 type DoubleCommand byte
 
 const (
@@ -142,7 +142,7 @@ const (
 	DCONotAllow3
 )
 
-// See companion standard 101, subclause 7.2.6.17.
+// See companion standard 101, subclass 7.2.6.17.
 type StepCommand byte
 
 const (
@@ -152,7 +152,7 @@ const (
 	SCONotAllow3
 )
 
-// See companion standard 101, subclause 7.2.6.21.
+// See companion standard 101, subclass 7.2.6.21.
 // COICause COI cause
 type COICause byte
 
@@ -189,7 +189,7 @@ func (this CauseOfInitial) Value() byte {
 	return byte(this.Cause)
 }
 
-// See companion standard 101, subclause 7.2.6.22.
+// See companion standard 101, subclass 7.2.6.22.
 // QualifierOfInterrogation Qualifier Of Interrogation
 type QualifierOfInterrogation byte
 
@@ -219,7 +219,7 @@ const (
 	QOIUnused QualifierOfInterrogation = 0
 )
 
-// See companion standard 101, subclause 7.2.6.23.
+// See companion standard 101, subclass 7.2.6.23.
 type QCCRequest byte
 type QCCFreeze byte
 
@@ -255,7 +255,7 @@ func (this QualifierCountCall) Value() byte {
 	return byte(this.Request&0x3f) | byte(this.Freeze&0xc0)
 }
 
-// See companion standard 101, subclause 7.2.6.24.
+// See companion standard 101, subclass 7.2.6.24.
 // QPMCategory 测量参数类别
 type QPMCategory byte
 
@@ -304,7 +304,7 @@ func (this QualifierOfParameterMV) Value() byte {
 
 // Qualifier Of Parameter Activation
 // 参数激活限定词
-// See companion standard 101, subclause 7.2.6.25.
+// See companion standard 101, subclass 7.2.6.25.
 type QualifierOfParameterAct byte
 
 const (
@@ -314,7 +314,7 @@ const (
 )
 
 // QOCQual is a qualifier of qual.
-// See companion standard 101, subclause 7.2.6.26.
+// See companion standard 101, subclass 7.2.6.26.
 // <0>: 未用
 //  the qualifier of command.
 //	0: no additional definition
@@ -330,7 +330,7 @@ type QOCQual byte
 // 命令限定词
 type QualifierOfCommand struct {
 	Qual QOCQual
-	// See section 5, subclause 6.8.
+	// See section 5, subclass 6.8.
 	// executes(false) (or selects(true)).
 	InExec bool
 }
@@ -350,7 +350,7 @@ func (this QualifierOfCommand) Value() byte {
 	return v
 }
 
-// See companion standard 101, subclause 7.2.6.27.
+// See companion standard 101, subclass 7.2.6.27.
 // 复位进程命令限定词
 type QualifierOfResetProcessCmd byte
 
@@ -363,7 +363,7 @@ const (
 )
 
 // CmdSetPoint is the qualifier of a set-point command qual.
-// See companion standard 101, subclause 7.2.6.39.
+// See companion standard 101, subclass 7.2.6.39.
 //	0: default
 //	0‥63: reserved for standard definitions of this companion standard (compatible range)
 //	64‥127: reserved for special use (private range)
@@ -372,7 +372,7 @@ type CmdSetPoint uint
 // QualifierOfCommand is a  qualifier of command.
 type QualifierOfSetpointCmd struct {
 	CmdS CmdSetPoint
-	// See section 5, subclause 6.8.
+	// See section 5, subclass 6.8.
 	// executes(false) (or selects(true)).
 	InExec bool
 }

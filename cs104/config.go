@@ -23,14 +23,14 @@ const (
 	// "t₂" 范围[1, 255]s 默认 10s, See IEC 60870-5-104, figure 10.
 	RecvUnackTimeout2Min = 1 * time.Second
 	RecvUnackTimeout2Max = 255 * time.Second
-	// "t₃" 范围[1 second, 48 hours] 默认 20 s, See IEC 60870-5-104, subclause 5.2.
+	// "t₃" 范围[1 second, 48 hours] 默认 20 s, See IEC 60870-5-104, subclass 5.2.
 	IdleTimeout3Min = 1 * time.Second
 	IdleTimeout3Max = 48 * time.Hour
 
-	// "k" 范围[1, 32767] 默认 12. See IEC 60870-5-104, subclause 5.5.
+	// "k" 范围[1, 32767] 默认 12. See IEC 60870-5-104, subclass 5.5.
 	SendUnackLimiKtMin = 1
 	SendUnackLimitKMax = 32767
-	// "w" 范围 [1， 32767] 默认 8. See IEC 60870-5-104, subclause 5.5.
+	// "w" 范围 [1， 32767] 默认 8. See IEC 60870-5-104, subclass 5.5.
 	RecvUnackLimitWMin = 1
 	RecvUnackLimitWMax = 32767
 )
@@ -44,7 +44,7 @@ type Config struct {
 
 	// I-frames 发送未收到确认的帧数上限， 一旦达到这个数，将停止传输
 	// "k" 范围[1, 32767] 默认 12.
-	// See IEC 60870-5-104, subclause 5.5.
+	// See IEC 60870-5-104, subclass 5.5.
 	SendUnackLimitK uint16
 
 	// 帧接收确认最长超时时间，超过此时间立即关闭连接。
@@ -54,7 +54,7 @@ type Config struct {
 
 	// 接收端最迟在接收了w次I-frames应用规约数据单元以后发出认可。 w不超过2/3k(2/3 SendUnackMax)
 	// "w" 范围 [1， 32767] 默认 8.
-	// See IEC 60870-5-104, subclause 5.5.
+	// See IEC 60870-5-104, subclass 5.5.
 	RecvUnackLimitW uint16
 
 	// 发送一个接收确认的最大时间，实际上这个框架1秒内发送回复
@@ -64,7 +64,7 @@ type Config struct {
 
 	// 触发 "TESTFR" 保活的空闲时间值，
 	// "t₃" 范围[1 second, 48 hours] 默认 20 s
-	// See IEC 60870-5-104, subclause 5.2.
+	// See IEC 60870-5-104, subclass 5.2.
 	IdleTimeout3 time.Duration
 }
 

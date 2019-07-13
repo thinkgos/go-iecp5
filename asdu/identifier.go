@@ -321,7 +321,7 @@ func (this VariableStruct) String() string {
 }
 
 // Cause is the cause of transmission.
-// See companion standard 101, subclause 7.2.3.
+// See companion standard 101, subclass 7.2.3.
 // | T | P/N | 5..0 cause |
 // T = test, the cause of transmission for testing ,0: 未试验, 1：试验
 // P/N indicates the negative (or positive) confirmation,
@@ -329,7 +329,7 @@ func (this VariableStruct) String() string {
 // Cause of transmission bit5-bit0
 type Cause byte
 
-// OriginAddr is originator address, See companion standard 101, subclause 7.2.3.
+// OriginAddr is originator address, See companion standard 101, subclass 7.2.3.
 // The width is controlled by Params.CauseSize. width 2 includes/activates the originator address.
 // <0>: 未用
 // <1..255>: 源发地址

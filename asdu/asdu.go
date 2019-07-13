@@ -30,7 +30,7 @@ var (
 )
 
 // Params 定义了ASDU相关特定参数
-// See companion standard 101, subclause 7.1.
+// See companion standard 101, subclass 7.1.
 type Params struct {
 	// cause of transmission, 传输原因字节数
 	// The standard requires "b" in [1, 2].
@@ -93,7 +93,7 @@ type Identifier struct {
 	OrigAddr OriginAddr
 	// CommonAddr is a station address. Zero is not used.
 	// The width is controlled by Params.CommonAddrSize.
-	// See companion standard 101, subclause 7.2.4.
+	// See companion standard 101, subclass 7.2.4.
 	CommonAddr CommonAddr // station address 公共地址是站地址
 }
 
@@ -171,7 +171,7 @@ func (this *ASDU) ParseInfoObjAddr(buf []byte) (InfoObjAddr, error) {
 	return 0, ErrParam
 }
 
-// IncVariableNumber See companion standard 101, subclause 7.2.2.
+// IncVariableNumber See companion standard 101, subclass 7.2.2.
 func (this *ASDU) IncVariableNumber(n int) error {
 	if n += int(this.Variable.Number); n >= 128 {
 		return ErrInfoObjIndexFit

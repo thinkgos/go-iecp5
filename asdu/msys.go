@@ -1,6 +1,6 @@
 package asdu
 
-// subclause 7.3.3.1
+// subclass 7.3.3.1
 // 初始化结束
 func EndOfInitialization(c Connect, coa CauseOfTransmission, ca CommonAddr,
 	ioa InfoObjAddr, coi CauseOfInitial) error {

@@ -7,9 +7,8 @@ import (
 // 在控制方向参数的应用服务数据单元
 
 // [P_ME_NA_1]
-// subclause 7.3.5.1
+// subclass 7.3.5.1
 // 测量参数,规一化值
-// TODO: check Normalize
 func ParameterNormalizedValue(c Connect, coa CauseOfTransmission, ca CommonAddr,
 	ioa InfoObjAddr, value Normalize, qpm QualifierOfParameterMV) error {
 	if coa.Cause != Act {
@@ -35,7 +34,7 @@ func ParameterNormalizedValue(c Connect, coa CauseOfTransmission, ca CommonAddr,
 }
 
 // [P_ME_NB_1]
-// subclause 7.3.5.2
+// subclass 7.3.5.2
 // 测量参数,标度化值
 func ParameterScaledValue(c Connect, coa CauseOfTransmission, ca CommonAddr,
 	ioa InfoObjAddr, value int16, qpm QualifierOfParameterMV) error {
@@ -62,7 +61,7 @@ func ParameterScaledValue(c Connect, coa CauseOfTransmission, ca CommonAddr,
 }
 
 // [P_ME_NC_1]
-// subclause 7.3.5.3
+// subclass 7.3.5.3
 // 测量参数,短浮点数
 func ParameterFloatValue(c Connect, coa CauseOfTransmission, ca CommonAddr,
 	ioa InfoObjAddr, value float32, qpm QualifierOfParameterMV) error {
@@ -89,7 +88,7 @@ func ParameterFloatValue(c Connect, coa CauseOfTransmission, ca CommonAddr,
 }
 
 // [P_AC_NA_1]
-// subclause 7.3.5.4
+// subclass 7.3.5.4
 // 参数激活
 func ParameterActivation(c Connect, coa CauseOfTransmission, ca CommonAddr,
 	ioa InfoObjAddr, qpa QualifierOfParameterAct) error {
