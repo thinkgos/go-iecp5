@@ -3,7 +3,6 @@ package asdu
 import (
 	"reflect"
 	"testing"
-	"time"
 )
 
 type conn struct {
@@ -12,23 +11,21 @@ type conn struct {
 	t    *testing.T
 }
 
-var tmUTC = time.Date(2009, 1, 2, 3, 4, 5, 6000, time.UTC)
-
 func newConn(want []byte, t *testing.T) *conn {
 	return &conn{ParamsWide, want, t}
 }
 
 func (this *conn) Params() *Params { return this.p }
 
-// SendASDU
+// Send
 func (this *conn) Send(u *ASDU) error {
-	_, err := u.MarshalBinary()
+	data, err := u.MarshalBinary()
 	if err != nil {
 		return err
 	}
-	//if !reflect.DeepEqual(this.want, data) {
-	//	//		this.t.Errorf("SendASDU() out = % x, want % x", data, this.want)
-	//}
+	if !reflect.DeepEqual(this.want, data) {
+		this.t.Errorf("Send() out = % x, want % x", data, this.want)
+	}
 	return nil
 }
 
@@ -47,34 +44,26 @@ func TestSingleCmd(t *testing.T) {
 	}{
 		{"cause not Act and Deact", args{
 			newConn(nil, t),
-			C_SC_NA_1,
-			CauseOfTransmission{Cause: Unused},
-			0x1234,
-			SingleCommandObject{}}, true},
+			C_SC_NA_1, CauseOfTransmission{Cause: Unused}, 0x1234,
+			SingleCommandObject{}},
+			true},
 		{"C_SC_NA_1", args{
-			newConn(
-				[]byte{45, 0x01, 0x06, 0x00, 0x34, 0x12, 0x90, 0x78, 0x56, 0x05}, t),
-			C_SC_NA_1,
-			CauseOfTransmission{Cause: Act},
-			0x1234,
+			newConn([]byte{45, 0x01, 0x06, 0x00, 0x34, 0x12, 0x90, 0x78, 0x56, 0x05}, t),
+			C_SC_NA_1, CauseOfTransmission{Cause: Act}, 0x1234,
 			SingleCommandObject{
 				0x567890,
 				true,
 				QualifierOfCommand{QOCShortPulse, false},
-				time.Time{},
-			}}, false},
-		{"C_SC_TA_1", args{
+				tm0}},
+			false},
+		{"C_SC_TA_1 CP56Time2a", args{
 			newConn(
-				[]byte{45, 0x01, 0x06, 0x00, 0x34, 0x12, 0x90, 0x78, 0x56, 0x05, 0x06, 0x05, 0x4, 0x03, 0x02, 0x01, 0x09}, t),
-			C_SC_TA_1,
-			CauseOfTransmission{Cause: Act},
-			0x1234,
+				append([]byte{58, 0x01, 0x06, 0x00, 0x34, 0x12, 0x90, 0x78, 0x56, 0x05}, tm0CP56Time2aBytes...), t),
+			C_SC_TA_1, CauseOfTransmission{Cause: Act}, 0x1234,
 			SingleCommandObject{
-				0x567890,
-				true,
-				QualifierOfCommand{QOCShortPulse, false},
-				tmUTC,
-			}}, false},
+				0x567890, true,
+				QualifierOfCommand{QOCShortPulse, false}, tm0}},
+			false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
