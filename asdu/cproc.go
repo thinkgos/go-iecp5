@@ -11,7 +11,7 @@ type SingleCommandObject struct {
 	Ioa   InfoObjAddr
 	Value bool
 	Qoc   QualifierOfCommand
-	Time  *time.Time
+	Time  time.Time
 }
 
 // SingleCmd sends a type identification C_SC_NA_1 or C_SC_TA_1. subclass 7.3.2.1
@@ -44,9 +44,6 @@ func SingleCmd(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
 	switch typeID {
 	case C_SC_NA_1:
 	case C_SC_TA_1:
-		if cmd.Time == nil {
-			return ErrInvalidTimeTag
-		}
 		u.infoObj = append(u.infoObj, CP56Time2a(cmd.Time, u.InfoObjTimeZone)...)
 	default:
 		return ErrTypeIDNotMatch
@@ -58,7 +55,7 @@ type DoubleCommandObject struct {
 	Ioa   InfoObjAddr
 	Value DoubleCommand
 	Qoc   QualifierOfCommand
-	Time  *time.Time
+	Time  time.Time
 }
 
 // DoubleCmd sends a type identification C_DC_NA_1 or C_DC_TA_1. subclass 7.3.2.2
@@ -87,9 +84,6 @@ func DoubleCmd(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
 	switch typeID {
 	case C_DC_NA_1:
 	case C_DC_TA_1:
-		if cmd.Time == nil {
-			return ErrInvalidTimeTag
-		}
 		u.infoObj = append(u.infoObj, CP56Time2a(cmd.Time, u.InfoObjTimeZone)...)
 	default:
 		return ErrTypeIDNotMatch
@@ -101,7 +95,7 @@ type StepCommandObject struct {
 	Ioa   InfoObjAddr
 	Value StepCommand
 	Qoc   QualifierOfCommand
-	Time  *time.Time
+	Time  time.Time
 }
 
 // StepCmd sends a type C_RC_NA_1 or C_RC_TA_1. subclass 7.3.2.3
@@ -130,9 +124,6 @@ func StepCmd(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
 	switch typeID {
 	case C_RC_NA_1:
 	case C_RC_TA_1:
-		if cmd.Time == nil {
-			return ErrInvalidTimeTag
-		}
 		u.infoObj = append(u.infoObj, CP56Time2a(cmd.Time, u.InfoObjTimeZone)...)
 	default:
 		return ErrTypeIDNotMatch
@@ -144,7 +135,7 @@ type SetpointNormalCommandObject struct {
 	Ioa   InfoObjAddr
 	Value Normalize
 	Qoc   QualifierOfSetpointCmd
-	Time  *time.Time
+	Time  time.Time
 }
 
 // SetpointCmdNormal sends a type C_SE_NA_1 or C_SE_TA_1. subclass 7.3.2.4
@@ -173,9 +164,6 @@ func SetpointCmdNormal(c Connect, typeID TypeID, coa CauseOfTransmission, ca Com
 	switch typeID {
 	case C_SE_NA_1:
 	case C_SE_TA_1:
-		if cmd.Time == nil {
-			return ErrInvalidTimeTag
-		}
 		u.infoObj = append(u.infoObj, CP56Time2a(cmd.Time, u.InfoObjTimeZone)...)
 	default:
 		return ErrTypeIDNotMatch
@@ -187,7 +175,7 @@ type SetpointScaledCommandObject struct {
 	Ioa   InfoObjAddr
 	Value int16
 	Qoc   QualifierOfSetpointCmd
-	Time  *time.Time
+	Time  time.Time
 }
 
 // SetpointCmdScaled sends a type C_SE_NB_1 or C_SE_TB_1.  subclass 7.3.2.5
@@ -216,9 +204,6 @@ func SetpointCmdScaled(c Connect, typeID TypeID, coa CauseOfTransmission, ca Com
 	switch typeID {
 	case C_SE_NB_1:
 	case C_SE_TB_1:
-		if cmd.Time == nil {
-			return ErrInvalidTimeTag
-		}
 		u.infoObj = append(u.infoObj, CP56Time2a(cmd.Time, u.InfoObjTimeZone)...)
 	default:
 		return ErrTypeIDNotMatch
@@ -230,7 +215,7 @@ type SetpointFloatCommandObject struct {
 	Ioa   InfoObjAddr
 	Value float32
 	Qos   QualifierOfSetpointCmd
-	Time  *time.Time
+	Time  time.Time
 }
 
 // SetpointCmdFloat sends a type C_SE_NC_1 or C_SE_TC_1.  subclass 7.3.2.6
@@ -257,9 +242,6 @@ func SetpointCmdFloat(c Connect, typeID TypeID, coa CauseOfTransmission, ca Comm
 	switch typeID {
 	case C_SE_NC_1:
 	case C_SE_TC_1:
-		if cmd.Time == nil {
-			return ErrInvalidTimeTag
-		}
 		u.infoObj = append(u.infoObj, CP56Time2a(cmd.Time, u.InfoObjTimeZone)...)
 
 	default:
@@ -273,7 +255,7 @@ type BitsString32CommandObject struct {
 	Ioa   InfoObjAddr
 	Value uint32
 	Qos   QualifierOfSetpointCmd
-	Time  *time.Time
+	Time  time.Time
 }
 
 // BitsString32Cmd sends a type C_BO_NA_1 or C_BO_TA_1. subclass 7.3.2.7
@@ -299,9 +281,6 @@ func BitsString32Cmd(c Connect, typeID TypeID, coa CauseOfTransmission, commonAd
 	switch typeID {
 	case C_BO_NA_1:
 	case C_BO_TA_1:
-		if cmd.Time == nil {
-			return ErrInvalidTimeTag
-		}
 		u.infoObj = append(u.infoObj, CP56Time2a(cmd.Time, u.InfoObjTimeZone)...)
 
 	default:
@@ -325,8 +304,8 @@ func (this *ASDU) GetSingleCmd() (SingleCommandObject, error) {
 	switch this.Type {
 	case C_SC_NA_1:
 	case C_SC_TA_1:
-		s.Time = ParseCP56Time2a(this.infoObj[this.InfoObjAddrSize+1:], this.InfoObjTimeZone)
-		if s.Time == nil {
+		s.Time, err = ParseCP56Time2a(this.infoObj[this.InfoObjAddrSize+1:], this.InfoObjTimeZone)
+		if err != nil {
 			return s, ErrInvalidTimeTag
 		}
 	default:
@@ -350,8 +329,8 @@ func (this *ASDU) GetDoubleCmd() (DoubleCommandObject, error) {
 	switch this.Type {
 	case C_SC_NA_1:
 	case C_SC_TA_1:
-		cmd.Time = ParseCP56Time2a(this.infoObj[this.InfoObjAddrSize+1:], this.InfoObjTimeZone)
-		if cmd.Time == nil {
+		cmd.Time, err = ParseCP56Time2a(this.infoObj[this.InfoObjAddrSize+1:], this.InfoObjTimeZone)
+		if err != nil {
 			return cmd, ErrInvalidTimeTag
 		}
 	default:
@@ -363,24 +342,29 @@ func (this *ASDU) GetDoubleCmd() (DoubleCommandObject, error) {
 
 func (this *ASDU) GetStepCmd() (StepCommandObject, error) {
 	var cmd StepCommandObject
+	// TODO:
 	return cmd, nil
 }
 
 func (this *ASDU) GetSetpointNormalCmd() (SetpointNormalCommandObject, error) {
 	var cmd SetpointNormalCommandObject
+	// TODO:
 	return cmd, nil
 }
 
 func (this *ASDU) GetSetpointCmdScaled() (SetpointScaledCommandObject, error) {
 	var cmd SetpointScaledCommandObject
+	// TODO:
 	return cmd, nil
 }
 func (this *ASDU) GetSetpointFloatCmd() (SetpointFloatCommandObject, error) {
 	var cmd SetpointFloatCommandObject
+	// TODO:
 	return cmd, nil
 }
 
 func (this *ASDU) GetBitsString32Cmd() (BitsString32CommandObject, error) {
 	var cmd BitsString32CommandObject
+	// TODO:
 	return cmd, nil
 }

@@ -315,36 +315,44 @@ const (
 
 // QOCQual is a qualifier of qual.
 // See companion standard 101, subclass 7.2.6.26.
-// <0>: 未用
 //  the qualifier of command.
-//	0: no additional definition
-//	1: short pulse duration (circuit-breaker), duration determined by a system parameter in the outstation
-//	2: long pulse duration, duration determined by a system parameter in the outstation
-//	3: persistent output
-//	4‥8: reserved for standard definitions of this companion standard
-//	9‥15: reserved for the selection of other predefined functions
-//	16‥31: reserved for special use (private range)
+
 type QOCQual byte
+
+const (
+	//	0: no additional definition
+	//	1: short pulse duration (circuit-breaker), duration determined by a system parameter in the outstation
+	//	2: long pulse duration, duration determined by a system parameter in the outstation
+	//	3: persistent output
+	QOCNoDefined QOCQual = iota
+	QOCShortPulse
+	QOCLongPulse
+	QOCPersistOut
+	//	4‥8: reserved for standard definitions of this companion standard
+	//	9‥15: reserved for the selection of other predefined functions
+	//	16‥31: reserved for special use (private range)
+
+)
 
 // QualifierOfCommand is a  qualifier of command.
 // 命令限定词
 type QualifierOfCommand struct {
 	Qual QOCQual
 	// See section 5, subclass 6.8.
-	// executes(false) (or selects(true)).
-	InExec bool
+	// selects(true) (or executes(false)).
+	InSelect bool
 }
 
 func ParseQualifierOfCommand(b byte) QualifierOfCommand {
 	return QualifierOfCommand{
-		Qual:   QOCQual((b >> 2) & 0x1f),
-		InExec: b&0x80 == 0,
+		Qual:     QOCQual((b >> 2) & 0x1f),
+		InSelect: b&0x80 == 0x80,
 	}
 }
 
 func (this QualifierOfCommand) Value() byte {
 	v := (byte(this.Qual) & 0x1f) << 2
-	if !this.InExec {
+	if this.InSelect {
 		v |= 0x80
 	}
 	return v

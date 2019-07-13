@@ -103,7 +103,7 @@ func ClockSynchronizationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr, 
 	if err := u.AppendInfoObjAddr(InfoObjIrrelevantAddr); err != nil {
 		return err
 	}
-	u.infoObj = append(u.infoObj, CP56Time2a(&t, u.InfoObjTimeZone)...)
+	u.infoObj = append(u.infoObj, CP56Time2a(t, u.InfoObjTimeZone)...)
 	return c.Send(u)
 }
 

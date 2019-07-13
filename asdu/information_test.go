@@ -116,8 +116,8 @@ func TestParseQualifierOfCmd(t *testing.T) {
 		args args
 		want QualifierOfCommand
 	}{
-		{"with selects", args{0x84}, QualifierOfCommand{1, false}},
-		{"with executes", args{0x0c}, QualifierOfCommand{3, true}},
+		{"with selects", args{0x84}, QualifierOfCommand{1, true}},
+		{"with executes", args{0x0c}, QualifierOfCommand{3, false}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -164,8 +164,8 @@ func TestQualifierOfCmd_Value(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			this := QualifierOfCommand{
-				Qual:   tt.fields.CmdQ,
-				InExec: tt.fields.InExec,
+				Qual:     tt.fields.CmdQ,
+				InSelect: tt.fields.InExec,
 			}
 			if got := this.Value(); got != tt.want {
 				t.Errorf("QualifierOfCommand.Value() = %v, want %v", got, tt.want)

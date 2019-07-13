@@ -50,7 +50,7 @@ type SinglePointInfo struct {
 
 	// The timestamp is nil when the data is invalid or
 	// when the type does not include timing at all.
-	Time *time.Time
+	Time time.Time
 }
 
 // Single sends a type identification M_SP_NA_1, M_SP_TA_1 or M_SP_TB_1.
@@ -89,14 +89,8 @@ func Single(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 		switch typeID {
 		case M_SP_NA_1:
 		case M_SP_TA_1:
-			if v.Time == nil {
-				return ErrInvalidTimeTag
-			}
 			u.infoObj = append(u.infoObj, CP24Time2a(v.Time, u.InfoObjTimeZone)...)
 		case M_SP_TB_1:
-			if v.Time == nil {
-				return ErrInvalidTimeTag
-			}
 			u.infoObj = append(u.infoObj, CP56Time2a(v.Time, u.InfoObjTimeZone)...)
 		default:
 			return ErrTypeIDNotMatch
@@ -115,7 +109,7 @@ type DoublePointInfo struct {
 
 	// The timestamp is nil when the data is invalid or
 	// when the type does not include timing at all.
-	Time *time.Time
+	Time time.Time
 }
 
 // Double sends a type identification M_DP_NA_1, M_DP_TA_1 or M_DP_TB_1.
@@ -150,14 +144,8 @@ func Double(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 		switch typeID {
 		case M_DP_NA_1:
 		case M_DP_TA_1:
-			if v.Time == nil {
-				return ErrInvalidTimeTag
-			}
 			u.infoObj = append(u.infoObj, CP24Time2a(v.Time, u.InfoObjTimeZone)...)
 		case M_DP_TB_1:
-			if v.Time == nil {
-				return ErrInvalidTimeTag
-			}
 			u.infoObj = append(u.infoObj, CP56Time2a(v.Time, u.InfoObjTimeZone)...)
 		default:
 			return ErrTypeIDNotMatch
@@ -176,7 +164,7 @@ type StepPositionInfo struct {
 
 	// The timestamp is nil when the data is invalid or
 	// when the type does not include timing at all.
-	Time *time.Time
+	Time time.Time
 }
 
 // Step sends a type identification M_ST_NA_1, M_ST_TA_1 or M_ST_TB_1.
@@ -211,14 +199,8 @@ func Step(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 		switch typeID {
 		case M_ST_NA_1:
 		case M_ST_TA_1:
-			if v.Time == nil {
-				return ErrInvalidTimeTag
-			}
 			u.infoObj = append(u.infoObj, CP24Time2a(v.Time, u.InfoObjTimeZone)...)
 		case M_SP_TB_1:
-			if v.Time == nil {
-				return ErrInvalidTimeTag
-			}
 			u.infoObj = append(u.infoObj, CP56Time2a(v.Time, u.InfoObjTimeZone)...)
 		default:
 			return ErrTypeIDNotMatch
@@ -237,7 +219,7 @@ type BitString32Info struct {
 
 	// The timestamp is nil when the data is invalid or
 	// when the type does not include timing at all.
-	Time *time.Time
+	Time time.Time
 }
 
 // Bits sends a type identificationM_BO_NA_1, M_BO_TA_1 or M_BO_TB_1.
@@ -272,14 +254,8 @@ func BitString32(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmiss
 		switch typeID {
 		case M_BO_NA_1:
 		case M_BO_TA_1:
-			if v.Time == nil {
-				return ErrInvalidTimeTag
-			}
 			u.infoObj = append(u.infoObj, CP24Time2a(v.Time, u.InfoObjTimeZone)...)
 		case M_BO_TB_1:
-			if v.Time == nil {
-				return ErrInvalidTimeTag
-			}
 			u.infoObj = append(u.infoObj, CP56Time2a(v.Time, u.InfoObjTimeZone)...)
 		default:
 			return ErrTypeIDNotMatch
@@ -298,7 +274,7 @@ type MeasuredValueNormalInfo struct {
 
 	// The timestamp is nil when the data is invalid or
 	// when the type does not include timing at all.
-	Time *time.Time
+	Time time.Time
 }
 
 // MeasuredValueNormal sends a type identification M_ME_NA_1, M_ME_TA_1, M_ME_TD_1 or M_ME_ND_1.
@@ -336,15 +312,9 @@ func MeasuredValueNormal(c Connect, typeID TypeID, isSequence bool, coa CauseOfT
 			u.infoObj = append(u.infoObj, byte(v.Qds))
 		case M_ME_TA_1:
 			u.infoObj = append(u.infoObj, byte(v.Qds))
-			if v.Time == nil {
-				return ErrInvalidTimeTag
-			}
 			u.infoObj = append(u.infoObj, CP24Time2a(v.Time, u.InfoObjTimeZone)...)
 		case M_ME_TD_1:
 			u.infoObj = append(u.infoObj, byte(v.Qds))
-			if v.Time == nil {
-				return ErrInvalidTimeTag
-			}
 			u.infoObj = append(u.infoObj, CP56Time2a(v.Time, u.InfoObjTimeZone)...)
 		case M_ME_ND_1: // 不带品质
 		default:
@@ -364,7 +334,7 @@ type MeasuredValueScaledInfo struct {
 
 	// The timestamp is nil when the data is invalid or
 	// when the type does not include timing at all.
-	Time *time.Time
+	Time time.Time
 }
 
 // MeasuredValueScaled sends a type identification M_ME_NB_1, M_ME_TB_1 or M_ME_TE_1.
@@ -399,14 +369,8 @@ func MeasuredValueScaled(c Connect, typeID TypeID, isSequence bool, coa CauseOfT
 		switch typeID {
 		case M_ME_NB_1:
 		case M_ME_TB_1:
-			if v.Time == nil {
-				return ErrInvalidTimeTag
-			}
 			u.infoObj = append(u.infoObj, CP24Time2a(v.Time, u.InfoObjTimeZone)...)
 		case M_ME_TE_1:
-			if v.Time == nil {
-				return ErrInvalidTimeTag
-			}
 			u.infoObj = append(u.infoObj, CP56Time2a(v.Time, u.InfoObjTimeZone)...)
 		default:
 			return ErrTypeIDNotMatch
@@ -425,7 +389,7 @@ type MeasuredValueFloatInfo struct {
 
 	// The timestamp is nil when the data is invalid or
 	// when the type does not include timing at all.
-	Time *time.Time
+	Time time.Time
 }
 
 // MeasuredValueFloat sends a type identification M_ME_NC_1, M_ME_TC_1 or M_ME_TF_1.
@@ -461,14 +425,8 @@ func MeasuredValueFloat(c Connect, typeID TypeID, isSequence bool, coa CauseOfTr
 		switch typeID {
 		case M_ME_NC_1:
 		case M_ME_TC_1:
-			if v.Time == nil {
-				return ErrInvalidTimeTag
-			}
 			u.infoObj = append(u.infoObj, CP24Time2a(v.Time, u.InfoObjTimeZone)...)
 		case M_ME_TF_1:
-			if v.Time == nil {
-				return ErrInvalidTimeTag
-			}
 			u.infoObj = append(u.infoObj, CP56Time2a(v.Time, u.InfoObjTimeZone)...)
 		default:
 			return ErrTypeIDNotMatch
@@ -497,16 +455,16 @@ func (this *ASDU) GetSinglePointInfo() ([]SinglePointInfo, error) {
 		value := this.infoObj[offset]
 		offset++
 
-		var t *time.Time
+		var t time.Time
 		switch this.Type {
 		case M_SP_NA_1:
 		case M_SP_TA_1:
-			if t = ParseCP24Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
+			if t, err = ParseCP24Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); err != nil {
 				return nil, ErrInvalidTimeTag
 			}
 			offset += 3
 		case M_SP_TB_1:
-			if t = ParseCP56Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
+			if t, err = ParseCP56Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); err != nil {
 				return nil, ErrInvalidTimeTag
 			}
 			offset += 7
@@ -544,16 +502,16 @@ func (this *ASDU) GetDoublePointInfo() ([]DoublePointInfo, error) {
 		value := this.infoObj[offset]
 		offset++
 
-		var t *time.Time
+		var t time.Time
 		switch this.Type {
 		case M_DP_NA_1:
 		case M_DP_TA_1:
-			if t = ParseCP24Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
+			if t, err = ParseCP24Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); err != nil {
 				return nil, ErrInvalidTimeTag
 			}
 			offset += 3
 		case M_DP_TB_1:
-			if t = ParseCP56Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
+			if t, err = ParseCP56Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); err != nil {
 				return nil, ErrInvalidTimeTag
 			}
 			offset += 7
@@ -593,16 +551,16 @@ func (this *ASDU) GetStepPositionInfo() ([]StepPositionInfo, error) {
 		qds := QualityDescriptor(this.infoObj[offset])
 		offset++
 
-		var t *time.Time
+		var t time.Time
 		switch this.Type {
 		case M_ST_NA_1:
 		case M_ST_TA_1:
-			if t = ParseCP24Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
+			if t, err = ParseCP24Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); err != nil {
 				return nil, ErrInvalidTimeTag
 			}
 			offset += 3
 		case M_SP_TB_1:
-			if t = ParseCP56Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
+			if t, err = ParseCP56Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); err != nil {
 				return nil, ErrInvalidTimeTag
 			}
 			offset += 7
@@ -643,16 +601,16 @@ func (this *ASDU) GetBitString32Info() ([]BitString32Info, error) {
 		qds := QualityDescriptor(this.infoObj[offset])
 		offset++
 
-		var t *time.Time
+		var t time.Time
 		switch this.Type {
 		case M_BO_NA_1:
 		case M_BO_TA_1:
-			if t = ParseCP24Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
+			if t, err = ParseCP24Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); err != nil {
 				return nil, ErrInvalidTimeTag
 			}
 			offset += 3
 		case M_BO_TB_1:
-			if t = ParseCP56Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
+			if t, err = ParseCP56Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); err != nil {
 				return nil, ErrInvalidTimeTag
 			}
 			offset += 7
@@ -691,7 +649,7 @@ func (this *ASDU) GetMeasuredValueNormalInfo() ([]MeasuredValueNormalInfo, error
 		value := Normalize(binary.LittleEndian.Uint16(this.infoObj[offset:]))
 		offset += 2
 
-		var t *time.Time
+		var t time.Time
 		var qds QualityDescriptor
 		switch this.Type {
 		case M_ME_NA_1:
@@ -700,14 +658,14 @@ func (this *ASDU) GetMeasuredValueNormalInfo() ([]MeasuredValueNormalInfo, error
 		case M_ME_TA_1:
 			qds = QualityDescriptor(this.infoObj[offset])
 			offset++
-			if t = ParseCP24Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
+			if t, err = ParseCP24Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); err != nil {
 				return nil, ErrInvalidTimeTag
 			}
 			offset += 3
 		case M_ME_TD_1:
 			qds = QualityDescriptor(this.infoObj[offset])
 			offset++
-			if t = ParseCP56Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
+			if t, err = ParseCP56Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); err != nil {
 				return nil, ErrInvalidTimeTag
 			}
 			offset += 7
@@ -749,16 +707,16 @@ func (this *ASDU) GetMeasuredValueScaledInfo() ([]MeasuredValueScaledInfo, error
 		qds := QualityDescriptor(this.infoObj[offset])
 		offset++
 
-		var t *time.Time
+		var t time.Time
 		switch this.Type {
 		case M_ME_NB_1:
 		case M_ME_TB_1:
-			if t = ParseCP24Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
+			if t, err = ParseCP24Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); err != nil {
 				return nil, ErrInvalidTimeTag
 			}
 			offset += 3
 		case M_ME_TE_1:
-			if t = ParseCP56Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
+			if t, err = ParseCP56Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); err != nil {
 				return nil, ErrInvalidTimeTag
 			}
 			offset += 7
@@ -799,16 +757,16 @@ func (this *ASDU) GetMeasuredValueFloatInfo() ([]MeasuredValueFloatInfo, error) 
 		qua := this.infoObj[offset] & 0xf1
 		offset++
 
-		var t *time.Time
+		var t time.Time
 		switch this.Type {
 		case M_ME_NC_1:
 		case M_ME_TC_1:
-			if t = ParseCP24Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
+			if t, err = ParseCP24Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); err != nil {
 				return nil, ErrInvalidTimeTag
 			}
 			offset += 3
 		case M_ME_TF_1:
-			if t = ParseCP56Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); t == nil {
+			if t, err = ParseCP56Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); err != nil {
 				return nil, ErrInvalidTimeTag
 			}
 			offset += 7
