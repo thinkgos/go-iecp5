@@ -6,10 +6,15 @@ import (
 	"time"
 )
 
-var tm0 = time.Date(2019, 6, 5, 4, 3, 0, 513000000, time.UTC)
-var tm0Serial = []byte{0x01, 0x02, 0x03, 0x04, 0x65, 0x06, 0x13}
-var tm1 = time.Date(2019, 12, 15, 14, 13, 3, 83000000, time.UTC)
-var tm1Serial = []byte{0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x0c, 0x13}
+var (
+	tm0                = time.Date(2019, 6, 5, 4, 3, 0, 513000000, time.UTC)
+	tm0CP56Time2aBytes = []byte{0x01, 0x02, 0x03, 0x04, 0x65, 0x06, 0x13}
+	tm0CP24Time2aBytes = tm0CP56Time2aBytes[:3]
+
+	tm1                = time.Date(2019, 12, 15, 14, 13, 3, 83000000, time.UTC)
+	tm1CP56Time2aBytes = []byte{0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x0c, 0x13}
+	tm1CP24Time2aBytes = tm1CP56Time2aBytes[:3]
+)
 
 func TestCP56Time2a(t *testing.T) {
 	type args struct {
@@ -21,8 +26,8 @@ func TestCP56Time2a(t *testing.T) {
 		args args
 		want []byte
 	}{
-		{"20190605", args{tm0, nil}, tm0Serial},
-		{"20191215", args{tm1, time.UTC}, tm1Serial},
+		{"20190605", args{tm0, nil}, tm0CP56Time2aBytes},
+		{"20191215", args{tm1, time.UTC}, tm1CP56Time2aBytes},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -49,8 +54,8 @@ func TestParseCP56Time2a(t *testing.T) {
 			nil},
 			time.Time{},
 			true},
-		{"20190605", args{tm0Serial, nil}, tm0, false},
-		{"20191215", args{tm1Serial, time.UTC}, tm1, false},
+		{"20190605", args{tm0CP56Time2aBytes, nil}, tm0, false},
+		{"20191215", args{tm1CP56Time2aBytes, time.UTC}, tm1, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -76,8 +81,8 @@ func TestCP24Time2a(t *testing.T) {
 		args args
 		want []byte
 	}{
-		{"3 Minutes 513 Milliseconds", args{tm0, nil}, tm0Serial[:3]},
-		{"13 Minutes 3083 Milliseconds", args{tm1, time.UTC}, tm1Serial[:3]},
+		{"3 Minutes 513 Milliseconds", args{tm0, nil}, tm0CP24Time2aBytes},
+		{"13 Minutes 3083 Milliseconds", args{tm1, time.UTC}, tm1CP24Time2aBytes},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -102,9 +107,9 @@ func TestParseCP24Time2a(t *testing.T) {
 	}{
 		{"invalid flag", args{[]byte{0x01, 0x02, 0x83}, nil},
 			0, 0, true},
-		{"3 Minutes 513 Milliseconds", args{tm0Serial[:3], nil},
+		{"3 Minutes 513 Milliseconds", args{tm0CP24Time2aBytes, nil},
 			513, 3, false},
-		{"13 Minutes 3083 Milliseconds", args{tm1Serial[:3], time.UTC},
+		{"13 Minutes 3083 Milliseconds", args{tm1CP24Time2aBytes, time.UTC},
 			3083, 13, false},
 	}
 	for _, tt := range tests {
