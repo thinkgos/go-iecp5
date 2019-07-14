@@ -137,8 +137,8 @@ func TestParseQualifierOfSetpointCmd(t *testing.T) {
 		args args
 		want QualifierOfSetpointCmd
 	}{
-		{"with selects", args{0x87}, QualifierOfSetpointCmd{7, false}},
-		{"with executes", args{0x07}, QualifierOfSetpointCmd{7, true}},
+		{"with selects", args{0x87}, QualifierOfSetpointCmd{7, true}},
+		{"with executes", args{0x07}, QualifierOfSetpointCmd{7, false}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

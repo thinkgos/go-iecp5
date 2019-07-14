@@ -258,7 +258,6 @@ func SetpointCmdFloat(c Connect, typeID TypeID, coa CauseOfTransmission, ca Comm
 type BitsString32CommandObject struct {
 	Ioa   InfoObjAddr
 	Value uint32
-	Qos   QualifierOfSetpointCmd
 	Time  time.Time
 }
 
@@ -334,8 +333,8 @@ func (this *ASDU) GetDoubleCmd() (DoubleCommandObject, error) {
 	cmd.Qoc = ParseQualifierOfCommand(value & 0xfc)
 
 	switch this.Type {
-	case C_SC_NA_1:
-	case C_SC_TA_1:
+	case C_DC_NA_1:
+	case C_DC_TA_1:
 		cmd.Time, err = ParseCP56Time2a(this.infoObj[this.InfoObjAddrSize+1:], this.InfoObjTimeZone)
 		if err != nil {
 			return cmd, ErrInvalidTimeTag
@@ -455,12 +454,11 @@ func (this *ASDU) GetBitsString32Cmd() (BitsString32CommandObject, error) {
 	}
 
 	cmd.Value = binary.LittleEndian.Uint32(this.infoObj[this.InfoObjAddrSize:])
-	cmd.Qos = ParseQualifierOfSetpointCmd(this.infoObj[this.InfoObjAddrSize+4])
 
 	switch this.Type {
-	case C_SC_NA_1:
-	case C_SC_TA_1:
-		cmd.Time, err = ParseCP56Time2a(this.infoObj[this.InfoObjAddrSize+5:], this.InfoObjTimeZone)
+	case C_BO_NA_1:
+	case C_BO_TA_1:
+		cmd.Time, err = ParseCP56Time2a(this.infoObj[this.InfoObjAddrSize+4:], this.InfoObjTimeZone)
 		if err != nil {
 			return cmd, ErrInvalidTimeTag
 		}
