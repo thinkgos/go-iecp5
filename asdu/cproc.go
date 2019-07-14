@@ -131,7 +131,7 @@ func StepCmd(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
 	return c.Send(u)
 }
 
-type SetpointNormalCommandObject struct {
+type SetpointCommandNormalObject struct {
 	Ioa   InfoObjAddr
 	Value Normalize
 	Qoc   QualifierOfSetpointCmd
@@ -141,7 +141,7 @@ type SetpointNormalCommandObject struct {
 // SetpointCmdNormal sends a type C_SE_NA_1 or C_SE_TA_1. subclass 7.3.2.4
 // 设定命令，规一化值
 func SetpointCmdNormal(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
-	cmd SetpointNormalCommandObject) error {
+	cmd SetpointCommandNormalObject) error {
 	if !(coa.Cause == Act || coa.Cause == Deact) {
 		return ErrCmdCause
 	}
@@ -171,7 +171,7 @@ func SetpointCmdNormal(c Connect, typeID TypeID, coa CauseOfTransmission, ca Com
 	return c.Send(u)
 }
 
-type SetpointScaledCommandObject struct {
+type SetpointCommandScaledObject struct {
 	Ioa   InfoObjAddr
 	Value int16
 	Qoc   QualifierOfSetpointCmd
@@ -181,7 +181,7 @@ type SetpointScaledCommandObject struct {
 // SetpointCmdScaled sends a type C_SE_NB_1 or C_SE_TB_1.  subclass 7.3.2.5
 // 设定命令,标度化值
 func SetpointCmdScaled(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
-	cmd SetpointScaledCommandObject) error {
+	cmd SetpointCommandScaledObject) error {
 	if !(coa.Cause == Act || coa.Cause == Deact) {
 		return ErrCmdCause
 	}
@@ -211,7 +211,7 @@ func SetpointCmdScaled(c Connect, typeID TypeID, coa CauseOfTransmission, ca Com
 	return c.Send(u)
 }
 
-type SetpointFloatCommandObject struct {
+type SetpointCommandFloatObject struct {
 	Ioa   InfoObjAddr
 	Value float32
 	Qos   QualifierOfSetpointCmd
@@ -221,7 +221,7 @@ type SetpointFloatCommandObject struct {
 // SetpointCmdFloat sends a type C_SE_NC_1 or C_SE_TC_1.  subclass 7.3.2.6
 // 设定命令,短浮点数
 func SetpointCmdFloat(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
-	cmd SetpointFloatCommandObject) error {
+	cmd SetpointCommandFloatObject) error {
 	if !(coa.Cause == Act || coa.Cause == Deact) {
 		return ErrCmdCause
 	}
@@ -235,6 +235,9 @@ func SetpointCmdFloat(c Connect, typeID TypeID, coa CauseOfTransmission, ca Comm
 		0,
 		ca,
 	})
+	if err := u.AppendInfoObjAddr(cmd.Ioa); err != nil {
+		return err
+	}
 
 	bits := math.Float32bits(cmd.Value)
 	u.infoObj = append(u.infoObj, byte(bits), byte(bits>>8), byte(bits>>16), byte(bits>>24), cmd.Qos.Value())
@@ -275,6 +278,9 @@ func BitsString32Cmd(c Connect, typeID TypeID, coa CauseOfTransmission, commonAd
 		0,
 		commonAddr,
 	})
+	if err := u.AppendInfoObjAddr(cmd.Ioa); err != nil {
+		return err
+	}
 
 	u.infoObj = append(u.infoObj, byte(cmd.Value), byte(cmd.Value>>8), byte(cmd.Value>>16), byte(cmd.Value>>24))
 
@@ -346,19 +352,19 @@ func (this *ASDU) GetStepCmd() (StepCommandObject, error) {
 	return cmd, nil
 }
 
-func (this *ASDU) GetSetpointNormalCmd() (SetpointNormalCommandObject, error) {
-	var cmd SetpointNormalCommandObject
+func (this *ASDU) GetSetpointNormalCmd() (SetpointCommandNormalObject, error) {
+	var cmd SetpointCommandNormalObject
 	// TODO:
 	return cmd, nil
 }
 
-func (this *ASDU) GetSetpointCmdScaled() (SetpointScaledCommandObject, error) {
-	var cmd SetpointScaledCommandObject
+func (this *ASDU) GetSetpointCmdScaled() (SetpointCommandScaledObject, error) {
+	var cmd SetpointCommandScaledObject
 	// TODO:
 	return cmd, nil
 }
-func (this *ASDU) GetSetpointFloatCmd() (SetpointFloatCommandObject, error) {
-	var cmd SetpointFloatCommandObject
+func (this *ASDU) GetSetpointFloatCmd() (SetpointCommandFloatObject, error) {
+	var cmd SetpointCommandFloatObject
 	// TODO:
 	return cmd, nil
 }

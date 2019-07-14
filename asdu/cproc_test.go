@@ -1,6 +1,7 @@
 package asdu
 
 import (
+	"math"
 	"reflect"
 	"testing"
 )
@@ -42,13 +43,19 @@ func TestSingleCmd(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
+		{"invalid type id", args{
+			newConn(nil, t),
+			0, CauseOfTransmission{Cause: Act}, 0x1234,
+			SingleCommandObject{}},
+			true},
 		{"cause not Act and Deact", args{
 			newConn(nil, t),
 			C_SC_NA_1, CauseOfTransmission{Cause: Unused}, 0x1234,
 			SingleCommandObject{}},
 			true},
 		{"C_SC_NA_1", args{
-			newConn([]byte{45, 0x01, 0x06, 0x00, 0x34, 0x12, 0x90, 0x78, 0x56, 0x05}, t),
+			newConn([]byte{byte(C_SC_NA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
+				0x90, 0x78, 0x56, 0x05}, t),
 			C_SC_NA_1, CauseOfTransmission{Cause: Act}, 0x1234,
 			SingleCommandObject{
 				0x567890,
@@ -58,10 +65,11 @@ func TestSingleCmd(t *testing.T) {
 			false},
 		{"C_SC_TA_1 CP56Time2a", args{
 			newConn(
-				append([]byte{58, 0x01, 0x06, 0x00, 0x34, 0x12, 0x90, 0x78, 0x56, 0x05}, tm0CP56Time2aBytes...), t),
+				append([]byte{byte(C_SC_TA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
+					0x90, 0x78, 0x56, 0x04}, tm0CP56Time2aBytes...), t),
 			C_SC_TA_1, CauseOfTransmission{Cause: Act}, 0x1234,
 			SingleCommandObject{
-				0x567890, true,
+				0x567890, false,
 				QualifierOfCommand{QOCShortPulse, false}, tm0}},
 			false},
 	}
@@ -87,7 +95,35 @@ func TestDoubleCmd(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{"invalid type id", args{
+			newConn(nil, t),
+			0, CauseOfTransmission{Cause: Act}, 0x1234,
+			DoubleCommandObject{}},
+			true},
+		{"cause not Act and Deact", args{
+			newConn(nil, t),
+			C_DC_NA_1, CauseOfTransmission{Cause: Unused}, 0x1234,
+			DoubleCommandObject{}},
+			true},
+		{"C_DC_NA_1", args{
+			newConn([]byte{byte(C_DC_NA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
+				0x90, 0x78, 0x56, 0x05}, t),
+			C_DC_NA_1, CauseOfTransmission{Cause: Act}, 0x1234,
+			DoubleCommandObject{
+				0x567890,
+				DCOOn,
+				QualifierOfCommand{QOCShortPulse, false},
+				tm0}},
+			false},
+		{"C_DC_TA_1 CP56Time2a", args{
+			newConn(
+				append([]byte{byte(C_DC_TA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
+					0x90, 0x78, 0x56, 0x06}, tm0CP56Time2aBytes...), t),
+			C_DC_TA_1, CauseOfTransmission{Cause: Act}, 0x1234,
+			DoubleCommandObject{
+				0x567890, DCOOff,
+				QualifierOfCommand{QOCShortPulse, false}, tm0}},
+			false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -111,7 +147,35 @@ func TestStepCmd(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{"invalid type id", args{
+			newConn(nil, t),
+			0, CauseOfTransmission{Cause: Act}, 0x1234,
+			StepCommandObject{}},
+			true},
+		{"cause not Act and Deact", args{
+			newConn(nil, t),
+			C_RC_NA_1, CauseOfTransmission{Cause: Unused}, 0x1234,
+			StepCommandObject{}},
+			true},
+		{"C_RC_NA_1", args{
+			newConn([]byte{byte(C_RC_NA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
+				0x90, 0x78, 0x56, 0x05}, t),
+			C_RC_NA_1, CauseOfTransmission{Cause: Act}, 0x1234,
+			StepCommandObject{
+				0x567890,
+				SCOStepDown,
+				QualifierOfCommand{QOCShortPulse, false},
+				tm0}},
+			false},
+		{"C_RC_NA_1 CP56Time2a", args{
+			newConn(
+				append([]byte{byte(C_RC_TA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
+					0x90, 0x78, 0x56, 0x06}, tm0CP56Time2aBytes...), t),
+			C_RC_TA_1, CauseOfTransmission{Cause: Act}, 0x1234,
+			StepCommandObject{
+				0x567890, SCOStepUP,
+				QualifierOfCommand{QOCShortPulse, false}, tm0}},
+			false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -128,14 +192,42 @@ func TestSetpointCmdNormal(t *testing.T) {
 		typeID TypeID
 		coa    CauseOfTransmission
 		ca     CommonAddr
-		cmd    SetpointNormalCommandObject
+		cmd    SetpointCommandNormalObject
 	}
 	tests := []struct {
 		name    string
 		args    args
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{"invalid type id", args{
+			newConn(nil, t),
+			0, CauseOfTransmission{Cause: Act}, 0x1234,
+			SetpointCommandNormalObject{}},
+			true},
+		{"cause not Act and Deact", args{
+			newConn(nil, t),
+			C_SE_NA_1, CauseOfTransmission{Cause: Unused}, 0x1234,
+			SetpointCommandNormalObject{}},
+			true},
+		{"C_SE_NA_1", args{
+			newConn([]byte{byte(C_SE_NA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
+				0x90, 0x78, 0x56, 0x64, 0x00, 0x01}, t),
+			C_SE_NA_1, CauseOfTransmission{Cause: Act}, 0x1234,
+			SetpointCommandNormalObject{
+				0x567890,
+				100,
+				QualifierOfSetpointCmd{1, false},
+				tm0}},
+			false},
+		{"C_SE_TA_1 CP56Time2a", args{
+			newConn(
+				append([]byte{byte(C_SE_TA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
+					0x90, 0x78, 0x56, 0x64, 0x00, 0x01}, tm0CP56Time2aBytes...), t),
+			C_SE_TA_1, CauseOfTransmission{Cause: Act}, 0x1234,
+			SetpointCommandNormalObject{
+				0x567890, 100,
+				QualifierOfSetpointCmd{1, false}, tm0}},
+			false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -152,14 +244,42 @@ func TestSetpointCmdScaled(t *testing.T) {
 		typeID TypeID
 		coa    CauseOfTransmission
 		ca     CommonAddr
-		cmd    SetpointScaledCommandObject
+		cmd    SetpointCommandScaledObject
 	}
 	tests := []struct {
 		name    string
 		args    args
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{"invalid type id", args{
+			newConn(nil, t),
+			0, CauseOfTransmission{Cause: Act}, 0x1234,
+			SetpointCommandScaledObject{}},
+			true},
+		{"cause not Act and Deact", args{
+			newConn(nil, t),
+			C_SE_NB_1, CauseOfTransmission{Cause: Unused}, 0x1234,
+			SetpointCommandScaledObject{}},
+			true},
+		{"C_SE_NB_1", args{
+			newConn([]byte{byte(C_SE_NB_1), 0x01, 0x06, 0x00, 0x34, 0x12,
+				0x90, 0x78, 0x56, 0x64, 0x00, 0x01}, t),
+			C_SE_NB_1, CauseOfTransmission{Cause: Act}, 0x1234,
+			SetpointCommandScaledObject{
+				0x567890,
+				100,
+				QualifierOfSetpointCmd{1, false},
+				tm0}},
+			false},
+		{"C_SE_TB_1 CP56Time2a", args{
+			newConn(
+				append([]byte{byte(C_SE_TB_1), 0x01, 0x06, 0x00, 0x34, 0x12,
+					0x90, 0x78, 0x56, 0x64, 0x00, 0x01}, tm0CP56Time2aBytes...), t),
+			C_SE_TB_1, CauseOfTransmission{Cause: Act}, 0x1234,
+			SetpointCommandScaledObject{
+				0x567890, 100,
+				QualifierOfSetpointCmd{1, false}, tm0}},
+			false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -171,19 +291,49 @@ func TestSetpointCmdScaled(t *testing.T) {
 }
 
 func TestSetpointCmdFloat(t *testing.T) {
+	bits := math.Float32bits(100)
+
 	type args struct {
 		c      Connect
 		typeID TypeID
 		coa    CauseOfTransmission
 		ca     CommonAddr
-		cmd    SetpointFloatCommandObject
+		cmd    SetpointCommandFloatObject
 	}
 	tests := []struct {
 		name    string
 		args    args
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{"invalid type id", args{
+			newConn(nil, t),
+			0, CauseOfTransmission{Cause: Act}, 0x1234,
+			SetpointCommandFloatObject{}},
+			true},
+		{"cause not Act and Deact", args{
+			newConn(nil, t),
+			C_SE_NC_1, CauseOfTransmission{Cause: Unused}, 0x1234,
+			SetpointCommandFloatObject{}},
+			true},
+		{"C_SE_NC_1", args{
+			newConn([]byte{byte(C_SE_NC_1), 0x01, 0x06, 0x00, 0x34, 0x12,
+				0x90, 0x78, 0x56, byte(bits), byte(bits >> 8), byte(bits >> 16), byte(bits >> 24), 0x01}, t),
+			C_SE_NC_1, CauseOfTransmission{Cause: Act}, 0x1234,
+			SetpointCommandFloatObject{
+				0x567890,
+				100,
+				QualifierOfSetpointCmd{1, false},
+				tm0}},
+			false},
+		{"C_SE_TC_1 CP56Time2a", args{
+			newConn(
+				append([]byte{byte(C_SE_TC_1), 0x01, 0x06, 0x00, 0x34, 0x12,
+					0x90, 0x78, 0x56, byte(bits), byte(bits >> 8), byte(bits >> 16), byte(bits >> 24), 0x01}, tm0CP56Time2aBytes...), t),
+			C_SE_TC_1, CauseOfTransmission{Cause: Act}, 0x1234,
+			SetpointCommandFloatObject{
+				0x567890, 100,
+				QualifierOfSetpointCmd{1, false}, tm0}},
+			false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -207,7 +357,35 @@ func TestBitsString32Cmd(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{"invalid type id", args{
+			newConn(nil, t),
+			0, CauseOfTransmission{Cause: Act}, 0x1234,
+			BitsString32CommandObject{}},
+			true},
+		{"cause not Act and Deact", args{
+			newConn(nil, t),
+			C_BO_NA_1, CauseOfTransmission{Cause: Unused}, 0x1234,
+			BitsString32CommandObject{}},
+			true},
+		{"C_BO_NA_1", args{
+			newConn([]byte{byte(C_BO_NA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
+				0x90, 0x78, 0x56, 0x64, 0x00, 0x00, 0x00}, t),
+			C_BO_NA_1, CauseOfTransmission{Cause: Act}, 0x1234,
+			BitsString32CommandObject{
+				0x567890,
+				100,
+				QualifierOfSetpointCmd{1, false},
+				tm0}},
+			false},
+		{"C_BO_TA_1 CP56Time2a", args{
+			newConn(
+				append([]byte{byte(C_BO_TA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
+					0x90, 0x78, 0x56, 0x64, 0x00, 0x00, 0x00}, tm0CP56Time2aBytes...), t),
+			C_BO_TA_1, CauseOfTransmission{Cause: Act}, 0x1234,
+			BitsString32CommandObject{
+				0x567890, 100,
+				QualifierOfSetpointCmd{1, false}, tm0}},
+			false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -333,7 +511,7 @@ func TestASDU_GetSetpointNormalCmd(t *testing.T) {
 	tests := []struct {
 		name    string
 		fields  fields
-		want    SetpointNormalCommandObject
+		want    SetpointCommandNormalObject
 		wantErr bool
 	}{
 		// TODO: Add test cases.
@@ -368,7 +546,7 @@ func TestASDU_GetSetpointCmdScaled(t *testing.T) {
 	tests := []struct {
 		name    string
 		fields  fields
-		want    SetpointScaledCommandObject
+		want    SetpointCommandScaledObject
 		wantErr bool
 	}{
 		// TODO: Add test cases.
@@ -403,7 +581,7 @@ func TestASDU_GetSetpointFloatCmd(t *testing.T) {
 	tests := []struct {
 		name    string
 		fields  fields
-		want    SetpointFloatCommandObject
+		want    SetpointCommandFloatObject
 		wantErr bool
 	}{
 		// TODO: Add test cases.

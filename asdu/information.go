@@ -370,31 +370,31 @@ const (
 	//<128..255>: 为特定使用保留
 )
 
-// CmdSetPoint is the qualifier of a set-point command qual.
+// QOSQual is the qualifier of a set-point command qual.
 // See companion standard 101, subclass 7.2.6.39.
 //	0: default
 //	0‥63: reserved for standard definitions of this companion standard (compatible range)
 //	64‥127: reserved for special use (private range)
-type CmdSetPoint uint
+type QOSQual uint
 
 // QualifierOfCommand is a  qualifier of command.
 type QualifierOfSetpointCmd struct {
-	CmdS CmdSetPoint
+	Qual QOSQual
 	// See section 5, subclass 6.8.
-	// executes(false) (or selects(true)).
-	InExec bool
+	// selects(true) (or executes(false)).
+	InSelect bool
 }
 
 func ParseQualifierOfSetpointCmd(b byte) QualifierOfSetpointCmd {
 	return QualifierOfSetpointCmd{
-		CmdS:   CmdSetPoint(b & 0x7f),
-		InExec: b&0x80 == 0,
+		Qual:     QOSQual(b & 0x7f),
+		InSelect: b&0x80 == 0x80,
 	}
 }
 
 func (this QualifierOfSetpointCmd) Value() byte {
-	v := byte(this.CmdS) & 0x7f
-	if !this.InExec {
+	v := byte(this.Qual) & 0x7f
+	if this.InSelect {
 		v |= 0x80
 	}
 	return v

@@ -176,7 +176,7 @@ func TestQualifierOfCmd_Value(t *testing.T) {
 
 func TestQualifierOfSetpointCmd_Value(t *testing.T) {
 	type fields struct {
-		CmdS   CmdSetPoint
+		CmdS   QOSQual
 		InExec bool
 	}
 	tests := []struct {
@@ -189,8 +189,8 @@ func TestQualifierOfSetpointCmd_Value(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			this := QualifierOfSetpointCmd{
-				CmdS:   tt.fields.CmdS,
-				InExec: tt.fields.InExec,
+				Qual:     tt.fields.CmdS,
+				InSelect: tt.fields.InExec,
 			}
 			if got := this.Value(); got != tt.want {
 				t.Errorf("QualifierOfSetpointCmd.Value() = %v, want %v", got, tt.want)
