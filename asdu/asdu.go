@@ -126,27 +126,6 @@ func NewASDU(p *Params, identifier Identifier) *ASDU {
 	return a
 }
 
-// ParseInfoObjAddr decodes an information object address from buf.
-// The function panics when the byte array is too small
-// or when the address size parameter is out of bounds.
-func (this *ASDU) ParseInfoObjAddraaa(buf []byte) (InfoObjAddr, error) {
-	switch this.InfoObjAddrSize {
-	case 1:
-		if len(buf) >= 1 {
-			return InfoObjAddr(buf[0]), nil
-		}
-	case 2:
-		if len(buf) >= 2 {
-			return InfoObjAddr(buf[0]) | (InfoObjAddr(buf[1]) << 8), nil
-		}
-	case 3:
-		if len(buf) >= 3 {
-			return InfoObjAddr(buf[0]) | (InfoObjAddr(buf[1]) << 8) | (InfoObjAddr(buf[2]) << 16), nil
-		}
-	}
-	return 0, ErrParam
-}
-
 // SetVariableNumber See companion standard 101, subclass 7.2.2.
 func (this *ASDU) SetVariableNumber(n int) error {
 	if n >= 128 {
