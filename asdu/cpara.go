@@ -27,7 +27,7 @@ func ParameterNormal(c Connect, coa CauseOfTransmission, ca CommonAddr,
 		0,
 		ca,
 	})
-	if err := u.AppendInfoObjAddress(p.Ioa); err != nil {
+	if err := u.AppendInfoObjAddr(p.Ioa); err != nil {
 		return err
 	}
 	u.AppendNormalize(p.Value)
@@ -60,7 +60,7 @@ func ParameterScaled(c Connect, coa CauseOfTransmission, ca CommonAddr,
 		0,
 		ca,
 	})
-	if err := u.AppendInfoObjAddress(p.Ioa); err != nil {
+	if err := u.AppendInfoObjAddr(p.Ioa); err != nil {
 		return err
 	}
 	u.AppendScaled(p.Value).AppendBytes(p.Qpm.Value())
@@ -92,7 +92,7 @@ func ParameterFloat(c Connect, coa CauseOfTransmission, ca CommonAddr,
 		0,
 		ca,
 	})
-	if err := u.AppendInfoObjAddress(p.Ioa); err != nil {
+	if err := u.AppendInfoObjAddr(p.Ioa); err != nil {
 		return err
 	}
 	u.AppendFloat32(p.Value).AppendBytes(p.Qpm.Value())
@@ -123,7 +123,7 @@ func ParameterActivation(c Connect, coa CauseOfTransmission, ca CommonAddr,
 		0,
 		ca,
 	})
-	if err := u.AppendInfoObjAddress(p.Ioa); err != nil {
+	if err := u.AppendInfoObjAddr(p.Ioa); err != nil {
 		return err
 	}
 	u.AppendBytes(byte(p.Qpa))

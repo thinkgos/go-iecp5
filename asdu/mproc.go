@@ -74,7 +74,7 @@ func Single(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 	for _, v := range attrs {
 		if !isSequence || !once {
 			once = true
-			if err := u.AppendInfoObjAddress(v.Ioa); err != nil {
+			if err := u.AppendInfoObjAddr(v.Ioa); err != nil {
 				return err
 			}
 		}
@@ -133,7 +133,7 @@ func Double(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 	for _, v := range attrs {
 		if !isSequence || !once {
 			once = true
-			if err := u.AppendInfoObjAddress(v.Ioa); err != nil {
+			if err := u.AppendInfoObjAddr(v.Ioa); err != nil {
 				return err
 			}
 		}
@@ -188,7 +188,7 @@ func Step(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 	for _, v := range attrs {
 		if !isSequence || !once {
 			once = true
-			if err := u.AppendInfoObjAddress(v.Ioa); err != nil {
+			if err := u.AppendInfoObjAddr(v.Ioa); err != nil {
 				return err
 			}
 		}
@@ -243,7 +243,7 @@ func BitString32(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmiss
 	for _, v := range attrs {
 		if !isSequence || !once {
 			once = true
-			if err := u.AppendInfoObjAddress(v.Ioa); err != nil {
+			if err := u.AppendInfoObjAddr(v.Ioa); err != nil {
 				return err
 			}
 		}
@@ -299,7 +299,7 @@ func MeasuredValueNormal(c Connect, typeID TypeID, isSequence bool, coa CauseOfT
 	for _, v := range attrs {
 		if !isSequence || !once {
 			once = true
-			if err := u.AppendInfoObjAddress(v.Ioa); err != nil {
+			if err := u.AppendInfoObjAddr(v.Ioa); err != nil {
 				return err
 			}
 		}
@@ -355,7 +355,7 @@ func MeasuredValueScaled(c Connect, typeID TypeID, isSequence bool, coa CauseOfT
 	for _, v := range attrs {
 		if !isSequence || !once {
 			once = true
-			if err := u.AppendInfoObjAddress(v.Ioa); err != nil {
+			if err := u.AppendInfoObjAddr(v.Ioa); err != nil {
 				return err
 			}
 		}
@@ -409,7 +409,7 @@ func MeasuredValueFloat(c Connect, typeID TypeID, isSequence bool, coa CauseOfTr
 	for _, v := range attrs {
 		if !isSequence || !once {
 			once = true
-			if err := u.AppendInfoObjAddress(v.Ioa); err != nil {
+			if err := u.AppendInfoObjAddr(v.Ioa); err != nil {
 				return err
 			}
 		}

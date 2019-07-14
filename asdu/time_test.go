@@ -49,11 +49,13 @@ func TestParseCP56Time2a(t *testing.T) {
 		want    time.Time
 		wantErr bool
 	}{
-		{"invalid flag", args{
-			[]byte{0x01, 0x02, 0x83, 0x04, 0x65, 0x06, 0x13},
-			nil},
+		{
+			"invalid flag", args{
+				[]byte{0x01, 0x02, 0x83, 0x04, 0x65, 0x06, 0x13},
+				nil},
 			time.Time{},
-			true},
+			true,
+		},
 		{"20190605", args{tm0CP56Time2aBytes, nil}, tm0, false},
 		{"20191215", args{tm1CP56Time2aBytes, time.UTC}, tm1, false},
 	}
@@ -105,12 +107,27 @@ func TestParseCP24Time2a(t *testing.T) {
 		wantMin  int
 		wantErr  bool
 	}{
-		{"invalid flag", args{[]byte{0x01, 0x02, 0x83}, nil},
-			0, 0, true},
-		{"3 Minutes 513 Milliseconds", args{tm0CP24Time2aBytes, nil},
-			513, 3, false},
-		{"13 Minutes 3083 Milliseconds", args{tm1CP24Time2aBytes, time.UTC},
-			3083, 13, false},
+		{
+			"invalid flag",
+			args{[]byte{0x01, 0x02, 0x83}, nil},
+			0,
+			0,
+			true,
+		},
+		{
+			"3 Minutes 513 Milliseconds",
+			args{tm0CP24Time2aBytes, nil},
+			513,
+			3,
+			false,
+		},
+		{
+			"13 Minutes 3083 Milliseconds",
+			args{tm1CP24Time2aBytes, time.UTC},
+			3083,
+			13,
+			false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

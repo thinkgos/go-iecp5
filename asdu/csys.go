@@ -27,7 +27,7 @@ func InterrogationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 		0,
 		ca,
 	})
-	if err := u.AppendInfoObjAddress(InfoObjIrrelevantAddr); err != nil {
+	if err := u.AppendInfoObjAddr(InfoObjIrrelevantAddr); err != nil {
 		return err
 	}
 	u.AppendBytes(byte(qoi))
@@ -53,7 +53,7 @@ func QuantityInterrogationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 		0,
 		ca,
 	})
-	if err := u.AppendInfoObjAddress(InfoObjIrrelevantAddr); err != nil {
+	if err := u.AppendInfoObjAddr(InfoObjIrrelevantAddr); err != nil {
 		return err
 	}
 	u.AppendBytes(qcc.Value())
@@ -80,7 +80,7 @@ func ReadCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 		0,
 		ca,
 	})
-	if err := u.AppendInfoObjAddress(ioa); err != nil {
+	if err := u.AppendInfoObjAddr(ioa); err != nil {
 		return err
 	}
 	return c.Send(u)
@@ -105,7 +105,7 @@ func ClockSynchronizationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 		0,
 		ca,
 	})
-	if err := u.AppendInfoObjAddress(InfoObjIrrelevantAddr); err != nil {
+	if err := u.AppendInfoObjAddr(InfoObjIrrelevantAddr); err != nil {
 		return err
 	}
 	u.AppendBytes(CP56Time2a(t, u.InfoObjTimeZone)...)
@@ -130,7 +130,7 @@ func TestCommand(c Connect, coa CauseOfTransmission, ca CommonAddr) error {
 		0,
 		ca,
 	})
-	if err := u.AppendInfoObjAddress(InfoObjIrrelevantAddr); err != nil {
+	if err := u.AppendInfoObjAddr(InfoObjIrrelevantAddr); err != nil {
 		return err
 	}
 	u.AppendBytes(byte(FBPTestWord&0xff), byte(FBPTestWord>>8))
@@ -156,7 +156,7 @@ func ResetProcessCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 		0,
 		ca,
 	})
-	if err := u.AppendInfoObjAddress(InfoObjIrrelevantAddr); err != nil {
+	if err := u.AppendInfoObjAddr(InfoObjIrrelevantAddr); err != nil {
 		return err
 	}
 	u.AppendBytes(byte(qrp))
@@ -182,7 +182,7 @@ func DelayAcquireCommand(c Connect, coa CauseOfTransmission, ca CommonAddr,
 		0,
 		ca,
 	})
-	if err := u.AppendInfoObjAddress(InfoObjIrrelevantAddr); err != nil {
+	if err := u.AppendInfoObjAddr(InfoObjIrrelevantAddr); err != nil {
 		return err
 	}
 	u.AppendBytes(CP16Time2a(msec)...)

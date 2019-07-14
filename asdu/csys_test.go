@@ -24,9 +24,9 @@ func TestInterrogationCmd(t *testing.T) {
 				newConn(nil, t),
 				CauseOfTransmission{Cause: Unused},
 				0x1234,
-				QOIInro1,
-			},
-			true},
+				QOIInro1},
+			true,
+		},
 		{
 			"C_IC_NA_1",
 			args{
@@ -34,9 +34,9 @@ func TestInterrogationCmd(t *testing.T) {
 					0x00, 0x00, 0x00, 21}, t),
 				CauseOfTransmission{Cause: Act},
 				0x1234,
-				QOIInro1,
-			},
-			false},
+				QOIInro1},
+			false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -65,9 +65,9 @@ func TestQuantityInterrogationCmd(t *testing.T) {
 				newConn(nil, t),
 				CauseOfTransmission{Cause: Unused},
 				0x1234,
-				QualifierCountCall{QCCGroup1, QCCFzeRead},
-			},
-			true},
+				QualifierCountCall{QCCGroup1, QCCFzeRead}},
+			true,
+		},
 		{
 			"C_CI_NA_1",
 			args{
@@ -75,9 +75,9 @@ func TestQuantityInterrogationCmd(t *testing.T) {
 					0x00, 0x00, 0x00, 0x01}, t),
 				CauseOfTransmission{Cause: Act},
 				0x1234,
-				QualifierCountCall{QCCGroup1, QCCFzeRead},
-			},
-			false},
+				QualifierCountCall{QCCGroup1, QCCFzeRead}},
+			false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -106,9 +106,9 @@ func TestReadCmd(t *testing.T) {
 				newConn(nil, t),
 				CauseOfTransmission{Cause: Unused},
 				0x1234,
-				0x567890,
-			},
-			true},
+				0x567890},
+			true,
+		},
 		{
 			"C_RD_NA_1",
 			args{
@@ -116,9 +116,9 @@ func TestReadCmd(t *testing.T) {
 					0x90, 0x78, 0x56}, t),
 				CauseOfTransmission{Cause: Req},
 				0x1234,
-				0x567890,
-			},
-			false},
+				0x567890},
+			false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -147,9 +147,9 @@ func TestClockSynchronizationCmd(t *testing.T) {
 				newConn(nil, t),
 				CauseOfTransmission{Cause: Unused},
 				0x1234,
-				time.Time{},
-			},
-			true},
+				time.Time{}},
+			true,
+		},
 		{
 			"C_CS_NA_1",
 			args{
@@ -157,9 +157,9 @@ func TestClockSynchronizationCmd(t *testing.T) {
 					0x00, 0x00, 0x00}, tm0CP56Time2aBytes...), t),
 				CauseOfTransmission{Cause: Act},
 				0x1234,
-				tm0,
-			},
-			false},
+				tm0},
+			false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -186,18 +186,18 @@ func TestTestCommand(t *testing.T) {
 			args{
 				newConn(nil, t),
 				CauseOfTransmission{Cause: Unused},
-				0x1234,
-			},
-			true},
+				0x1234},
+			true,
+		},
 		{
 			"C_TS_NA_1",
 			args{
 				newConn([]byte{byte(C_TS_NA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
 					0x00, 0x00, 0x00, 0xaa, 0x55}, t),
 				CauseOfTransmission{Cause: Act},
-				0x1234,
-			},
-			false},
+				0x1234},
+			false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -226,9 +226,9 @@ func TestResetProcessCmd(t *testing.T) {
 				newConn(nil, t),
 				CauseOfTransmission{Cause: Unused},
 				0x1234,
-				QPRTotal,
-			},
-			true},
+				QPRTotal},
+			true,
+		},
 		{
 			"C_RP_NA_1",
 			args{
@@ -236,9 +236,9 @@ func TestResetProcessCmd(t *testing.T) {
 					0x00, 0x00, 0x00, 0x01}, t),
 				CauseOfTransmission{Cause: Act},
 				0x1234,
-				QPRTotal,
-			},
-			false},
+				QPRTotal},
+			false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -267,9 +267,9 @@ func TestDelayAcquireCommand(t *testing.T) {
 				newConn(nil, t),
 				CauseOfTransmission{Cause: Unused},
 				0x1234,
-				10000,
-			},
-			true},
+				10000},
+			true,
+		},
 		{
 			"C_CD_NA_1",
 			args{
@@ -277,9 +277,9 @@ func TestDelayAcquireCommand(t *testing.T) {
 					0x00, 0x00, 0x00, 0x10, 0x27}, t),
 				CauseOfTransmission{Cause: Act},
 				0x1234,
-				10000,
-			},
-			false},
+				10000},
+			false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -302,10 +302,9 @@ func TestASDU_GetInterrogationCmd(t *testing.T) {
 	}{
 		{
 			"C_IC_NA_1",
-			fields{
-				ParamsWide,
-				[]byte{0x00, 0x00, 0x00, 21}},
-			QOIInro1},
+			fields{ParamsWide, []byte{0x00, 0x00, 0x00, 21}},
+			QOIInro1,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -332,10 +331,9 @@ func TestASDU_GetQuantityInterrogationCmd(t *testing.T) {
 	}{
 		{
 			"C_CI_NA_1",
-			fields{
-				ParamsWide,
-				[]byte{0x00, 0x00, 0x00, 0x01}},
-			QualifierCountCall{QCCGroup1, QCCFzeRead}},
+			fields{ParamsWide, []byte{0x00, 0x00, 0x00, 0x01}},
+			QualifierCountCall{QCCGroup1, QCCFzeRead},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -362,10 +360,9 @@ func TestASDU_GetReadCmd(t *testing.T) {
 	}{
 		{
 			"C_RD_NA_1",
-			fields{
-				ParamsWide,
-				[]byte{0x90, 0x78, 0x56}},
-			0x567890},
+			fields{ParamsWide, []byte{0x90, 0x78, 0x56}},
+			0x567890,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -394,11 +391,10 @@ func TestASDU_GetClockSynchronizationCmd(t *testing.T) {
 	}{
 		{
 			"C_CS_NA_1",
-			fields{
-				ParamsWide,
-				append([]byte{0x00, 0x00, 0x00}, tm0CP56Time2aBytes...)},
+			fields{ParamsWide, append([]byte{0x00, 0x00, 0x00}, tm0CP56Time2aBytes...)},
 			tm0,
-			false},
+			false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -430,10 +426,9 @@ func TestASDU_GetTestCommand(t *testing.T) {
 	}{
 		{
 			"C_CS_NA_1",
-			fields{
-				ParamsWide,
-				[]byte{0x00, 0x00, 0x00, 0xaa, 0x55}},
-			true},
+			fields{ParamsWide, []byte{0x00, 0x00, 0x00, 0xaa, 0x55}},
+			true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -460,10 +455,9 @@ func TestASDU_GetResetProcessCmd(t *testing.T) {
 	}{
 		{
 			"C_RP_NA_1",
-			fields{
-				ParamsWide,
-				[]byte{0x00, 0x00, 0x00, 0x01}},
-			QPRTotal},
+			fields{ParamsWide, []byte{0x00, 0x00, 0x00, 0x01}},
+			QPRTotal,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -490,10 +484,9 @@ func TestASDU_GetDelayAcquireCommand(t *testing.T) {
 	}{
 		{
 			"C_CD_NA_1",
-			fields{
-				ParamsWide,
-				[]byte{0x00, 0x00, 0x00, 0x10, 0x27}},
-			10000},
+			fields{ParamsWide, []byte{0x00, 0x00, 0x00, 0x10, 0x27}},
+			10000,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

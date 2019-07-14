@@ -32,7 +32,7 @@ func SingleCmd(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
 		ca,
 	})
 
-	if err := u.AppendInfoObjAddress(cmd.Ioa); err != nil {
+	if err := u.AppendInfoObjAddr(cmd.Ioa); err != nil {
 		return err
 	}
 	value := cmd.Qoc.Value()
@@ -75,7 +75,7 @@ func DoubleCmd(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
 		ca,
 	})
 
-	if err := u.AppendInfoObjAddress(cmd.Ioa); err != nil {
+	if err := u.AppendInfoObjAddr(cmd.Ioa); err != nil {
 		return err
 	}
 
@@ -115,7 +115,7 @@ func StepCmd(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
 		ca,
 	})
 
-	if err := u.AppendInfoObjAddress(cmd.Ioa); err != nil {
+	if err := u.AppendInfoObjAddr(cmd.Ioa); err != nil {
 		return err
 	}
 
@@ -155,7 +155,7 @@ func SetpointCmdNormal(c Connect, typeID TypeID, coa CauseOfTransmission, ca Com
 		ca,
 	})
 
-	if err := u.AppendInfoObjAddress(cmd.Ioa); err != nil {
+	if err := u.AppendInfoObjAddr(cmd.Ioa); err != nil {
 		return err
 	}
 	u.AppendNormalize(cmd.Value).AppendBytes(cmd.Qos.Value())
@@ -194,7 +194,7 @@ func SetpointCmdScaled(c Connect, typeID TypeID, coa CauseOfTransmission, ca Com
 		ca,
 	})
 
-	if err := u.AppendInfoObjAddress(cmd.Ioa); err != nil {
+	if err := u.AppendInfoObjAddr(cmd.Ioa); err != nil {
 		return err
 	}
 	u.AppendScaled(cmd.Value).AppendBytes(cmd.Qos.Value())
@@ -232,7 +232,7 @@ func SetpointCmdFloat(c Connect, typeID TypeID, coa CauseOfTransmission, ca Comm
 		0,
 		ca,
 	})
-	if err := u.AppendInfoObjAddress(cmd.Ioa); err != nil {
+	if err := u.AppendInfoObjAddr(cmd.Ioa); err != nil {
 		return err
 	}
 
@@ -272,7 +272,7 @@ func BitsString32Cmd(c Connect, typeID TypeID, coa CauseOfTransmission, commonAd
 		0,
 		commonAddr,
 	})
-	if err := u.AppendInfoObjAddress(cmd.Ioa); err != nil {
+	if err := u.AppendInfoObjAddr(cmd.Ioa); err != nil {
 		return err
 	}
 

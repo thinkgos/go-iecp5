@@ -15,7 +15,7 @@ func (this *ASDU) DecodeByte() byte {
 	this.infoObj = this.infoObj[1:]
 	return v
 }
-func (this *ASDU) AppendInfoObjAddress(addr InfoObjAddr) error {
+func (this *ASDU) AppendInfoObjAddr(addr InfoObjAddr) error {
 	switch this.InfoObjAddrSize {
 	case 1:
 		if addr > 255 {

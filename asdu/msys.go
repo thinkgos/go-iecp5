@@ -19,7 +19,7 @@ func EndOfInitialization(c Connect, coa CauseOfTransmission, ca CommonAddr,
 		ca,
 	})
 
-	if err := u.AppendInfoObjAddress(ioa); err != nil {
+	if err := u.AppendInfoObjAddr(ioa); err != nil {
 		return err
 	}
 	u.AppendBytes(coi.Value())
