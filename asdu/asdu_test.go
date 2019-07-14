@@ -215,51 +215,131 @@ func TestASDU_MarshalBinary(t *testing.T) {
 		wantData []byte
 		wantErr  bool
 	}{
-		{"unused cause", fields{
-			ParamsNarrow,
-			Identifier{M_SP_NA_1, VariableStruct{}, CauseOfTransmission{Cause: Unused}, 0, 0x80},
+		{
+			"unused cause",
+			fields{
+				ParamsNarrow,
+				Identifier{
+					M_SP_NA_1,
+					VariableStruct{},
+					CauseOfTransmission{Cause: Unused},
+					0,
+					0x80},
+				nil},
 			nil,
-		}, nil, true},
-		{"invalid cause size", fields{
-			&Params{CauseSize: 0, CommonAddrSize: 1, InfoObjAddrSize: 1, InfoObjTimeZone: time.UTC},
-			Identifier{M_SP_NA_1, VariableStruct{}, CauseOfTransmission{Cause: Act}, 0, 0x80},
+			true,
+		},
+		{
+			"invalid cause size",
+			fields{
+				&Params{CauseSize: 0, CommonAddrSize: 1, InfoObjAddrSize: 1, InfoObjTimeZone: time.UTC},
+				Identifier{
+					M_SP_NA_1,
+					VariableStruct{},
+					CauseOfTransmission{Cause: Act},
+					0,
+					0x80},
+				nil},
 			nil,
-		}, nil, true},
-		{"cause size(1),but origAddress not equal zero", fields{
-			&Params{CauseSize: 1, CommonAddrSize: 1, InfoObjAddrSize: 1, InfoObjTimeZone: time.UTC},
-			Identifier{M_SP_NA_1, VariableStruct{}, CauseOfTransmission{Cause: Act}, 1, 0x80},
+			true,
+		},
+		{
+			"cause size(1),but origAddress not equal zero",
+			fields{
+				&Params{CauseSize: 1, CommonAddrSize: 1, InfoObjAddrSize: 1, InfoObjTimeZone: time.UTC},
+				Identifier{
+					M_SP_NA_1,
+					VariableStruct{},
+					CauseOfTransmission{Cause: Act},
+					1,
+					0x80},
+				nil},
 			nil,
-		}, nil, true},
-		{"invalid common address", fields{
-			&Params{CauseSize: 1, CommonAddrSize: 1, InfoObjAddrSize: 1, InfoObjTimeZone: time.UTC},
-			Identifier{M_SP_NA_1, VariableStruct{}, CauseOfTransmission{Cause: Act}, 0, InvalidCommonAddr},
+			true,
+		},
+		{
+			"invalid common address",
+			fields{
+				&Params{CauseSize: 1, CommonAddrSize: 1, InfoObjAddrSize: 1, InfoObjTimeZone: time.UTC},
+				Identifier{
+					M_SP_NA_1,
+					VariableStruct{},
+					CauseOfTransmission{Cause: Act},
+					0,
+					InvalidCommonAddr},
+				nil},
 			nil,
-		}, nil, true},
-		{"invalid common address size", fields{
-			&Params{CauseSize: 1, CommonAddrSize: 0, InfoObjAddrSize: 1, InfoObjTimeZone: time.UTC},
-			Identifier{M_SP_NA_1, VariableStruct{}, CauseOfTransmission{Cause: Act}, 0, 0x80},
+			true},
+		{
+			"invalid common address size",
+			fields{
+				&Params{CauseSize: 1, CommonAddrSize: 0, InfoObjAddrSize: 1, InfoObjTimeZone: time.UTC},
+				Identifier{
+					M_SP_NA_1,
+					VariableStruct{},
+					CauseOfTransmission{Cause: Act},
+					0,
+					0x80},
+				nil},
 			nil,
-		}, nil, true},
-		{"common size(1),but common address equal 255", fields{
-			&Params{CauseSize: 1, CommonAddrSize: 1, InfoObjAddrSize: 1, InfoObjTimeZone: time.UTC},
-			Identifier{M_SP_NA_1, VariableStruct{}, CauseOfTransmission{Cause: Act}, 0, 255},
+			true,
+		},
+		{
+			"common size(1),but common address equal 255",
+			fields{
+				&Params{CauseSize: 1, CommonAddrSize: 1, InfoObjAddrSize: 1, InfoObjTimeZone: time.UTC},
+				Identifier{
+					M_SP_NA_1,
+					VariableStruct{},
+					CauseOfTransmission{Cause: Act},
+					0,
+					255},
+				nil},
 			nil,
-		}, nil, true},
-		{"ParamsNarrow", fields{
-			ParamsNarrow,
-			Identifier{M_SP_NA_1, VariableStruct{Number: 1}, CauseOfTransmission{Cause: Act}, 0, 0x80},
-			[]byte{0x00, 0x01, 0x02, 0x03},
-		}, []byte{0x01, 0x01, 0x06, 0x80, 0x00, 0x01, 0x02, 0x03}, false},
-		{"ParamsNarrow global address", fields{
-			ParamsNarrow,
-			Identifier{M_SP_NA_1, VariableStruct{Number: 1}, CauseOfTransmission{Cause: Act}, 0, GlobalCommonAddr},
-			[]byte{0x00, 0x01, 0x02, 0x03},
-		}, []byte{0x01, 0x01, 0x06, 0xff, 0x00, 0x01, 0x02, 0x03}, false},
-		{"ParamsWide", fields{
-			ParamsWide,
-			Identifier{M_SP_NA_1, VariableStruct{Number: 1}, CauseOfTransmission{Cause: Act}, 0, 0x6080},
-			[]byte{0x00, 0x01, 0x02, 0x03},
-		}, []byte{0x01, 0x01, 0x06, 0x00, 0x80, 0x60, 0x00, 0x01, 0x02, 0x03}, false},
+			true,
+		},
+		{
+			"ParamsNarrow",
+			fields{
+				ParamsNarrow,
+				Identifier{
+					M_SP_NA_1,
+					VariableStruct{Number: 1},
+					CauseOfTransmission{Cause: Act},
+					0,
+					0x80},
+				[]byte{0x00, 0x01, 0x02, 0x03}},
+			[]byte{0x01, 0x01, 0x06, 0x80, 0x00, 0x01, 0x02, 0x03},
+			false,
+		},
+		{
+			"ParamsNarrow global address",
+			fields{
+				ParamsNarrow,
+				Identifier{
+					M_SP_NA_1,
+					VariableStruct{Number: 1},
+					CauseOfTransmission{Cause: Act},
+					0,
+					GlobalCommonAddr},
+				[]byte{0x00, 0x01, 0x02, 0x03}},
+			[]byte{0x01, 0x01, 0x06, 0xff, 0x00, 0x01, 0x02, 0x03},
+			false,
+		},
+		{
+			"ParamsWide",
+			fields{
+				ParamsWide,
+				Identifier{
+					M_SP_NA_1,
+					VariableStruct{Number: 1},
+					CauseOfTransmission{Cause: Act},
+					0,
+					0x6080},
+				[]byte{0x00, 0x01, 0x02, 0x03}},
+			[]byte{0x01, 0x01, 0x06, 0x00, 0x80, 0x60, 0x00, 0x01, 0x02, 0x03},
+			false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -289,21 +369,56 @@ func TestASDU_UnmarshalBinary(t *testing.T) {
 		want    []byte
 		wantErr bool
 	}{
-		{"invalid param", &Params{}, args{}, // 125
-			[]byte{}, true},
-		{"less than data unit identifier size", ParamsWide, args{[]byte{0x0b, 0x01, 0x06, 0x80}},
-			[]byte{}, true},
-		{"type id fix size error", ParamsWide, args{[]byte{0x07d, 0x01, 0x06, 0x00, 0x80, 0x60}},
-			[]byte{}, true},
+		{
+			"invalid param",
+			&Params{},
+			args{}, // 125
+			[]byte{},
+			true,
+		},
+		{
+			"less than data unit identifier size",
+			ParamsWide,
+			args{[]byte{0x0b, 0x01, 0x06, 0x80}},
+			[]byte{},
+			true,
+		},
+		{
+			"type id fix size error",
+			ParamsWide,
+			args{[]byte{0x07d, 0x01, 0x06, 0x00, 0x80, 0x60}},
+			[]byte{},
+			true,
+		},
 
-		{"ParamsNarrow global address", ParamsNarrow, args{[]byte{0x0b, 0x01, 0x06, 0x80, 0x00, 0x01, 0x02, 0x03}},
-			[]byte{0x00, 0x01, 0x02, 0x03}, false},
-		{"ParamsNarrow", ParamsNarrow, args{[]byte{0x0b, 0x01, 0x06, 0xff, 0x00, 0x01, 0x02, 0x03}},
-			[]byte{0x00, 0x01, 0x02, 0x03}, false},
-		{"ParamsWide", ParamsWide, args{[]byte{0x01, 0x01, 0x06, 0x00, 0x80, 0x60, 0x00, 0x01, 0x02, 0x03}},
-			[]byte{0x00, 0x01, 0x02, 0x03}, false},
-		{"ParamsWide sequence", ParamsWide, args{[]byte{0x01, 0x81, 0x06, 0x00, 0x80, 0x60, 0x00, 0x01, 0x02, 0x03}},
-			[]byte{0x00, 0x01, 0x02, 0x03}, false},
+		{
+			"ParamsNarrow global address",
+			ParamsNarrow,
+			args{[]byte{0x0b, 0x01, 0x06, 0x80, 0x00, 0x01, 0x02, 0x03}},
+			[]byte{0x00, 0x01, 0x02, 0x03},
+			false,
+		},
+		{
+			"ParamsNarrow",
+			ParamsNarrow,
+			args{[]byte{0x0b, 0x01, 0x06, 0xff, 0x00, 0x01, 0x02, 0x03}},
+			[]byte{0x00, 0x01, 0x02, 0x03},
+			false,
+		},
+		{
+			"ParamsWide",
+			ParamsWide,
+			args{[]byte{0x01, 0x01, 0x06, 0x00, 0x80, 0x60, 0x00, 0x01, 0x02, 0x03}},
+			[]byte{0x00, 0x01, 0x02, 0x03},
+			false,
+		},
+		{
+			"ParamsWide sequence",
+			ParamsWide,
+			args{[]byte{0x01, 0x81, 0x06, 0x00, 0x80, 0x60, 0x00, 0x01, 0x02, 0x03}},
+			[]byte{0x00, 0x01, 0x02, 0x03},
+			false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

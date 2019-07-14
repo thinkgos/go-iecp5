@@ -62,9 +62,18 @@ func Test_newIFrame(t *testing.T) {
 		want    []byte
 		wantErr bool
 	}{
-		{"asdu out of range", args{asdu: make([]byte, 250)}, nil, true},
-		{"asdu right", args{[]byte{0x01, 0x02}, 0x06, 0x07},
-			[]byte{startFrame, 0x06, 0x0c, 0x00, 0x0e, 0x00, 0x01, 0x02}, false},
+		{
+			"asdu out of range",
+			args{asdu: make([]byte, 250)},
+			nil,
+			true,
+		},
+		{
+			"asdu right",
+			args{[]byte{0x01, 0x02}, 0x06, 0x07},
+			[]byte{startFrame, 0x06, 0x0c, 0x00, 0x0e, 0x00, 0x01, 0x02},
+			false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -130,8 +139,12 @@ func Test_parse(t *testing.T) {
 		want  APCI
 		want1 []byte
 	}{
-		{"", args{[]byte{startFrame, 0x04, 0x13, 0x00, 0x00, 0x00}},
-			APCI{startFrame, 0x04, 0x13, 0x00, 0x00, 0x00}, []byte{}},
+		{
+			"",
+			args{[]byte{startFrame, 0x04, 0x13, 0x00, 0x00, 0x00}},
+			APCI{startFrame, 0x04, 0x13, 0x00, 0x00, 0x00},
+			[]byte{},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
