@@ -126,34 +126,10 @@ func NewASDU(p *Params, identifier Identifier) *ASDU {
 	return a
 }
 
-// AppendInfoObjAddr appends an information object address to Info.
-func (this *ASDU) AppendInfoObjAddr(addr InfoObjAddr) error {
-	switch this.InfoObjAddrSize {
-	case 1:
-		if addr > 255 {
-			return ErrInfoObjAddrFit
-		}
-		this.infoObj = append(this.infoObj, byte(addr))
-	case 2:
-		if addr > 65535 {
-			return ErrInfoObjAddrFit
-		}
-		this.infoObj = append(this.infoObj, byte(addr), byte(addr>>8))
-	case 3:
-		if addr > 16777215 {
-			return ErrInfoObjAddrFit
-		}
-		this.infoObj = append(this.infoObj, byte(addr), byte(addr>>8), byte(addr>>16))
-	default:
-		return ErrParam
-	}
-	return nil
-}
-
 // ParseInfoObjAddr decodes an information object address from buf.
 // The function panics when the byte array is too small
 // or when the address size parameter is out of bounds.
-func (this *ASDU) ParseInfoObjAddr(buf []byte) (InfoObjAddr, error) {
+func (this *ASDU) ParseInfoObjAddraaa(buf []byte) (InfoObjAddr, error) {
 	switch this.InfoObjAddrSize {
 	case 1:
 		if len(buf) >= 1 {
@@ -171,9 +147,9 @@ func (this *ASDU) ParseInfoObjAddr(buf []byte) (InfoObjAddr, error) {
 	return 0, ErrParam
 }
 
-// IncVariableNumber See companion standard 101, subclass 7.2.2.
-func (this *ASDU) IncVariableNumber(n int) error {
-	if n += int(this.Variable.Number); n >= 128 {
+// SetVariableNumber See companion standard 101, subclass 7.2.2.
+func (this *ASDU) SetVariableNumber(n int) error {
+	if n >= 128 {
 		return ErrInfoObjIndexFit
 	}
 	this.Variable.Number = byte(n)

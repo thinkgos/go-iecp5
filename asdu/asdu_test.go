@@ -136,67 +136,7 @@ func TestParams_IdentifierSize(t *testing.T) {
 	}
 }
 
-func TestASDU_AppendInfoObjAddr(t *testing.T) {
-	type args struct {
-		addr InfoObjAddr
-	}
-	tests := []struct {
-		name    string
-		this    *ASDU
-		args    args
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.this.AppendInfoObjAddr(tt.args.addr); (err != nil) != tt.wantErr {
-				t.Errorf("ASDU.AppendInfoObjAddr() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestASDU_ParseInfoObjAddr(t *testing.T) {
-	type fields struct {
-		Params     *Params
-		Identifier Identifier
-		InfoObj    []byte
-		bootstrap  [ASDUSizeMax]byte
-	}
-	type args struct {
-		buf []byte
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    InfoObjAddr
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			this := &ASDU{
-				Params:     tt.fields.Params,
-				Identifier: tt.fields.Identifier,
-				infoObj:    tt.fields.InfoObj,
-				bootstrap:  tt.fields.bootstrap,
-			}
-			got, err := this.ParseInfoObjAddr(tt.args.buf)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ASDU.ParseInfoObjAddr() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("ASDU.ParseInfoObjAddr() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestASDU_IncVariableNumber(t *testing.T) {
+func TestASDU_SetVariableNumber(t *testing.T) {
 	type fields struct {
 		Params     *Params
 		Identifier Identifier
@@ -222,8 +162,8 @@ func TestASDU_IncVariableNumber(t *testing.T) {
 				infoObj:    tt.fields.InfoObj,
 				bootstrap:  tt.fields.bootstrap,
 			}
-			if err := this.IncVariableNumber(tt.args.n); (err != nil) != tt.wantErr {
-				t.Errorf("ASDU.IncVariableNumber() error = %v, wantErr %v", err, tt.wantErr)
+			if err := this.SetVariableNumber(tt.args.n); (err != nil) != tt.wantErr {
+				t.Errorf("ASDU.SetVariableNumber() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

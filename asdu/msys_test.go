@@ -49,14 +49,13 @@ func TestASDU_GetEndOfInitialization(t *testing.T) {
 		infoObj []byte
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		want    InfoObjAddr
-		want1   CauseOfInitial
-		wantErr bool
+		name   string
+		fields fields
+		want   InfoObjAddr
+		want1  CauseOfInitial
 	}{
 		{"", fields{ParamsWide, []byte{0x90, 0x78, 0x56, 0x01}},
-			0x567890, CauseOfInitial{COIlocalHandReset, false}, false},
+			0x567890, CauseOfInitial{COIlocalHandReset, false}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -64,11 +63,7 @@ func TestASDU_GetEndOfInitialization(t *testing.T) {
 				Params:  tt.fields.Params,
 				infoObj: tt.fields.infoObj,
 			}
-			got, got1, err := this.GetEndOfInitialization()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ASDU.GetEndOfInitialization() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			got, got1 := this.GetEndOfInitialization()
 			if got != tt.want {
 				t.Errorf("ASDU.GetEndOfInitialization() got = %v, want %v", got, tt.want)
 			}

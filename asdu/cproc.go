@@ -1,8 +1,6 @@
 package asdu
 
 import (
-	"encoding/binary"
-	"math"
 	"time"
 )
 
@@ -34,18 +32,18 @@ func SingleCmd(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
 		ca,
 	})
 
-	if err := u.AppendInfoObjAddr(cmd.Ioa); err != nil {
+	if err := u.AppendInfoObjAddress(cmd.Ioa); err != nil {
 		return err
 	}
 	value := cmd.Qoc.Value()
 	if cmd.Value {
 		value |= 0x01
 	}
-	u.infoObj = append(u.infoObj, value)
+	u.AppendBytes(value)
 	switch typeID {
 	case C_SC_NA_1:
 	case C_SC_TA_1:
-		u.infoObj = append(u.infoObj, CP56Time2a(cmd.Time, u.InfoObjTimeZone)...)
+		u.AppendBytes(CP56Time2a(cmd.Time, u.InfoObjTimeZone)...)
 	default:
 		return ErrTypeIDNotMatch
 	}
@@ -77,15 +75,15 @@ func DoubleCmd(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
 		ca,
 	})
 
-	if err := u.AppendInfoObjAddr(cmd.Ioa); err != nil {
+	if err := u.AppendInfoObjAddress(cmd.Ioa); err != nil {
 		return err
 	}
 
-	u.infoObj = append(u.infoObj, cmd.Qoc.Value()|byte(cmd.Value&0x03))
+	u.AppendBytes(cmd.Qoc.Value() | byte(cmd.Value&0x03))
 	switch typeID {
 	case C_DC_NA_1:
 	case C_DC_TA_1:
-		u.infoObj = append(u.infoObj, CP56Time2a(cmd.Time, u.InfoObjTimeZone)...)
+		u.AppendBytes(CP56Time2a(cmd.Time, u.InfoObjTimeZone)...)
 	default:
 		return ErrTypeIDNotMatch
 	}
@@ -117,15 +115,15 @@ func StepCmd(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
 		ca,
 	})
 
-	if err := u.AppendInfoObjAddr(cmd.Ioa); err != nil {
+	if err := u.AppendInfoObjAddress(cmd.Ioa); err != nil {
 		return err
 	}
 
-	u.infoObj = append(u.infoObj, cmd.Qoc.Value()|byte(cmd.Value&0x03))
+	u.AppendBytes(cmd.Qoc.Value() | byte(cmd.Value&0x03))
 	switch typeID {
 	case C_RC_NA_1:
 	case C_RC_TA_1:
-		u.infoObj = append(u.infoObj, CP56Time2a(cmd.Time, u.InfoObjTimeZone)...)
+		u.AppendBytes(CP56Time2a(cmd.Time, u.InfoObjTimeZone)...)
 	default:
 		return ErrTypeIDNotMatch
 	}
@@ -157,15 +155,14 @@ func SetpointCmdNormal(c Connect, typeID TypeID, coa CauseOfTransmission, ca Com
 		ca,
 	})
 
-	if err := u.AppendInfoObjAddr(cmd.Ioa); err != nil {
+	if err := u.AppendInfoObjAddress(cmd.Ioa); err != nil {
 		return err
 	}
-
-	u.infoObj = append(u.infoObj, byte(cmd.Value), byte(cmd.Value>>8), cmd.Qos.Value())
+	u.AppendNormalize(cmd.Value).AppendBytes(cmd.Qos.Value())
 	switch typeID {
 	case C_SE_NA_1:
 	case C_SE_TA_1:
-		u.infoObj = append(u.infoObj, CP56Time2a(cmd.Time, u.InfoObjTimeZone)...)
+		u.AppendBytes(CP56Time2a(cmd.Time, u.InfoObjTimeZone)...)
 	default:
 		return ErrTypeIDNotMatch
 	}
@@ -197,15 +194,14 @@ func SetpointCmdScaled(c Connect, typeID TypeID, coa CauseOfTransmission, ca Com
 		ca,
 	})
 
-	if err := u.AppendInfoObjAddr(cmd.Ioa); err != nil {
+	if err := u.AppendInfoObjAddress(cmd.Ioa); err != nil {
 		return err
 	}
-
-	u.infoObj = append(u.infoObj, byte(cmd.Value), byte(cmd.Value>>8), cmd.Qos.Value())
+	u.AppendScaled(cmd.Value).AppendBytes(cmd.Qos.Value())
 	switch typeID {
 	case C_SE_NB_1:
 	case C_SE_TB_1:
-		u.infoObj = append(u.infoObj, CP56Time2a(cmd.Time, u.InfoObjTimeZone)...)
+		u.AppendBytes(CP56Time2a(cmd.Time, u.InfoObjTimeZone)...)
 	default:
 		return ErrTypeIDNotMatch
 	}
@@ -236,18 +232,16 @@ func SetpointCmdFloat(c Connect, typeID TypeID, coa CauseOfTransmission, ca Comm
 		0,
 		ca,
 	})
-	if err := u.AppendInfoObjAddr(cmd.Ioa); err != nil {
+	if err := u.AppendInfoObjAddress(cmd.Ioa); err != nil {
 		return err
 	}
 
-	bits := math.Float32bits(cmd.Value)
-	u.infoObj = append(u.infoObj, byte(bits), byte(bits>>8), byte(bits>>16), byte(bits>>24), cmd.Qos.Value())
+	u.AppendFloat32(cmd.Value).AppendBytes(cmd.Qos.Value())
 
 	switch typeID {
 	case C_SE_NC_1:
 	case C_SE_TC_1:
-		u.infoObj = append(u.infoObj, CP56Time2a(cmd.Time, u.InfoObjTimeZone)...)
-
+		u.AppendBytes(CP56Time2a(cmd.Time, u.InfoObjTimeZone)...)
 	default:
 		return ErrTypeIDNotMatch
 	}
@@ -278,17 +272,16 @@ func BitsString32Cmd(c Connect, typeID TypeID, coa CauseOfTransmission, commonAd
 		0,
 		commonAddr,
 	})
-	if err := u.AppendInfoObjAddr(cmd.Ioa); err != nil {
+	if err := u.AppendInfoObjAddress(cmd.Ioa); err != nil {
 		return err
 	}
 
-	u.infoObj = append(u.infoObj, byte(cmd.Value), byte(cmd.Value>>8), byte(cmd.Value>>16), byte(cmd.Value>>24))
+	u.AppendBitsString32(cmd.Value)
 
 	switch typeID {
 	case C_BO_NA_1:
 	case C_BO_TA_1:
-		u.infoObj = append(u.infoObj, CP56Time2a(cmd.Time, u.InfoObjTimeZone)...)
-
+		u.AppendBytes(CP56Time2a(cmd.Time, u.InfoObjTimeZone)...)
 	default:
 		return ErrTypeIDNotMatch
 	}
@@ -300,17 +293,15 @@ func (this *ASDU) GetSingleCmd() (SingleCommandObject, error) {
 	var err error
 	var s SingleCommandObject
 
-	if s.Ioa, err = this.ParseInfoObjAddr(this.infoObj); err != nil {
-		return s, err
-	}
-	value := this.infoObj[this.InfoObjAddrSize]
+	s.Ioa = this.DecodeInfoObjAddr()
+	value := this.infoObj[0]
 	s.Value = value&0x01 == 0x01
 	s.Qoc = ParseQualifierOfCommand(value & 0xfe)
 
 	switch this.Type {
 	case C_SC_NA_1:
 	case C_SC_TA_1:
-		s.Time, err = ParseCP56Time2a(this.infoObj[this.InfoObjAddrSize+1:], this.InfoObjTimeZone)
+		s.Time, err = ParseCP56Time2a(this.infoObj[1:], this.InfoObjTimeZone)
 		if err != nil {
 			return s, ErrInvalidTimeTag
 		}
@@ -325,17 +316,15 @@ func (this *ASDU) GetDoubleCmd() (DoubleCommandObject, error) {
 	var err error
 	var cmd DoubleCommandObject
 
-	if cmd.Ioa, err = this.ParseInfoObjAddr(this.infoObj); err != nil {
-		return cmd, err
-	}
-	value := this.infoObj[this.InfoObjAddrSize]
+	cmd.Ioa = this.DecodeInfoObjAddr()
+	value := this.infoObj[0]
 	cmd.Value = DoubleCommand(value & 0x03)
 	cmd.Qoc = ParseQualifierOfCommand(value & 0xfc)
 
 	switch this.Type {
 	case C_DC_NA_1:
 	case C_DC_TA_1:
-		cmd.Time, err = ParseCP56Time2a(this.infoObj[this.InfoObjAddrSize+1:], this.InfoObjTimeZone)
+		cmd.Time, err = ParseCP56Time2a(this.infoObj[1:], this.InfoObjTimeZone)
 		if err != nil {
 			return cmd, ErrInvalidTimeTag
 		}
@@ -350,17 +339,15 @@ func (this *ASDU) GetStepCmd() (StepCommandObject, error) {
 	var cmd StepCommandObject
 	var err error
 
-	if cmd.Ioa, err = this.ParseInfoObjAddr(this.infoObj); err != nil {
-		return cmd, err
-	}
-	value := this.infoObj[this.InfoObjAddrSize]
+	cmd.Ioa = this.DecodeInfoObjAddr()
+	value := this.infoObj[0]
 	cmd.Value = StepCommand(value & 0x03)
 	cmd.Qoc = ParseQualifierOfCommand(value & 0xfc)
 
 	switch this.Type {
 	case C_RC_NA_1:
 	case C_RC_TA_1:
-		cmd.Time, err = ParseCP56Time2a(this.infoObj[this.InfoObjAddrSize+1:], this.InfoObjTimeZone)
+		cmd.Time, err = ParseCP56Time2a(this.infoObj[1:], this.InfoObjTimeZone)
 		if err != nil {
 			return cmd, ErrInvalidTimeTag
 		}
@@ -375,17 +362,14 @@ func (this *ASDU) GetSetpointNormalCmd() (SetpointCommandNormalObject, error) {
 	var cmd SetpointCommandNormalObject
 	var err error
 
-	if cmd.Ioa, err = this.ParseInfoObjAddr(this.infoObj); err != nil {
-		return cmd, err
-	}
-
-	cmd.Value = Normalize(binary.LittleEndian.Uint16(this.infoObj[this.InfoObjAddrSize:]))
-	cmd.Qos = ParseQualifierOfSetpointCmd(this.infoObj[this.InfoObjAddrSize+2])
+	cmd.Ioa = this.DecodeInfoObjAddr()
+	cmd.Value = this.DecodeNormalize()
+	cmd.Qos = ParseQualifierOfSetpointCmd(this.infoObj[0])
 
 	switch this.Type {
 	case C_SE_NA_1:
 	case C_SE_TA_1:
-		cmd.Time, err = ParseCP56Time2a(this.infoObj[this.InfoObjAddrSize+3:], this.InfoObjTimeZone)
+		cmd.Time, err = ParseCP56Time2a(this.infoObj[1:], this.InfoObjTimeZone)
 		if err != nil {
 			return cmd, ErrInvalidTimeTag
 		}
@@ -400,17 +384,14 @@ func (this *ASDU) GetSetpointCmdScaled() (SetpointCommandScaledObject, error) {
 	var cmd SetpointCommandScaledObject
 	var err error
 
-	if cmd.Ioa, err = this.ParseInfoObjAddr(this.infoObj); err != nil {
-		return cmd, err
-	}
-
-	cmd.Value = int16(binary.LittleEndian.Uint16(this.infoObj[this.InfoObjAddrSize:]))
-	cmd.Qos = ParseQualifierOfSetpointCmd(this.infoObj[this.InfoObjAddrSize+2])
+	cmd.Ioa = this.DecodeInfoObjAddr()
+	cmd.Value = this.DecodeScaled()
+	cmd.Qos = ParseQualifierOfSetpointCmd(this.infoObj[0])
 
 	switch this.Type {
 	case C_SE_NB_1:
 	case C_SE_TB_1:
-		cmd.Time, err = ParseCP56Time2a(this.infoObj[this.InfoObjAddrSize+3:], this.InfoObjTimeZone)
+		cmd.Time, err = ParseCP56Time2a(this.infoObj[1:], this.InfoObjTimeZone)
 		if err != nil {
 			return cmd, ErrInvalidTimeTag
 		}
@@ -424,17 +405,14 @@ func (this *ASDU) GetSetpointFloatCmd() (SetpointCommandFloatObject, error) {
 	var cmd SetpointCommandFloatObject
 	var err error
 
-	if cmd.Ioa, err = this.ParseInfoObjAddr(this.infoObj); err != nil {
-		return cmd, err
-	}
-	bits := binary.LittleEndian.Uint32(this.infoObj[this.InfoObjAddrSize:])
-	cmd.Value = math.Float32frombits(bits)
-	cmd.Qos = ParseQualifierOfSetpointCmd(this.infoObj[this.InfoObjAddrSize+4])
+	cmd.Ioa = this.DecodeInfoObjAddr()
+	cmd.Value = this.DecodeFloat()
+	cmd.Qos = ParseQualifierOfSetpointCmd(this.infoObj[0])
 
 	switch this.Type {
 	case C_SE_NC_1:
 	case C_SE_TC_1:
-		cmd.Time, err = ParseCP56Time2a(this.infoObj[this.InfoObjAddrSize+5:], this.InfoObjTimeZone)
+		cmd.Time, err = ParseCP56Time2a(this.infoObj[1:], this.InfoObjTimeZone)
 		if err != nil {
 			return cmd, ErrInvalidTimeTag
 		}
@@ -449,16 +427,12 @@ func (this *ASDU) GetBitsString32Cmd() (BitsString32CommandObject, error) {
 	var cmd BitsString32CommandObject
 	var err error
 
-	if cmd.Ioa, err = this.ParseInfoObjAddr(this.infoObj); err != nil {
-		return cmd, err
-	}
-
-	cmd.Value = binary.LittleEndian.Uint32(this.infoObj[this.InfoObjAddrSize:])
-
+	cmd.Ioa = this.DecodeInfoObjAddr()
+	cmd.Value = this.DecodeBitsString32()
 	switch this.Type {
 	case C_BO_NA_1:
 	case C_BO_TA_1:
-		cmd.Time, err = ParseCP56Time2a(this.infoObj[this.InfoObjAddrSize+4:], this.InfoObjTimeZone)
+		cmd.Time, err = ParseCP56Time2a(this.infoObj, this.InfoObjTimeZone)
 		if err != nil {
 			return cmd, ErrInvalidTimeTag
 		}

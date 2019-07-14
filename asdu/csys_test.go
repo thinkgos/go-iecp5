@@ -356,18 +356,16 @@ func TestASDU_GetReadCmd(t *testing.T) {
 		infoObj []byte
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		want    InfoObjAddr
-		wantErr bool
+		name   string
+		fields fields
+		want   InfoObjAddr
 	}{
 		{
 			"C_RD_NA_1",
 			fields{
 				ParamsWide,
 				[]byte{0x90, 0x78, 0x56}},
-			0x567890,
-			false},
+			0x567890},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -375,11 +373,7 @@ func TestASDU_GetReadCmd(t *testing.T) {
 				Params:  tt.fields.Params,
 				infoObj: tt.fields.infoObj,
 			}
-			got, err := this.GetReadCmd()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ASDU.GetReadCmd() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			got := this.GetReadCmd()
 			if got != tt.want {
 				t.Errorf("ASDU.GetReadCmd() = %v, want %v", got, tt.want)
 			}

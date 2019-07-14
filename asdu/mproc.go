@@ -1,8 +1,6 @@
 package asdu
 
 import (
-	"encoding/binary"
-	"math"
 	"time"
 )
 
@@ -69,14 +67,14 @@ func Single(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 		0,
 		ca,
 	})
-	if err := u.IncVariableNumber(len(attrs)); err != nil {
+	if err := u.SetVariableNumber(len(attrs)); err != nil {
 		return err
 	}
 	once := false
 	for _, v := range attrs {
 		if !isSequence || !once {
 			once = true
-			if err := u.AppendInfoObjAddr(v.Ioa); err != nil {
+			if err := u.AppendInfoObjAddress(v.Ioa); err != nil {
 				return err
 			}
 		}
@@ -85,13 +83,13 @@ func Single(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 		if v.Value {
 			value = 0x01
 		}
-		u.infoObj = append(u.infoObj, value|byte(v.Qds&0xf0))
+		u.AppendBytes(value | byte(v.Qds&0xf0))
 		switch typeID {
 		case M_SP_NA_1:
 		case M_SP_TA_1:
-			u.infoObj = append(u.infoObj, CP24Time2a(v.Time, u.InfoObjTimeZone)...)
+			u.AppendBytes(CP24Time2a(v.Time, u.InfoObjTimeZone)...)
 		case M_SP_TB_1:
-			u.infoObj = append(u.infoObj, CP56Time2a(v.Time, u.InfoObjTimeZone)...)
+			u.AppendBytes(CP56Time2a(v.Time, u.InfoObjTimeZone)...)
 		default:
 			return ErrTypeIDNotMatch
 		}
@@ -128,25 +126,25 @@ func Double(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 		0,
 		ca,
 	})
-	if err := u.IncVariableNumber(len(attrs)); err != nil {
+	if err := u.SetVariableNumber(len(attrs)); err != nil {
 		return err
 	}
 	once := false
 	for _, v := range attrs {
 		if !isSequence || !once {
 			once = true
-			if err := u.AppendInfoObjAddr(v.Ioa); err != nil {
+			if err := u.AppendInfoObjAddress(v.Ioa); err != nil {
 				return err
 			}
 		}
 
-		u.infoObj = append(u.infoObj, byte(v.Value&0x03)|byte(v.Qds&0xf0))
+		u.AppendBytes(byte(v.Value&0x03) | byte(v.Qds&0xf0))
 		switch typeID {
 		case M_DP_NA_1:
 		case M_DP_TA_1:
-			u.infoObj = append(u.infoObj, CP24Time2a(v.Time, u.InfoObjTimeZone)...)
+			u.AppendBytes(CP24Time2a(v.Time, u.InfoObjTimeZone)...)
 		case M_DP_TB_1:
-			u.infoObj = append(u.infoObj, CP56Time2a(v.Time, u.InfoObjTimeZone)...)
+			u.AppendBytes(CP56Time2a(v.Time, u.InfoObjTimeZone)...)
 		default:
 			return ErrTypeIDNotMatch
 		}
@@ -183,25 +181,25 @@ func Step(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 		0,
 		ca,
 	})
-	if err := u.IncVariableNumber(len(attrs)); err != nil {
+	if err := u.SetVariableNumber(len(attrs)); err != nil {
 		return err
 	}
 	once := false
 	for _, v := range attrs {
 		if !isSequence || !once {
 			once = true
-			if err := u.AppendInfoObjAddr(v.Ioa); err != nil {
+			if err := u.AppendInfoObjAddress(v.Ioa); err != nil {
 				return err
 			}
 		}
 
-		u.infoObj = append(u.infoObj, v.Value.Value(), byte(v.Qds))
+		u.AppendBytes(v.Value.Value(), byte(v.Qds))
 		switch typeID {
 		case M_ST_NA_1:
 		case M_ST_TA_1:
-			u.infoObj = append(u.infoObj, CP24Time2a(v.Time, u.InfoObjTimeZone)...)
+			u.AppendBytes(CP24Time2a(v.Time, u.InfoObjTimeZone)...)
 		case M_SP_TB_1:
-			u.infoObj = append(u.infoObj, CP56Time2a(v.Time, u.InfoObjTimeZone)...)
+			u.AppendBytes(CP56Time2a(v.Time, u.InfoObjTimeZone)...)
 		default:
 			return ErrTypeIDNotMatch
 		}
@@ -238,25 +236,25 @@ func BitString32(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmiss
 		0,
 		ca,
 	})
-	if err := u.IncVariableNumber(len(attrs)); err != nil {
+	if err := u.SetVariableNumber(len(attrs)); err != nil {
 		return err
 	}
 	once := false
 	for _, v := range attrs {
 		if !isSequence || !once {
 			once = true
-			if err := u.AppendInfoObjAddr(v.Ioa); err != nil {
+			if err := u.AppendInfoObjAddress(v.Ioa); err != nil {
 				return err
 			}
 		}
+		u.AppendBitsString32(v.Value).AppendBytes(byte(v.Qds))
 
-		u.infoObj = append(u.infoObj, byte(v.Value), byte(v.Value>>8), byte(v.Value>>16), byte(v.Value>>24), byte(v.Qds))
 		switch typeID {
 		case M_BO_NA_1:
 		case M_BO_TA_1:
-			u.infoObj = append(u.infoObj, CP24Time2a(v.Time, u.InfoObjTimeZone)...)
+			u.AppendBytes(CP24Time2a(v.Time, u.InfoObjTimeZone)...)
 		case M_BO_TB_1:
-			u.infoObj = append(u.infoObj, CP56Time2a(v.Time, u.InfoObjTimeZone)...)
+			u.AppendBytes(CP56Time2a(v.Time, u.InfoObjTimeZone)...)
 		default:
 			return ErrTypeIDNotMatch
 		}
@@ -294,28 +292,25 @@ func MeasuredValueNormal(c Connect, typeID TypeID, isSequence bool, coa CauseOfT
 		0,
 		ca,
 	})
-	if err := u.IncVariableNumber(len(attrs)); err != nil {
+	if err := u.SetVariableNumber(len(attrs)); err != nil {
 		return err
 	}
 	once := false
 	for _, v := range attrs {
 		if !isSequence || !once {
 			once = true
-			if err := u.AppendInfoObjAddr(v.Ioa); err != nil {
+			if err := u.AppendInfoObjAddress(v.Ioa); err != nil {
 				return err
 			}
 		}
-
-		u.infoObj = append(u.infoObj, byte(v.Value), byte(v.Value>>8))
+		u.AppendNormalize(v.Value)
 		switch typeID {
 		case M_ME_NA_1:
-			u.infoObj = append(u.infoObj, byte(v.Qds))
+			u.AppendBytes(byte(v.Qds))
 		case M_ME_TA_1:
-			u.infoObj = append(u.infoObj, byte(v.Qds))
-			u.infoObj = append(u.infoObj, CP24Time2a(v.Time, u.InfoObjTimeZone)...)
+			u.AppendBytes(byte(v.Qds)).AppendBytes(CP24Time2a(v.Time, u.InfoObjTimeZone)...)
 		case M_ME_TD_1:
-			u.infoObj = append(u.infoObj, byte(v.Qds))
-			u.infoObj = append(u.infoObj, CP56Time2a(v.Time, u.InfoObjTimeZone)...)
+			u.AppendBytes(byte(v.Qds)).AppendBytes(CP56Time2a(v.Time, u.InfoObjTimeZone)...)
 		case M_ME_ND_1: // 不带品质
 		default:
 			return ErrTypeIDNotMatch
@@ -341,7 +336,7 @@ type MeasuredValueScaledInfo struct {
 // subclass 7.3.1.11 - 7.3.1.12
 // 测量值,标度化值
 func MeasuredValueScaled(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
-	ca CommonAddr, attrs ...MeasuredValueNormalInfo) error {
+	ca CommonAddr, attrs ...MeasuredValueScaledInfo) error {
 	if err := checkValid(c, typeID, isSequence, len(attrs)); err != nil {
 		return err
 	}
@@ -353,25 +348,24 @@ func MeasuredValueScaled(c Connect, typeID TypeID, isSequence bool, coa CauseOfT
 		0,
 		ca,
 	})
-	if err := u.IncVariableNumber(len(attrs)); err != nil {
+	if err := u.SetVariableNumber(len(attrs)); err != nil {
 		return err
 	}
 	once := false
 	for _, v := range attrs {
 		if !isSequence || !once {
 			once = true
-			if err := u.AppendInfoObjAddr(v.Ioa); err != nil {
+			if err := u.AppendInfoObjAddress(v.Ioa); err != nil {
 				return err
 			}
 		}
-
-		u.infoObj = append(u.infoObj, byte(v.Value), byte(v.Value>>8), byte(v.Qds))
+		u.AppendScaled(v.Value).AppendBytes(byte(v.Qds))
 		switch typeID {
 		case M_ME_NB_1:
 		case M_ME_TB_1:
-			u.infoObj = append(u.infoObj, CP24Time2a(v.Time, u.InfoObjTimeZone)...)
+			u.AppendBytes(CP24Time2a(v.Time, u.InfoObjTimeZone)...)
 		case M_ME_TE_1:
-			u.infoObj = append(u.infoObj, CP56Time2a(v.Time, u.InfoObjTimeZone)...)
+			u.AppendBytes(CP56Time2a(v.Time, u.InfoObjTimeZone)...)
 		default:
 			return ErrTypeIDNotMatch
 		}
@@ -408,26 +402,25 @@ func MeasuredValueFloat(c Connect, typeID TypeID, isSequence bool, coa CauseOfTr
 		0,
 		ca,
 	})
-	if err := u.IncVariableNumber(len(attrs)); err != nil {
+	if err := u.SetVariableNumber(len(attrs)); err != nil {
 		return err
 	}
 	once := false
 	for _, v := range attrs {
 		if !isSequence || !once {
 			once = true
-			if err := u.AppendInfoObjAddr(v.Ioa); err != nil {
+			if err := u.AppendInfoObjAddress(v.Ioa); err != nil {
 				return err
 			}
 		}
 
-		bits := math.Float32bits(v.Value)
-		u.infoObj = append(u.infoObj, byte(bits), byte(bits>>8), byte(bits>>16), byte(bits>>24), byte(v.Qds&0xf1))
+		u.AppendFloat32(v.Value).AppendBytes(byte(v.Qds & 0xf1))
 		switch typeID {
 		case M_ME_NC_1:
 		case M_ME_TC_1:
-			u.infoObj = append(u.infoObj, CP24Time2a(v.Time, u.InfoObjTimeZone)...)
+			u.AppendBytes(CP24Time2a(v.Time, u.InfoObjTimeZone)...)
 		case M_ME_TF_1:
-			u.infoObj = append(u.infoObj, CP56Time2a(v.Time, u.InfoObjTimeZone)...)
+			u.AppendBytes(CP56Time2a(v.Time, u.InfoObjTimeZone)...)
 		default:
 			return ErrTypeIDNotMatch
 		}
@@ -435,43 +428,34 @@ func MeasuredValueFloat(c Connect, typeID TypeID, isSequence bool, coa CauseOfTr
 	return c.Send(u)
 }
 
-func (this *ASDU) GetSinglePointInfo() ([]SinglePointInfo, error) {
+func (this *ASDU) GetSinglePoint() ([]SinglePointInfo, error) {
 	var err error
 
 	info := make([]SinglePointInfo, 0, this.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
-	for i, once, offset := 0, false, 0; i < int(this.Variable.Number); i++ {
+	for i, once := 0, false; i < int(this.Variable.Number); i++ {
 		if !this.Variable.IsSequence || !once {
 			once = true
-			infoObjAddr, err = this.ParseInfoObjAddr(this.infoObj)
-			if err != nil {
-				return nil, err
-			}
-			offset = this.InfoObjAddrSize
+			infoObjAddr = this.DecodeInfoObjAddr()
 		} else {
 			infoObjAddr++
-			offset = 0
 		}
-		value := this.infoObj[offset]
-		offset++
+		value := this.DecodeByte()
 
 		var t time.Time
 		switch this.Type {
 		case M_SP_NA_1:
 		case M_SP_TA_1:
-			if t, err = ParseCP24Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); err != nil {
+			if t, err = this.DecodeCP24Time2a(); err != nil {
 				return nil, ErrInvalidTimeTag
 			}
-			offset += 3
 		case M_SP_TB_1:
-			if t, err = ParseCP56Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); err != nil {
+			if t, err = this.DecodeCP56Time2a(); err != nil {
 				return nil, ErrInvalidTimeTag
 			}
-			offset += 7
 		default:
 			return nil, ErrTypeIDNotMatch
 		}
-		this.infoObj = this.infoObj[offset:]
 
 		info = append(info, SinglePointInfo{
 			Ioa:   infoObjAddr,
@@ -482,43 +466,34 @@ func (this *ASDU) GetSinglePointInfo() ([]SinglePointInfo, error) {
 	return info, nil
 }
 
-func (this *ASDU) GetDoublePointInfo() ([]DoublePointInfo, error) {
+func (this *ASDU) GetDoublePoint() ([]DoublePointInfo, error) {
 	var err error
 
 	info := make([]DoublePointInfo, 0, this.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
-	for i, once, offset := 0, false, 0; i < int(this.Variable.Number); i++ {
+	for i, once := 0, false; i < int(this.Variable.Number); i++ {
 		if !this.Variable.IsSequence || !once {
 			once = true
-			infoObjAddr, err = this.ParseInfoObjAddr(this.infoObj)
-			if err != nil {
-				return nil, err
-			}
-			offset = this.InfoObjAddrSize
+			infoObjAddr = this.DecodeInfoObjAddr()
 		} else {
 			infoObjAddr++
-			offset = 0
 		}
-		value := this.infoObj[offset]
-		offset++
+		value := this.DecodeByte()
 
 		var t time.Time
 		switch this.Type {
 		case M_DP_NA_1:
 		case M_DP_TA_1:
-			if t, err = ParseCP24Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); err != nil {
+			if t, err = this.DecodeCP24Time2a(); err != nil {
 				return nil, ErrInvalidTimeTag
 			}
-			offset += 3
 		case M_DP_TB_1:
-			if t, err = ParseCP56Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); err != nil {
+			if t, err = this.DecodeCP56Time2a(); err != nil {
 				return nil, ErrInvalidTimeTag
 			}
-			offset += 7
 		default:
 			return nil, ErrTypeIDNotMatch
 		}
-		this.infoObj = this.infoObj[offset:]
 
 		info = append(info, DoublePointInfo{
 			Ioa:   infoObjAddr,
@@ -529,45 +504,35 @@ func (this *ASDU) GetDoublePointInfo() ([]DoublePointInfo, error) {
 	return info, nil
 }
 
-func (this *ASDU) GetStepPositionInfo() ([]StepPositionInfo, error) {
+func (this *ASDU) GetStepPosition() ([]StepPositionInfo, error) {
 	var err error
 
 	info := make([]StepPositionInfo, 0, this.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
-	for i, once, offset := 0, false, 0; i < int(this.Variable.Number); i++ {
+	for i, once := 0, false; i < int(this.Variable.Number); i++ {
 		if !this.Variable.IsSequence || !once {
 			once = true
-			infoObjAddr, err = this.ParseInfoObjAddr(this.infoObj)
-			if err != nil {
-				return nil, err
-			}
-			offset = this.InfoObjAddrSize
+			infoObjAddr = this.DecodeInfoObjAddr()
 		} else {
 			infoObjAddr++
-			offset = 0
 		}
-		value := ParseStepPosition(this.infoObj[offset])
-		offset++
-		qds := QualityDescriptor(this.infoObj[offset])
-		offset++
+		value := ParseStepPosition(this.DecodeByte())
+		qds := QualityDescriptor(this.DecodeByte())
 
 		var t time.Time
 		switch this.Type {
 		case M_ST_NA_1:
 		case M_ST_TA_1:
-			if t, err = ParseCP24Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); err != nil {
+			if t, err = this.DecodeCP24Time2a(); err != nil {
 				return nil, ErrInvalidTimeTag
 			}
-			offset += 3
 		case M_SP_TB_1:
-			if t, err = ParseCP56Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); err != nil {
+			if t, err = this.DecodeCP56Time2a(); err != nil {
 				return nil, ErrInvalidTimeTag
 			}
-			offset += 7
 		default:
 			return nil, ErrTypeIDNotMatch
 		}
-		this.infoObj = this.infoObj[offset:]
 
 		info = append(info, StepPositionInfo{
 			Ioa:   infoObjAddr,
@@ -578,46 +543,36 @@ func (this *ASDU) GetStepPositionInfo() ([]StepPositionInfo, error) {
 	return info, nil
 }
 
-func (this *ASDU) GetBitString32Info() ([]BitString32Info, error) {
+func (this *ASDU) GetBitString32() ([]BitString32Info, error) {
 	var err error
 
 	info := make([]BitString32Info, 0, this.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
-	for i, once, offset := 0, false, 0; i < int(this.Variable.Number); i++ {
+	for i, once := 0, false; i < int(this.Variable.Number); i++ {
 		if !this.Variable.IsSequence || !once {
 			once = true
-			infoObjAddr, err = this.ParseInfoObjAddr(this.infoObj)
-			if err != nil {
-				return nil, err
-			}
-			offset = this.InfoObjAddrSize
+			infoObjAddr = this.DecodeInfoObjAddr()
 		} else {
 			infoObjAddr++
-			offset = 0
 		}
 
-		value := binary.LittleEndian.Uint32(this.infoObj[offset:])
-		offset += 4
-		qds := QualityDescriptor(this.infoObj[offset])
-		offset++
+		value := this.DecodeBitsString32()
+		qds := QualityDescriptor(this.DecodeByte())
 
 		var t time.Time
 		switch this.Type {
 		case M_BO_NA_1:
 		case M_BO_TA_1:
-			if t, err = ParseCP24Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); err != nil {
+			if t, err = this.DecodeCP24Time2a(); err != nil {
 				return nil, ErrInvalidTimeTag
 			}
-			offset += 3
 		case M_BO_TB_1:
-			if t, err = ParseCP56Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); err != nil {
+			if t, err = this.DecodeCP56Time2a(); err != nil {
 				return nil, ErrInvalidTimeTag
 			}
-			offset += 7
 		default:
 			return nil, ErrTypeIDNotMatch
 		}
-		this.infoObj = this.infoObj[offset:]
 
 		info = append(info, BitString32Info{
 			Ioa:   infoObjAddr,
@@ -628,52 +583,40 @@ func (this *ASDU) GetBitString32Info() ([]BitString32Info, error) {
 	return info, nil
 }
 
-func (this *ASDU) GetMeasuredValueNormalInfo() ([]MeasuredValueNormalInfo, error) {
+func (this *ASDU) GetMeasuredValueNormal() ([]MeasuredValueNormalInfo, error) {
 	var err error
 
 	info := make([]MeasuredValueNormalInfo, 0, this.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
-	for i, once, offset := 0, false, 0; i < int(this.Variable.Number); i++ {
+	for i, once := 0, false; i < int(this.Variable.Number); i++ {
 		if !this.Variable.IsSequence || !once {
 			once = true
-			infoObjAddr, err = this.ParseInfoObjAddr(this.infoObj)
-			if err != nil {
-				return nil, err
-			}
-			offset = this.InfoObjAddrSize
+			infoObjAddr = this.DecodeInfoObjAddr()
 		} else {
 			infoObjAddr++
-			offset = 0
 		}
 
-		value := Normalize(binary.LittleEndian.Uint16(this.infoObj[offset:]))
-		offset += 2
+		value := this.DecodeNormalize()
 
 		var t time.Time
 		var qds QualityDescriptor
 		switch this.Type {
 		case M_ME_NA_1:
-			qds = QualityDescriptor(this.infoObj[offset])
-			offset++
+			qds = QualityDescriptor(this.DecodeByte())
 		case M_ME_TA_1:
-			qds = QualityDescriptor(this.infoObj[offset])
-			offset++
-			if t, err = ParseCP24Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); err != nil {
+			qds = QualityDescriptor(this.DecodeByte())
+			if t, err = this.DecodeCP24Time2a(); err != nil {
 				return nil, ErrInvalidTimeTag
 			}
-			offset += 3
 		case M_ME_TD_1:
-			qds = QualityDescriptor(this.infoObj[offset])
-			offset++
-			if t, err = ParseCP56Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); err != nil {
+			qds = QualityDescriptor(this.DecodeByte())
+			if t, err = this.DecodeCP56Time2a(); err != nil {
 				return nil, ErrInvalidTimeTag
 			}
-			offset += 7
 		case M_ME_ND_1: // 不带品质
 		default:
 			return nil, ErrTypeIDNotMatch
 		}
-		this.infoObj = this.infoObj[offset:]
 
 		info = append(info, MeasuredValueNormalInfo{
 			Ioa:   infoObjAddr,
@@ -684,46 +627,36 @@ func (this *ASDU) GetMeasuredValueNormalInfo() ([]MeasuredValueNormalInfo, error
 	return info, nil
 }
 
-func (this *ASDU) GetMeasuredValueScaledInfo() ([]MeasuredValueScaledInfo, error) {
+func (this *ASDU) GetMeasuredValueScaled() ([]MeasuredValueScaledInfo, error) {
 	var err error
 
 	info := make([]MeasuredValueScaledInfo, 0, this.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
-	for i, once, offset := 0, false, 0; i < int(this.Variable.Number); i++ {
+	for i, once := 0, false; i < int(this.Variable.Number); i++ {
 		if !this.Variable.IsSequence || !once {
 			once = true
-			infoObjAddr, err = this.ParseInfoObjAddr(this.infoObj)
-			if err != nil {
-				return nil, err
-			}
-			offset = this.InfoObjAddrSize
+			infoObjAddr = this.DecodeInfoObjAddr()
 		} else {
 			infoObjAddr++
-			offset = 0
 		}
 
-		value := int16(binary.LittleEndian.Uint16(this.infoObj[offset:]))
-		offset += 2
-		qds := QualityDescriptor(this.infoObj[offset])
-		offset++
+		value := this.DecodeScaled()
+		qds := QualityDescriptor(this.DecodeByte())
 
 		var t time.Time
 		switch this.Type {
 		case M_ME_NB_1:
 		case M_ME_TB_1:
-			if t, err = ParseCP24Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); err != nil {
+			if t, err = this.DecodeCP24Time2a(); err != nil {
 				return nil, ErrInvalidTimeTag
 			}
-			offset += 3
 		case M_ME_TE_1:
-			if t, err = ParseCP56Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); err != nil {
+			if t, err = this.DecodeCP56Time2a(); err != nil {
 				return nil, ErrInvalidTimeTag
 			}
-			offset += 7
 		default:
 			return nil, ErrTypeIDNotMatch
 		}
-		this.infoObj = this.infoObj[offset:]
 
 		info = append(info, MeasuredValueScaledInfo{
 			Ioa:   infoObjAddr,
@@ -734,46 +667,36 @@ func (this *ASDU) GetMeasuredValueScaledInfo() ([]MeasuredValueScaledInfo, error
 	return info, nil
 }
 
-func (this *ASDU) GetMeasuredValueFloatInfo() ([]MeasuredValueFloatInfo, error) {
+func (this *ASDU) GetMeasuredValueFloat() ([]MeasuredValueFloatInfo, error) {
 	var err error
 
 	info := make([]MeasuredValueFloatInfo, 0, this.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
-	for i, once, offset := 0, false, 0; i < int(this.Variable.Number); i++ {
+	for i, once := 0, false; i < int(this.Variable.Number); i++ {
 		if !this.Variable.IsSequence || !once {
 			once = true
-			infoObjAddr, err = this.ParseInfoObjAddr(this.infoObj)
-			if err != nil {
-				return nil, err
-			}
-			offset = this.InfoObjAddrSize
+			infoObjAddr = this.DecodeInfoObjAddr()
 		} else {
 			infoObjAddr++
-			offset = 0
 		}
 
-		value := math.Float32frombits(binary.LittleEndian.Uint32(this.infoObj[offset:]))
-		offset += 4
-		qua := this.infoObj[offset] & 0xf1
-		offset++
+		value := this.DecodeFloat()
+		qua := this.DecodeByte() & 0xf1
 
 		var t time.Time
 		switch this.Type {
 		case M_ME_NC_1:
 		case M_ME_TC_1:
-			if t, err = ParseCP24Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); err != nil {
+			if t, err = this.DecodeCP24Time2a(); err != nil {
 				return nil, ErrInvalidTimeTag
 			}
-			offset += 3
 		case M_ME_TF_1:
-			if t, err = ParseCP56Time2a(this.infoObj[offset:], this.Params.InfoObjTimeZone); err != nil {
+			if t, err = this.DecodeCP56Time2a(); err != nil {
 				return nil, ErrInvalidTimeTag
 			}
-			offset += 7
 		default:
 			return nil, ErrTypeIDNotMatch
 		}
-		this.infoObj = this.infoObj[offset:]
 		info = append(info, MeasuredValueFloatInfo{
 			Ioa:   infoObjAddr,
 			Value: value,

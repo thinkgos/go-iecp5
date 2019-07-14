@@ -27,10 +27,10 @@ func InterrogationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 		0,
 		ca,
 	})
-	if err := u.AppendInfoObjAddr(InfoObjIrrelevantAddr); err != nil {
+	if err := u.AppendInfoObjAddress(InfoObjIrrelevantAddr); err != nil {
 		return err
 	}
-	u.infoObj = append(u.infoObj, byte(qoi))
+	u.AppendBytes(byte(qoi))
 	return c.Send(u)
 }
 
@@ -53,10 +53,10 @@ func QuantityInterrogationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 		0,
 		ca,
 	})
-	if err := u.AppendInfoObjAddr(InfoObjIrrelevantAddr); err != nil {
+	if err := u.AppendInfoObjAddress(InfoObjIrrelevantAddr); err != nil {
 		return err
 	}
-	u.infoObj = append(u.infoObj, qcc.Value())
+	u.AppendBytes(qcc.Value())
 	return c.Send(u)
 }
 
@@ -80,7 +80,7 @@ func ReadCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 		0,
 		ca,
 	})
-	if err := u.AppendInfoObjAddr(ioa); err != nil {
+	if err := u.AppendInfoObjAddress(ioa); err != nil {
 		return err
 	}
 	return c.Send(u)
@@ -105,10 +105,10 @@ func ClockSynchronizationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 		0,
 		ca,
 	})
-	if err := u.AppendInfoObjAddr(InfoObjIrrelevantAddr); err != nil {
+	if err := u.AppendInfoObjAddress(InfoObjIrrelevantAddr); err != nil {
 		return err
 	}
-	u.infoObj = append(u.infoObj, CP56Time2a(t, u.InfoObjTimeZone)...)
+	u.AppendBytes(CP56Time2a(t, u.InfoObjTimeZone)...)
 	return c.Send(u)
 }
 
@@ -130,10 +130,10 @@ func TestCommand(c Connect, coa CauseOfTransmission, ca CommonAddr) error {
 		0,
 		ca,
 	})
-	if err := u.AppendInfoObjAddr(InfoObjIrrelevantAddr); err != nil {
+	if err := u.AppendInfoObjAddress(InfoObjIrrelevantAddr); err != nil {
 		return err
 	}
-	u.infoObj = append(u.infoObj, byte(FBPTestWord&0xff), byte(FBPTestWord>>8))
+	u.AppendBytes(byte(FBPTestWord&0xff), byte(FBPTestWord>>8))
 	return c.Send(u)
 }
 
@@ -156,10 +156,10 @@ func ResetProcessCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 		0,
 		ca,
 	})
-	if err := u.AppendInfoObjAddr(InfoObjIrrelevantAddr); err != nil {
+	if err := u.AppendInfoObjAddress(InfoObjIrrelevantAddr); err != nil {
 		return err
 	}
-	u.infoObj = append(u.infoObj, byte(qrp))
+	u.AppendBytes(byte(qrp))
 	return c.Send(u)
 }
 
@@ -182,10 +182,10 @@ func DelayAcquireCommand(c Connect, coa CauseOfTransmission, ca CommonAddr,
 		0,
 		ca,
 	})
-	if err := u.AppendInfoObjAddr(InfoObjIrrelevantAddr); err != nil {
+	if err := u.AppendInfoObjAddress(InfoObjIrrelevantAddr); err != nil {
 		return err
 	}
-	u.infoObj = append(u.infoObj, CP16Time2a(msec)...)
+	u.AppendBytes(CP16Time2a(msec)...)
 	return c.Send(u)
 }
 
@@ -199,8 +199,8 @@ func (this *ASDU) GetQuantityInterrogationCmd() QualifierCountCall {
 	return ParseQualifierCountCall(this.infoObj[this.InfoObjAddrSize])
 }
 
-func (this *ASDU) GetReadCmd() (InfoObjAddr, error) {
-	return this.ParseInfoObjAddr(this.infoObj)
+func (this *ASDU) GetReadCmd() InfoObjAddr {
+	return this.DecodeInfoObjAddr()
 }
 
 func (this *ASDU) GetClockSynchronizationCmd() (time.Time, error) {
