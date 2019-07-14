@@ -1,6 +1,7 @@
 package asdu
 
 import (
+	"encoding/binary"
 	"time"
 )
 
@@ -186,4 +187,38 @@ func DelayAcquireCommand(c Connect, coa CauseOfTransmission, ca CommonAddr,
 	}
 	u.infoObj = append(u.infoObj, CP16Time2a(msec)...)
 	return c.Send(u)
+}
+
+func (this *ASDU) GetInterrogationCmd() QualifierOfInterrogation {
+	// pass InfoObjAddr
+	return QualifierOfInterrogation(this.infoObj[this.InfoObjAddrSize])
+}
+
+func (this *ASDU) GetQuantityInterrogationCmd() QualifierCountCall {
+	// pass InfoObjAddr
+	return ParseQualifierCountCall(this.infoObj[this.InfoObjAddrSize])
+}
+
+func (this *ASDU) GetReadCmd() (InfoObjAddr, error) {
+	return this.ParseInfoObjAddr(this.infoObj)
+}
+
+func (this *ASDU) GetClockSynchronizationCmd() (time.Time, error) {
+	// pass InfoObjAddr
+	return ParseCP56Time2a(this.infoObj[this.InfoObjAddrSize:], this.InfoObjTimeZone)
+}
+
+func (this *ASDU) GetTestCommand() bool {
+	// pass InfoObjAddr
+	return binary.LittleEndian.Uint16(this.infoObj[this.InfoObjAddrSize:]) == FBPTestWord
+}
+
+func (this *ASDU) GetResetProcessCmd() QualifierOfResetProcessCmd {
+	// pass InfoObjAddr
+	return QualifierOfResetProcessCmd(this.infoObj[this.InfoObjAddrSize])
+}
+
+func (this *ASDU) GetDelayAcquireCommand() uint16 {
+	// pass InfoObjAddr
+	return binary.LittleEndian.Uint16(this.infoObj[this.InfoObjAddrSize:])
 }

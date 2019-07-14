@@ -1,6 +1,7 @@
 package asdu
 
 import (
+	"reflect"
 	"testing"
 	"time"
 )
@@ -284,6 +285,230 @@ func TestDelayAcquireCommand(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := DelayAcquireCommand(tt.args.c, tt.args.coa, tt.args.ca, tt.args.msec); (err != nil) != tt.wantErr {
 				t.Errorf("DelayAcquireCommand() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestASDU_GetInterrogationCmd(t *testing.T) {
+	type fields struct {
+		Params  *Params
+		infoObj []byte
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   QualifierOfInterrogation
+	}{
+		{
+			"C_IC_NA_1",
+			fields{
+				ParamsWide,
+				[]byte{0x00, 0x00, 0x00, 21}},
+			QOIInro1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			this := &ASDU{
+				Params:  tt.fields.Params,
+				infoObj: tt.fields.infoObj,
+			}
+			if got := this.GetInterrogationCmd(); got != tt.want {
+				t.Errorf("ASDU.GetInterrogationCmd() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestASDU_GetQuantityInterrogationCmd(t *testing.T) {
+	type fields struct {
+		Params  *Params
+		infoObj []byte
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   QualifierCountCall
+	}{
+		{
+			"C_CI_NA_1",
+			fields{
+				ParamsWide,
+				[]byte{0x00, 0x00, 0x00, 0x01}},
+			QualifierCountCall{QCCGroup1, QCCFzeRead}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			this := &ASDU{
+				Params:  tt.fields.Params,
+				infoObj: tt.fields.infoObj,
+			}
+			if got := this.GetQuantityInterrogationCmd(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ASDU.GetQuantityInterrogationCmd() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestASDU_GetReadCmd(t *testing.T) {
+	type fields struct {
+		Params  *Params
+		infoObj []byte
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		want    InfoObjAddr
+		wantErr bool
+	}{
+		{
+			"C_RD_NA_1",
+			fields{
+				ParamsWide,
+				[]byte{0x90, 0x78, 0x56}},
+			0x567890,
+			false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			this := &ASDU{
+				Params:  tt.fields.Params,
+				infoObj: tt.fields.infoObj,
+			}
+			got, err := this.GetReadCmd()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ASDU.GetReadCmd() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("ASDU.GetReadCmd() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestASDU_GetClockSynchronizationCmd(t *testing.T) {
+	type fields struct {
+		Params  *Params
+		infoObj []byte
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		want    time.Time
+		wantErr bool
+	}{
+		{
+			"C_CS_NA_1",
+			fields{
+				ParamsWide,
+				append([]byte{0x00, 0x00, 0x00}, tm0CP56Time2aBytes...)},
+			tm0,
+			false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			this := &ASDU{
+				Params:  tt.fields.Params,
+				infoObj: tt.fields.infoObj,
+			}
+			got, err := this.GetClockSynchronizationCmd()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ASDU.GetClockSynchronizationCmd() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ASDU.GetClockSynchronizationCmd() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestASDU_GetTestCommand(t *testing.T) {
+	type fields struct {
+		Params  *Params
+		infoObj []byte
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   bool
+	}{
+		{
+			"C_CS_NA_1",
+			fields{
+				ParamsWide,
+				[]byte{0x00, 0x00, 0x00, 0xaa, 0x55}},
+			true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			this := &ASDU{
+				Params:  tt.fields.Params,
+				infoObj: tt.fields.infoObj,
+			}
+			if got := this.GetTestCommand(); got != tt.want {
+				t.Errorf("ASDU.GetTestCommand() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestASDU_GetResetProcessCmd(t *testing.T) {
+	type fields struct {
+		Params  *Params
+		infoObj []byte
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   QualifierOfResetProcessCmd
+	}{
+		{
+			"C_RP_NA_1",
+			fields{
+				ParamsWide,
+				[]byte{0x00, 0x00, 0x00, 0x01}},
+			QPRTotal},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			this := &ASDU{
+				Params:  tt.fields.Params,
+				infoObj: tt.fields.infoObj,
+			}
+			if got := this.GetResetProcessCmd(); got != tt.want {
+				t.Errorf("ASDU.GetResetProcessCmd() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestASDU_GetDelayAcquireCommand(t *testing.T) {
+	type fields struct {
+		Params  *Params
+		infoObj []byte
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   uint16
+	}{
+		{
+			"C_CD_NA_1",
+			fields{
+				ParamsWide,
+				[]byte{0x00, 0x00, 0x00, 0x10, 0x27}},
+			10000},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			this := &ASDU{
+				Params:  tt.fields.Params,
+				infoObj: tt.fields.infoObj,
+			}
+			if got := this.GetDelayAcquireCommand(); got != tt.want {
+				t.Errorf("ASDU.GetDelayAcquireCommand() = %v, want %v", got, tt.want)
 			}
 		})
 	}
