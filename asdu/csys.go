@@ -10,7 +10,8 @@ import (
 // subclass 7.3.4.1
 // Use group 1 to 16, or 0 for the default.
 // 总召唤命令
-func InterrogationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr, qoi QualifierOfInterrogation) error {
+func InterrogationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
+	qoi QualifierOfInterrogation) error {
 	if !(coa.Cause == Act || coa.Cause == Deact) {
 		return ErrCmdCause
 	}
@@ -35,7 +36,8 @@ func InterrogationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr, qoi Qua
 // QuantityInterrogationCmd send Quantity Interrogation command [C_CI_NA_1]
 // subclass 7.3.4.2
 // 计数量召唤命令
-func QuantityInterrogationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr, qcc QualifierCountCall) error {
+func QuantityInterrogationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
+	qcc QualifierCountCall) error {
 	if coa.Cause != Act {
 		return ErrCmdCause
 	}
@@ -60,7 +62,8 @@ func QuantityInterrogationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 // [C_RD_NA_1]
 // subclass 7.3.4.3
 // 计数量召唤命令
-func ReadCmd(c Connect, coa CauseOfTransmission, ca CommonAddr, ioa InfoObjAddr) error {
+func ReadCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
+	ioa InfoObjAddr) error {
 	if !(coa.Cause == Req || coa.Cause == UnkType || coa.Cause == UnkCause ||
 		coa.Cause == UnkAddr || coa.Cause == UnkInfo) {
 		return ErrCmdCause
@@ -76,7 +79,7 @@ func ReadCmd(c Connect, coa CauseOfTransmission, ca CommonAddr, ioa InfoObjAddr)
 		0,
 		ca,
 	})
-	if err := u.AppendInfoObjAddr(InfoObjIrrelevantAddr); err != nil {
+	if err := u.AppendInfoObjAddr(ioa); err != nil {
 		return err
 	}
 	return c.Send(u)
@@ -85,7 +88,8 @@ func ReadCmd(c Connect, coa CauseOfTransmission, ca CommonAddr, ioa InfoObjAddr)
 // [C_CS_NA_1]
 // subclass 7.3.4.4
 // 时钟同步命令
-func ClockSynchronizationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr, t time.Time) error {
+func ClockSynchronizationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
+	t time.Time) error {
 	if coa.Cause != Act {
 		return ErrCmdCause
 	}
@@ -135,7 +139,8 @@ func TestCommand(c Connect, coa CauseOfTransmission, ca CommonAddr) error {
 // [C_RP_NA_1]
 // subclass 7.3.4.6
 // 复位进程命令
-func ResetProcessCmd(c Connect, coa CauseOfTransmission, ca CommonAddr, qrp QualifierOfResetProcessCmd) error {
+func ResetProcessCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
+	qrp QualifierOfResetProcessCmd) error {
 	if coa.Cause != Act {
 		return ErrCmdCause
 	}
@@ -160,7 +165,8 @@ func ResetProcessCmd(c Connect, coa CauseOfTransmission, ca CommonAddr, qrp Qual
 // [C_CD_NA_1]
 // subclass 7.3.4.7
 // 延时获得命令
-func DelayAcquireCommand(c Connect, coa CauseOfTransmission, ca CommonAddr, msec uint16) error {
+func DelayAcquireCommand(c Connect, coa CauseOfTransmission, ca CommonAddr,
+	msec uint16) error {
 	if !(coa.Cause == Spont || coa.Cause == Act) {
 		return ErrCmdCause
 	}
