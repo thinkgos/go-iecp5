@@ -84,7 +84,7 @@ func NewServer(conf *Config, conn net.Conn) (*Server, error) {
 
 // RecvLoop feeds t.recv.
 func (t *Server) recvLoop() {
-	t.Informational("cs104 server: recvLoop start!")
+	t.Info("cs104 server: recvLoop start!")
 	// 临时错误恢复，过长和过短不适合，这个需要再调试
 	retryTicker := time.NewTicker(200 * time.Millisecond)
 
@@ -92,7 +92,7 @@ func (t *Server) recvLoop() {
 		close(t.recv)
 		retryTicker.Stop()
 		t.cancelFunc()
-		t.Informational("cs104 server: recvLoop stop!")
+		t.Info("cs104 server: recvLoop stop!")
 	}()
 
 	var deadline time.Time
@@ -155,10 +155,10 @@ func (t *Server) recvLoop() {
 
 // SendLoop drains t.send.
 func (t *Server) sendLoop() {
-	t.Informational("cs104 server: sendLoop start!")
+	t.Info("cs104 server: sendLoop start!")
 	defer func() {
 		t.cancelFunc()
-		t.Informational("cs104 server server: sendLoop stop!")
+		t.Info("cs104 server server: sendLoop stop!")
 	}()
 
 	for apdu := range t.send {
@@ -184,7 +184,7 @@ func (t *Server) sendLoop() {
 
 // Run is the big fat state machine.
 func (this *Server) run() {
-	this.Informational("cs104 server: run start!")
+	this.Info("cs104 server: run start!")
 	// when connected establish and not enable "data transfer" yet
 	// defualt: STOPDT
 	isActive := false
@@ -217,7 +217,7 @@ func (this *Server) run() {
 		}
 
 		close(this.In)
-		this.Informational("cs104 server: run stop!")
+		this.Info("cs104 server: run stop!")
 	}()
 
 	// transmission timestamps for timeout calculation
