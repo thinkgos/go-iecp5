@@ -10,11 +10,13 @@ func (this *ASDU) AppendBytes(b ...byte) *ASDU {
 	this.infoObj = append(this.infoObj, b...)
 	return this
 }
+
 func (this *ASDU) DecodeByte() byte {
 	v := this.infoObj[0]
 	this.infoObj = this.infoObj[1:]
 	return v
 }
+
 func (this *ASDU) AppendInfoObjAddr(addr InfoObjAddr) error {
 	switch this.InfoObjAddrSize {
 	case 1:

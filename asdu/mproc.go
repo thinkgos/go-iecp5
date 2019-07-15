@@ -6,11 +6,6 @@ import (
 
 // 在监视方向过程信息的应用服务数据单元
 
-type Connect interface {
-	Params() *Params
-	Send(a *ASDU) error
-}
-
 func checkValid(c Connect, typeID TypeID, isSequence bool, infosLen int) error {
 	if infosLen == 0 {
 		return ErrNotAnyObjInfo

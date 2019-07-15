@@ -29,9 +29,10 @@ var (
 
 type Server struct {
 	Config
-	conn net.Conn
+	params *asdu.Params
+	conn   net.Conn
 
-	In   chan []byte
+	in   chan []byte
 	out  chan []byte
 	recv chan []byte // for recvLoop
 	send chan []byte // for sendLoop
@@ -54,9 +55,11 @@ type Server struct {
 }
 
 // NewServer returns a cs104 server
-func NewServer(conf *Config, conn net.Conn) (*Server, error) {
-	err := conf.Valid()
-	if err != nil {
+func NewServer(conf *Config, params *asdu.Params, conn net.Conn) (*Server, error) {
+	if err := conf.Valid(); err != nil {
+		return nil, err
+	}
+	if err := params.Valid(); err != nil {
 		return nil, err
 	}
 
@@ -64,9 +67,10 @@ func NewServer(conf *Config, conn net.Conn) (*Server, error) {
 
 	t := &Server{
 		Config: *conf,
+		params: params,
 		conn:   conn,
 
-		In:   make(chan []byte),
+		in:   make(chan []byte),
 		out:  make(chan []byte),
 		recv: make(chan []byte, conf.RecvUnackLimitW),
 		send: make(chan []byte, conf.SendUnackLimitK), // may not block!
@@ -97,7 +101,7 @@ func (t *Server) recvLoop() {
 
 	var deadline time.Time
 	for {
-		datagram := make([]byte, 255)
+		datagram := make([]byte, APDUSizeMax)
 		length := 2
 		for rdCnt := 0; rdCnt < length; {
 			byteCount, err := io.ReadFull(t.conn, datagram[rdCnt:length])
@@ -145,7 +149,7 @@ func (t *Server) recvLoop() {
 				}
 				if rdCnt == length {
 					apdu := datagram[:length]
-					t.Debug("cs104 server: Raw RX [% X]", apdu)
+					t.Debug("cs104 server: Raw RX [% x]", apdu)
 					t.recv <- apdu // copy
 				}
 			}
@@ -162,7 +166,7 @@ func (t *Server) sendLoop() {
 	}()
 
 	for apdu := range t.send {
-		t.Debug("cs104 server: Raw TX [% X]", apdu)
+		t.Debug("cs104 server: Raw TX [% x]", apdu)
 		for wrCnt := 0; len(apdu) > wrCnt; {
 			byteCount, err := t.conn.Write(apdu[wrCnt:])
 			if err != nil {
@@ -216,7 +220,7 @@ func (this *Server) run() {
 			}
 		}
 
-		close(this.In)
+		close(this.in)
 		this.Info("cs104 server: run stop!")
 	}()
 
@@ -295,7 +299,7 @@ func (this *Server) run() {
 					return
 				}
 
-				this.In <- asdu
+				this.in <- asdu
 				if this.ackNoIn == this.seqNoIn { // first unacked
 					unAckRecvdSince = time.Now()
 				}
@@ -376,7 +380,7 @@ func seqNoCount(nextAckNo, nextSeqNo uint16) uint16 {
 }
 
 // SendASDU
-func (this *Server) SendASDU(u *asdu.ASDU) error {
+func (this *Server) Send(u *asdu.ASDU) error {
 	data, err := u.MarshalBinary()
 	if err != nil {
 		return err
@@ -392,4 +396,14 @@ func (this *Server) SendASDU(u *asdu.ASDU) error {
 
 func (this *Server) Close() {
 	this.cancelFunc()
+}
+
+func (this *Server) Params() *asdu.Params {
+	return this.params
+}
+
+func (this *Server) runHandler() {
+	for asdu := range this.in {
+
+	}
 }
