@@ -203,7 +203,7 @@ func (this *ASDU) GetReadCmd() InfoObjAddr {
 	return this.DecodeInfoObjAddr()
 }
 
-func (this *ASDU) GetClockSynchronizationCmd() (time.Time, error) {
+func (this *ASDU) GetClockSynchronizationCmd() time.Time {
 	// pass InfoObjAddr
 	return ParseCP56Time2a(this.infoObj[this.InfoObjAddrSize:], this.InfoObjTimeZone)
 }

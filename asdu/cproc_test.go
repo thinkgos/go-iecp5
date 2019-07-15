@@ -516,10 +516,9 @@ func TestASDU_GetSingleCmd(t *testing.T) {
 		infoObj    []byte
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		want    SingleCommandObject
-		wantErr bool
+		name   string
+		fields fields
+		want   SingleCommandObject
 	}{
 		{
 			"C_SC_NA_1",
@@ -532,7 +531,7 @@ func TestASDU_GetSingleCmd(t *testing.T) {
 				true,
 				QualifierOfCommand{QOCShortPulse, false},
 				time.Time{}},
-			false},
+		},
 		{
 			"C_SC_TA_1 CP56Time2a",
 			fields{
@@ -544,7 +543,7 @@ func TestASDU_GetSingleCmd(t *testing.T) {
 				false,
 				QualifierOfCommand{QOCShortPulse, false},
 				tm0},
-			false},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -553,11 +552,7 @@ func TestASDU_GetSingleCmd(t *testing.T) {
 				Identifier: tt.fields.Identifier,
 				infoObj:    tt.fields.infoObj,
 			}
-			got, err := this.GetSingleCmd()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ASDU.GetSingleCmd() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			got := this.GetSingleCmd()
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ASDU.GetSingleCmd() = %v, want %v", got, tt.want)
 			}
@@ -572,10 +567,9 @@ func TestASDU_GetDoubleCmd(t *testing.T) {
 		infoObj    []byte
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		want    DoubleCommandObject
-		wantErr bool
+		name   string
+		fields fields
+		want   DoubleCommandObject
 	}{
 		{
 			"C_DC_NA_1",
@@ -588,7 +582,8 @@ func TestASDU_GetDoubleCmd(t *testing.T) {
 				DCOOn,
 				QualifierOfCommand{QOCShortPulse, false},
 				time.Time{},
-			}, false},
+			},
+		},
 		{
 			"C_DC_TA_1 CP56Time2a",
 			fields{
@@ -600,7 +595,7 @@ func TestASDU_GetDoubleCmd(t *testing.T) {
 				DCOOff,
 				QualifierOfCommand{QOCShortPulse, false},
 				tm0},
-			false},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -609,11 +604,7 @@ func TestASDU_GetDoubleCmd(t *testing.T) {
 				Identifier: tt.fields.Identifier,
 				infoObj:    tt.fields.infoObj,
 			}
-			got, err := this.GetDoubleCmd()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ASDU.GetDoubleCmd() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			got := this.GetDoubleCmd()
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ASDU.GetDoubleCmd() = %v, want %v", got, tt.want)
 			}
@@ -628,10 +619,9 @@ func TestASDU_GetStepCmd(t *testing.T) {
 		infoObj    []byte
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		want    StepCommandObject
-		wantErr bool
+		name   string
+		fields fields
+		want   StepCommandObject
 	}{
 		{
 			"C_RC_NA_1",
@@ -644,7 +634,7 @@ func TestASDU_GetStepCmd(t *testing.T) {
 				SCOStepDown,
 				QualifierOfCommand{QOCShortPulse, false},
 				time.Time{}},
-			false},
+		},
 		{
 			"C_RC_TA_1 CP56Time2a",
 			fields{
@@ -656,7 +646,7 @@ func TestASDU_GetStepCmd(t *testing.T) {
 				SCOStepUP,
 				QualifierOfCommand{QOCShortPulse, false},
 				tm0},
-			false},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -665,11 +655,7 @@ func TestASDU_GetStepCmd(t *testing.T) {
 				Identifier: tt.fields.Identifier,
 				infoObj:    tt.fields.infoObj,
 			}
-			got, err := this.GetStepCmd()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ASDU.GetStepCmd() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			got := this.GetStepCmd()
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ASDU.GetStepCmd() = %v, want %v", got, tt.want)
 			}
@@ -684,10 +670,9 @@ func TestASDU_GetSetpointNormalCmd(t *testing.T) {
 		infoObj    []byte
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		want    SetpointCommandNormalObject
-		wantErr bool
+		name   string
+		fields fields
+		want   SetpointCommandNormalObject
 	}{
 		{
 			"C_SE_NA_1",
@@ -700,7 +685,7 @@ func TestASDU_GetSetpointNormalCmd(t *testing.T) {
 				100,
 				QualifierOfSetpointCmd{1, false},
 				time.Time{}},
-			false},
+		},
 		{
 			"C_SE_TA_1 CP56Time2a",
 			fields{
@@ -712,7 +697,7 @@ func TestASDU_GetSetpointNormalCmd(t *testing.T) {
 				100,
 				QualifierOfSetpointCmd{1, false},
 				tm0},
-			false},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -721,11 +706,7 @@ func TestASDU_GetSetpointNormalCmd(t *testing.T) {
 				Identifier: tt.fields.Identifier,
 				infoObj:    tt.fields.infoObj,
 			}
-			got, err := this.GetSetpointNormalCmd()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ASDU.GetSetpointNormalCmd() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			got := this.GetSetpointNormalCmd()
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ASDU.GetSetpointNormalCmd() = %v, want %v", got, tt.want)
 			}
@@ -740,10 +721,9 @@ func TestASDU_GetSetpointCmdScaled(t *testing.T) {
 		infoObj    []byte
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		want    SetpointCommandScaledObject
-		wantErr bool
+		name   string
+		fields fields
+		want   SetpointCommandScaledObject
 	}{
 		{
 			"C_SE_NB_1",
@@ -756,7 +736,7 @@ func TestASDU_GetSetpointCmdScaled(t *testing.T) {
 				100,
 				QualifierOfSetpointCmd{1, false},
 				time.Time{}},
-			false},
+		},
 		{
 			"C_SE_TB_1 CP56Time2a",
 			fields{
@@ -768,7 +748,7 @@ func TestASDU_GetSetpointCmdScaled(t *testing.T) {
 				100,
 				QualifierOfSetpointCmd{1, false},
 				tm0},
-			false},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -777,11 +757,7 @@ func TestASDU_GetSetpointCmdScaled(t *testing.T) {
 				Identifier: tt.fields.Identifier,
 				infoObj:    tt.fields.infoObj,
 			}
-			got, err := this.GetSetpointCmdScaled()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ASDU.GetSetpointCmdScaled() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			got := this.GetSetpointCmdScaled()
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ASDU.GetSetpointCmdScaled() = %v, want %v", got, tt.want)
 			}
@@ -798,10 +774,9 @@ func TestASDU_GetSetpointFloatCmd(t *testing.T) {
 		infoObj    []byte
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		want    SetpointCommandFloatObject
-		wantErr bool
+		name   string
+		fields fields
+		want   SetpointCommandFloatObject
 	}{
 		{
 			"C_SE_NC_1",
@@ -814,7 +789,7 @@ func TestASDU_GetSetpointFloatCmd(t *testing.T) {
 				100,
 				QualifierOfSetpointCmd{1, false},
 				time.Time{}},
-			false},
+		},
 		{
 			"C_SE_TC_1 CP56Time2a",
 			fields{
@@ -826,7 +801,7 @@ func TestASDU_GetSetpointFloatCmd(t *testing.T) {
 				100,
 				QualifierOfSetpointCmd{1, false},
 				tm0},
-			false},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -835,11 +810,7 @@ func TestASDU_GetSetpointFloatCmd(t *testing.T) {
 				Identifier: tt.fields.Identifier,
 				infoObj:    tt.fields.infoObj,
 			}
-			got, err := this.GetSetpointFloatCmd()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ASDU.GetSetpointFloatCmd() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			got := this.GetSetpointFloatCmd()
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ASDU.GetSetpointFloatCmd() = %v, want %v", got, tt.want)
 			}
@@ -854,10 +825,9 @@ func TestASDU_GetBitsString32Cmd(t *testing.T) {
 		infoObj    []byte
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		want    BitsString32CommandObject
-		wantErr bool
+		name   string
+		fields fields
+		want   BitsString32CommandObject
 	}{
 		{
 			"C_BO_NA_1",
@@ -869,7 +839,7 @@ func TestASDU_GetBitsString32Cmd(t *testing.T) {
 				0x567890,
 				100,
 				time.Time{}},
-			false},
+		},
 		{
 			"C_BO_TA_1 CP56Time2a",
 			fields{
@@ -880,7 +850,7 @@ func TestASDU_GetBitsString32Cmd(t *testing.T) {
 				0x567890,
 				100,
 				tm0},
-			false},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -889,11 +859,7 @@ func TestASDU_GetBitsString32Cmd(t *testing.T) {
 				Identifier: tt.fields.Identifier,
 				infoObj:    tt.fields.infoObj,
 			}
-			got, err := this.GetBitsString32Cmd()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ASDU.GetBitsString32Cmd() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			got := this.GetBitsString32Cmd()
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ASDU.GetBitsString32Cmd() = %v, want %v", got, tt.want)
 			}

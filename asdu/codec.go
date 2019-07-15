@@ -101,20 +101,14 @@ func (this *ASDU) DecodeBitsString32() uint32 {
 	return v
 }
 
-func (this *ASDU) DecodeCP56Time2a() (time.Time, error) {
-	t, err := ParseCP56Time2a(this.infoObj, this.Params.InfoObjTimeZone)
-	if err != nil {
-		return t, ErrInvalidTimeTag
-	}
+func (this *ASDU) DecodeCP56Time2a() time.Time {
+	t := ParseCP56Time2a(this.infoObj, this.Params.InfoObjTimeZone)
 	this.infoObj = this.infoObj[7:]
-	return t, nil
+	return t
 }
 
-func (this *ASDU) DecodeCP24Time2a() (time.Time, error) {
-	t, err := ParseCP24Time2a(this.infoObj, this.Params.InfoObjTimeZone)
-	if err != nil {
-		return t, ErrInvalidTimeTag
-	}
+func (this *ASDU) DecodeCP24Time2a() time.Time {
+	t := ParseCP24Time2a(this.infoObj, this.Params.InfoObjTimeZone)
 	this.infoObj = this.infoObj[3:]
-	return t, nil
+	return t
 }

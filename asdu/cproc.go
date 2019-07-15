@@ -289,156 +289,128 @@ func BitsString32Cmd(c Connect, typeID TypeID, coa CauseOfTransmission, commonAd
 	return c.Send(u)
 }
 
-func (this *ASDU) GetSingleCmd() (SingleCommandObject, error) {
-	var err error
+func (this *ASDU) GetSingleCmd() SingleCommandObject {
 	var s SingleCommandObject
 
 	s.Ioa = this.DecodeInfoObjAddr()
-	value := this.infoObj[0]
+	value := this.DecodeByte()
 	s.Value = value&0x01 == 0x01
 	s.Qoc = ParseQualifierOfCommand(value & 0xfe)
 
 	switch this.Type {
 	case C_SC_NA_1:
 	case C_SC_TA_1:
-		s.Time, err = ParseCP56Time2a(this.infoObj[1:], this.InfoObjTimeZone)
-		if err != nil {
-			return s, ErrInvalidTimeTag
-		}
+		s.Time = this.DecodeCP56Time2a()
 	default:
-		return s, ErrTypeIDNotMatch
+		panic(ErrTypeIDNotMatch)
 	}
 
-	return s, nil
+	return s
 }
 
-func (this *ASDU) GetDoubleCmd() (DoubleCommandObject, error) {
-	var err error
+func (this *ASDU) GetDoubleCmd() DoubleCommandObject {
 	var cmd DoubleCommandObject
 
 	cmd.Ioa = this.DecodeInfoObjAddr()
-	value := this.infoObj[0]
+	value := this.DecodeByte()
 	cmd.Value = DoubleCommand(value & 0x03)
 	cmd.Qoc = ParseQualifierOfCommand(value & 0xfc)
 
 	switch this.Type {
 	case C_DC_NA_1:
 	case C_DC_TA_1:
-		cmd.Time, err = ParseCP56Time2a(this.infoObj[1:], this.InfoObjTimeZone)
-		if err != nil {
-			return cmd, ErrInvalidTimeTag
-		}
+		cmd.Time = this.DecodeCP56Time2a()
 	default:
-		return cmd, ErrTypeIDNotMatch
+		panic(ErrTypeIDNotMatch)
 	}
 
-	return cmd, nil
+	return cmd
 }
 
-func (this *ASDU) GetStepCmd() (StepCommandObject, error) {
+func (this *ASDU) GetStepCmd() StepCommandObject {
 	var cmd StepCommandObject
-	var err error
 
 	cmd.Ioa = this.DecodeInfoObjAddr()
-	value := this.infoObj[0]
+	value := this.DecodeByte()
 	cmd.Value = StepCommand(value & 0x03)
 	cmd.Qoc = ParseQualifierOfCommand(value & 0xfc)
 
 	switch this.Type {
 	case C_RC_NA_1:
 	case C_RC_TA_1:
-		cmd.Time, err = ParseCP56Time2a(this.infoObj[1:], this.InfoObjTimeZone)
-		if err != nil {
-			return cmd, ErrInvalidTimeTag
-		}
+		cmd.Time = this.DecodeCP56Time2a()
 	default:
-		return cmd, ErrTypeIDNotMatch
+		panic(ErrTypeIDNotMatch)
 	}
 
-	return cmd, nil
+	return cmd
 }
 
-func (this *ASDU) GetSetpointNormalCmd() (SetpointCommandNormalObject, error) {
+func (this *ASDU) GetSetpointNormalCmd() SetpointCommandNormalObject {
 	var cmd SetpointCommandNormalObject
-	var err error
 
 	cmd.Ioa = this.DecodeInfoObjAddr()
 	cmd.Value = this.DecodeNormalize()
-	cmd.Qos = ParseQualifierOfSetpointCmd(this.infoObj[0])
+	cmd.Qos = ParseQualifierOfSetpointCmd(this.DecodeByte())
 
 	switch this.Type {
 	case C_SE_NA_1:
 	case C_SE_TA_1:
-		cmd.Time, err = ParseCP56Time2a(this.infoObj[1:], this.InfoObjTimeZone)
-		if err != nil {
-			return cmd, ErrInvalidTimeTag
-		}
+		cmd.Time = this.DecodeCP56Time2a()
 	default:
-		return cmd, ErrTypeIDNotMatch
+		panic(ErrTypeIDNotMatch)
 	}
 
-	return cmd, nil
+	return cmd
 }
 
-func (this *ASDU) GetSetpointCmdScaled() (SetpointCommandScaledObject, error) {
+func (this *ASDU) GetSetpointCmdScaled() SetpointCommandScaledObject {
 	var cmd SetpointCommandScaledObject
-	var err error
 
 	cmd.Ioa = this.DecodeInfoObjAddr()
 	cmd.Value = this.DecodeScaled()
-	cmd.Qos = ParseQualifierOfSetpointCmd(this.infoObj[0])
+	cmd.Qos = ParseQualifierOfSetpointCmd(this.DecodeByte())
 
 	switch this.Type {
 	case C_SE_NB_1:
 	case C_SE_TB_1:
-		cmd.Time, err = ParseCP56Time2a(this.infoObj[1:], this.InfoObjTimeZone)
-		if err != nil {
-			return cmd, ErrInvalidTimeTag
-		}
+		cmd.Time = this.DecodeCP56Time2a()
 	default:
-		return cmd, ErrTypeIDNotMatch
+		panic(ErrTypeIDNotMatch)
 	}
 
-	return cmd, nil
+	return cmd
 }
-func (this *ASDU) GetSetpointFloatCmd() (SetpointCommandFloatObject, error) {
+func (this *ASDU) GetSetpointFloatCmd() SetpointCommandFloatObject {
 	var cmd SetpointCommandFloatObject
-	var err error
 
 	cmd.Ioa = this.DecodeInfoObjAddr()
 	cmd.Value = this.DecodeFloat()
-	cmd.Qos = ParseQualifierOfSetpointCmd(this.infoObj[0])
+	cmd.Qos = ParseQualifierOfSetpointCmd(this.DecodeByte())
 
 	switch this.Type {
 	case C_SE_NC_1:
 	case C_SE_TC_1:
-		cmd.Time, err = ParseCP56Time2a(this.infoObj[1:], this.InfoObjTimeZone)
-		if err != nil {
-			return cmd, ErrInvalidTimeTag
-		}
+		cmd.Time = this.DecodeCP56Time2a()
 	default:
-		return cmd, ErrTypeIDNotMatch
+		panic(ErrTypeIDNotMatch)
 	}
 
-	return cmd, nil
+	return cmd
 }
 
-func (this *ASDU) GetBitsString32Cmd() (BitsString32CommandObject, error) {
+func (this *ASDU) GetBitsString32Cmd() BitsString32CommandObject {
 	var cmd BitsString32CommandObject
-	var err error
 
 	cmd.Ioa = this.DecodeInfoObjAddr()
 	cmd.Value = this.DecodeBitsString32()
 	switch this.Type {
 	case C_BO_NA_1:
 	case C_BO_TA_1:
-		cmd.Time, err = ParseCP56Time2a(this.infoObj, this.InfoObjTimeZone)
-		if err != nil {
-			return cmd, ErrInvalidTimeTag
-		}
+		cmd.Time = this.DecodeCP56Time2a()
 	default:
-		return cmd, ErrTypeIDNotMatch
+		panic(ErrTypeIDNotMatch)
 	}
 
-	return cmd, nil
+	return cmd
 }

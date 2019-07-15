@@ -28,9 +28,9 @@ func CP56Time2a(t time.Time, loc *time.Location) []byte {
 // 7个八位位组二进制时间，建议所有时标采用UTC
 // The year is assumed to be in the 20th century.
 // See IEC 60870-5-4 § 6.8 and IEC 60870-5-101 second edition § 7.2.6.18.
-func ParseCP56Time2a(bytes []byte, loc *time.Location) (time.Time, error) {
+func ParseCP56Time2a(bytes []byte, loc *time.Location) time.Time {
 	if len(bytes) < 7 || bytes[2]&0x80 == 0x80 {
-		return time.Time{}, ErrInvalidTimeTag
+		return time.Time{}
 	}
 
 	x := int(binary.LittleEndian.Uint16(bytes))
@@ -46,7 +46,7 @@ func ParseCP56Time2a(bytes []byte, loc *time.Location) (time.Time, error) {
 	if loc == nil {
 		loc = time.UTC
 	}
-	return time.Date(year, month, day, hour, min, sec, nsec, loc), nil
+	return time.Date(year, month, day, hour, min, sec, nsec, loc)
 }
 
 func CP24Time2a(t time.Time, loc *time.Location) []byte {
@@ -59,12 +59,12 @@ func CP24Time2a(t time.Time, loc *time.Location) []byte {
 }
 
 // 3个八位位组二进制时间，建议所有时标采用UTC
-// 读3字节,返回一个值，当无效时返回nil
+// 读3字节,返回一个值，当无效时返回空值
 // The moment is assumed to be in the recent present.
 // See IEC 60870-5-4 § 6.8 and IEC 60870-5-101 second edition § 7.2.6.19.
-func ParseCP24Time2a(bytes []byte, loc *time.Location) (time.Time, error) {
+func ParseCP24Time2a(bytes []byte, loc *time.Location) time.Time {
 	if len(bytes) < 3 || bytes[2]&0x80 == 0x80 {
-		return time.Time{}, ErrInvalidTimeTag
+		return time.Time{}
 	}
 	x := int(binary.LittleEndian.Uint16(bytes))
 	msec := x % 1000
@@ -85,7 +85,7 @@ func ParseCP24Time2a(bytes []byte, loc *time.Location) (time.Time, error) {
 	//	val = val.Add(-time.Hour)
 	//}
 
-	return val, nil
+	return val
 }
 
 func CP16Time2a(msec uint16) []byte {

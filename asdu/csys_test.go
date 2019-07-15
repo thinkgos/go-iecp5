@@ -384,16 +384,14 @@ func TestASDU_GetClockSynchronizationCmd(t *testing.T) {
 		infoObj []byte
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		want    time.Time
-		wantErr bool
+		name   string
+		fields fields
+		want   time.Time
 	}{
 		{
 			"C_CS_NA_1",
 			fields{ParamsWide, append([]byte{0x00, 0x00, 0x00}, tm0CP56Time2aBytes...)},
 			tm0,
-			false,
 		},
 	}
 	for _, tt := range tests {
@@ -402,11 +400,7 @@ func TestASDU_GetClockSynchronizationCmd(t *testing.T) {
 				Params:  tt.fields.Params,
 				infoObj: tt.fields.infoObj,
 			}
-			got, err := this.GetClockSynchronizationCmd()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ASDU.GetClockSynchronizationCmd() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			got := this.GetClockSynchronizationCmd()
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ASDU.GetClockSynchronizationCmd() = %v, want %v", got, tt.want)
 			}

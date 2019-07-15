@@ -624,9 +624,7 @@ func MeasuredValueFloatCP56Time2a(c Connect, coa CauseOfTransmission,
 	return measuredValueFloat(c, M_ME_TF_1, false, coa, ca, infos...)
 }
 
-func (this *ASDU) GetSinglePoint() ([]SinglePointInfo, error) {
-	var err error
-
+func (this *ASDU) GetSinglePoint() []SinglePointInfo {
 	info := make([]SinglePointInfo, 0, this.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
 	for i, once := 0, false; i < int(this.Variable.Number); i++ {
@@ -642,15 +640,11 @@ func (this *ASDU) GetSinglePoint() ([]SinglePointInfo, error) {
 		switch this.Type {
 		case M_SP_NA_1:
 		case M_SP_TA_1:
-			if t, err = this.DecodeCP24Time2a(); err != nil {
-				return nil, ErrInvalidTimeTag
-			}
+			t = this.DecodeCP24Time2a()
 		case M_SP_TB_1:
-			if t, err = this.DecodeCP56Time2a(); err != nil {
-				return nil, ErrInvalidTimeTag
-			}
+			t = this.DecodeCP56Time2a()
 		default:
-			return nil, ErrTypeIDNotMatch
+			panic(ErrTypeIDNotMatch)
 		}
 
 		info = append(info, SinglePointInfo{
@@ -659,12 +653,10 @@ func (this *ASDU) GetSinglePoint() ([]SinglePointInfo, error) {
 			Qds:   QualityDescriptor(value & 0xf0),
 			Time:  t})
 	}
-	return info, nil
+	return info
 }
 
-func (this *ASDU) GetDoublePoint() ([]DoublePointInfo, error) {
-	var err error
-
+func (this *ASDU) GetDoublePoint() []DoublePointInfo {
 	info := make([]DoublePointInfo, 0, this.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
 	for i, once := 0, false; i < int(this.Variable.Number); i++ {
@@ -680,15 +672,11 @@ func (this *ASDU) GetDoublePoint() ([]DoublePointInfo, error) {
 		switch this.Type {
 		case M_DP_NA_1:
 		case M_DP_TA_1:
-			if t, err = this.DecodeCP24Time2a(); err != nil {
-				return nil, ErrInvalidTimeTag
-			}
+			t = this.DecodeCP24Time2a()
 		case M_DP_TB_1:
-			if t, err = this.DecodeCP56Time2a(); err != nil {
-				return nil, ErrInvalidTimeTag
-			}
+			t = this.DecodeCP56Time2a()
 		default:
-			return nil, ErrTypeIDNotMatch
+			panic(ErrTypeIDNotMatch)
 		}
 
 		info = append(info, DoublePointInfo{
@@ -697,12 +685,10 @@ func (this *ASDU) GetDoublePoint() ([]DoublePointInfo, error) {
 			Qds:   QualityDescriptor(value & 0xf0),
 			Time:  t})
 	}
-	return info, nil
+	return info
 }
 
-func (this *ASDU) GetStepPosition() ([]StepPositionInfo, error) {
-	var err error
-
+func (this *ASDU) GetStepPosition() []StepPositionInfo {
 	info := make([]StepPositionInfo, 0, this.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
 	for i, once := 0, false; i < int(this.Variable.Number); i++ {
@@ -719,15 +705,11 @@ func (this *ASDU) GetStepPosition() ([]StepPositionInfo, error) {
 		switch this.Type {
 		case M_ST_NA_1:
 		case M_ST_TA_1:
-			if t, err = this.DecodeCP24Time2a(); err != nil {
-				return nil, ErrInvalidTimeTag
-			}
+			t = this.DecodeCP24Time2a()
 		case M_SP_TB_1:
-			if t, err = this.DecodeCP56Time2a(); err != nil {
-				return nil, ErrInvalidTimeTag
-			}
+			t = this.DecodeCP56Time2a()
 		default:
-			return nil, ErrTypeIDNotMatch
+			panic(ErrTypeIDNotMatch)
 		}
 
 		info = append(info, StepPositionInfo{
@@ -736,12 +718,10 @@ func (this *ASDU) GetStepPosition() ([]StepPositionInfo, error) {
 			Qds:   qds,
 			Time:  t})
 	}
-	return info, nil
+	return info
 }
 
-func (this *ASDU) GetBitString32() ([]BitString32Info, error) {
-	var err error
-
+func (this *ASDU) GetBitString32() []BitString32Info {
 	info := make([]BitString32Info, 0, this.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
 	for i, once := 0, false; i < int(this.Variable.Number); i++ {
@@ -759,15 +739,11 @@ func (this *ASDU) GetBitString32() ([]BitString32Info, error) {
 		switch this.Type {
 		case M_BO_NA_1:
 		case M_BO_TA_1:
-			if t, err = this.DecodeCP24Time2a(); err != nil {
-				return nil, ErrInvalidTimeTag
-			}
+			t = this.DecodeCP24Time2a()
 		case M_BO_TB_1:
-			if t, err = this.DecodeCP56Time2a(); err != nil {
-				return nil, ErrInvalidTimeTag
-			}
+			t = this.DecodeCP56Time2a()
 		default:
-			return nil, ErrTypeIDNotMatch
+			panic(ErrTypeIDNotMatch)
 		}
 
 		info = append(info, BitString32Info{
@@ -776,12 +752,10 @@ func (this *ASDU) GetBitString32() ([]BitString32Info, error) {
 			Qds:   qds,
 			Time:  t})
 	}
-	return info, nil
+	return info
 }
 
-func (this *ASDU) GetMeasuredValueNormal() ([]MeasuredValueNormalInfo, error) {
-	var err error
-
+func (this *ASDU) GetMeasuredValueNormal() []MeasuredValueNormalInfo {
 	info := make([]MeasuredValueNormalInfo, 0, this.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
 	for i, once := 0, false; i < int(this.Variable.Number); i++ {
@@ -801,17 +775,13 @@ func (this *ASDU) GetMeasuredValueNormal() ([]MeasuredValueNormalInfo, error) {
 			qds = QualityDescriptor(this.DecodeByte())
 		case M_ME_TA_1:
 			qds = QualityDescriptor(this.DecodeByte())
-			if t, err = this.DecodeCP24Time2a(); err != nil {
-				return nil, ErrInvalidTimeTag
-			}
+			t = this.DecodeCP24Time2a()
 		case M_ME_TD_1:
 			qds = QualityDescriptor(this.DecodeByte())
-			if t, err = this.DecodeCP56Time2a(); err != nil {
-				return nil, ErrInvalidTimeTag
-			}
+			t = this.DecodeCP56Time2a()
 		case M_ME_ND_1: // 不带品质
 		default:
-			return nil, ErrTypeIDNotMatch
+			panic(ErrTypeIDNotMatch)
 		}
 
 		info = append(info, MeasuredValueNormalInfo{
@@ -820,12 +790,10 @@ func (this *ASDU) GetMeasuredValueNormal() ([]MeasuredValueNormalInfo, error) {
 			Qds:   qds,
 			Time:  t})
 	}
-	return info, nil
+	return info
 }
 
-func (this *ASDU) GetMeasuredValueScaled() ([]MeasuredValueScaledInfo, error) {
-	var err error
-
+func (this *ASDU) GetMeasuredValueScaled() []MeasuredValueScaledInfo {
 	info := make([]MeasuredValueScaledInfo, 0, this.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
 	for i, once := 0, false; i < int(this.Variable.Number); i++ {
@@ -843,15 +811,11 @@ func (this *ASDU) GetMeasuredValueScaled() ([]MeasuredValueScaledInfo, error) {
 		switch this.Type {
 		case M_ME_NB_1:
 		case M_ME_TB_1:
-			if t, err = this.DecodeCP24Time2a(); err != nil {
-				return nil, ErrInvalidTimeTag
-			}
+			t = this.DecodeCP24Time2a()
 		case M_ME_TE_1:
-			if t, err = this.DecodeCP56Time2a(); err != nil {
-				return nil, ErrInvalidTimeTag
-			}
+			t = this.DecodeCP56Time2a()
 		default:
-			return nil, ErrTypeIDNotMatch
+			panic(ErrTypeIDNotMatch)
 		}
 
 		info = append(info, MeasuredValueScaledInfo{
@@ -860,12 +824,10 @@ func (this *ASDU) GetMeasuredValueScaled() ([]MeasuredValueScaledInfo, error) {
 			Qds:   qds,
 			Time:  t})
 	}
-	return info, nil
+	return info
 }
 
-func (this *ASDU) GetMeasuredValueFloat() ([]MeasuredValueFloatInfo, error) {
-	var err error
-
+func (this *ASDU) GetMeasuredValueFloat() []MeasuredValueFloatInfo {
 	info := make([]MeasuredValueFloatInfo, 0, this.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
 	for i, once := 0, false; i < int(this.Variable.Number); i++ {
@@ -883,15 +845,11 @@ func (this *ASDU) GetMeasuredValueFloat() ([]MeasuredValueFloatInfo, error) {
 		switch this.Type {
 		case M_ME_NC_1:
 		case M_ME_TC_1:
-			if t, err = this.DecodeCP24Time2a(); err != nil {
-				return nil, ErrInvalidTimeTag
-			}
+			t = this.DecodeCP24Time2a()
 		case M_ME_TF_1:
-			if t, err = this.DecodeCP56Time2a(); err != nil {
-				return nil, ErrInvalidTimeTag
-			}
+			t = this.DecodeCP56Time2a()
 		default:
-			return nil, ErrTypeIDNotMatch
+			panic(ErrTypeIDNotMatch)
 		}
 		info = append(info, MeasuredValueFloatInfo{
 			Ioa:   infoObjAddr,
@@ -899,5 +857,5 @@ func (this *ASDU) GetMeasuredValueFloat() ([]MeasuredValueFloatInfo, error) {
 			Qds:   QualityDescriptor(qua),
 			Time:  t})
 	}
-	return info, nil
+	return info
 }

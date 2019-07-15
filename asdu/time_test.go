@@ -44,28 +44,22 @@ func TestParseCP56Time2a(t *testing.T) {
 		loc   *time.Location
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    time.Time
-		wantErr bool
+		name string
+		args args
+		want time.Time
 	}{
 		{
 			"invalid flag", args{
 				[]byte{0x01, 0x02, 0x83, 0x04, 0x65, 0x06, 0x13},
 				nil},
 			time.Time{},
-			true,
 		},
-		{"20190605", args{tm0CP56Time2aBytes, nil}, tm0, false},
-		{"20191215", args{tm1CP56Time2aBytes, time.UTC}, tm1, false},
+		{"20190605", args{tm0CP56Time2aBytes, nil}, tm0},
+		{"20191215", args{tm1CP56Time2aBytes, time.UTC}, tm1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ParseCP56Time2a(tt.args.bytes, tt.args.loc)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ParseCP56Time2a() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			got := ParseCP56Time2a(tt.args.bytes, tt.args.loc)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ParseCP56Time2a() = %v, want %v", got, tt.want)
 			}
@@ -105,38 +99,29 @@ func TestParseCP24Time2a(t *testing.T) {
 		args     args
 		wantMsec int
 		wantMin  int
-		wantErr  bool
 	}{
 		{
 			"invalid flag",
 			args{[]byte{0x01, 0x02, 0x83}, nil},
 			0,
 			0,
-			true,
 		},
 		{
 			"3 Minutes 513 Milliseconds",
 			args{tm0CP24Time2aBytes, nil},
 			513,
 			3,
-			false,
 		},
 		{
 			"13 Minutes 3083 Milliseconds",
 			args{tm1CP24Time2aBytes, time.UTC},
 			3083,
 			13,
-			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ParseCP24Time2a(tt.args.bytes, tt.args.loc)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ParseCP24Time2a() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
+			got := ParseCP24Time2a(tt.args.bytes, tt.args.loc)
 			msec := (got.Nanosecond()/int(time.Millisecond) + got.Second()*1000)
 			if msec != tt.wantMsec {
 				t.Errorf("ParseCP24Time2a() go Millisecond = %v, want %v", msec, tt.wantMsec)
