@@ -942,8 +942,8 @@ func TestMeasuredValueNormalNoQuality(t *testing.T) {
 				CauseOfTransmission{Cause: Back},
 				0x1234,
 				[]MeasuredValueNormalInfo{
-					{0x000001, 1, QDSBlocked, time.Time{}},
-					{0x000002, 2, QDSBlocked, time.Time{}},
+					{0x000001, 1, QDSOK, time.Time{}},
+					{0x000002, 2, QDSOK, time.Time{}},
 				}},
 			false,
 		},
@@ -956,8 +956,8 @@ func TestMeasuredValueNormalNoQuality(t *testing.T) {
 				CauseOfTransmission{Cause: Back},
 				0x1234,
 				[]MeasuredValueNormalInfo{
-					{0x000001, 1, QDSBlocked, time.Time{}},
-					{0x000002, 2, QDSBlocked, time.Time{}},
+					{0x000001, 1, QDSOK, time.Time{}},
+					{0x000002, 2, QDSOK, time.Time{}},
 				}},
 			false,
 		},
@@ -1825,14 +1825,73 @@ func TestASDU_GetMeasuredValueNormal(t *testing.T) {
 		Params     *Params
 		Identifier Identifier
 		infoObj    []byte
-		bootstrap  [ASDUSizeMax]byte
 	}
 	tests := []struct {
 		name   string
 		fields fields
 		want   []MeasuredValueNormalInfo
 	}{
-		// TODO: Add test cases.
+		{
+			"M_ME_NA_1 seq = false Number = 2",
+			fields{
+				ParamsWide,
+				Identifier{
+					Type:     M_ME_NA_1,
+					Variable: VariableStruct{IsSequence: false, Number: 2}},
+				[]byte{0x01, 0x00, 0x00, 0x01, 0x00, 0x10, 0x02, 0x00, 0x00, 0x02, 0x00, 0x10}},
+			[]MeasuredValueNormalInfo{
+				{0x000001, 1, QDSBlocked, time.Time{}},
+				{0x000002, 2, QDSBlocked, time.Time{}}},
+		},
+		{
+			"M_ME_NA_1 seq = true Number = 2",
+			fields{
+				ParamsWide,
+				Identifier{
+					Type:     M_ME_NA_1,
+					Variable: VariableStruct{IsSequence: true, Number: 2}},
+				[]byte{0x01, 0x00, 0x00, 0x01, 0x00, 0x10, 0x02, 0x00, 0x10}},
+			[]MeasuredValueNormalInfo{
+				{0x000001, 1, QDSBlocked, time.Time{}},
+				{0x000002, 2, QDSBlocked, time.Time{}}},
+		},
+		{
+			"M_ME_TD_1 CP56Time2a  Number = 2",
+			fields{
+				ParamsWide,
+				Identifier{
+					Type:     M_ME_TD_1,
+					Variable: VariableStruct{IsSequence: false, Number: 2}},
+				append(append([]byte{0x01, 0x00, 0x00, 0x01, 0x00, 0x10}, tm0CP56Time2aBytes...),
+					append([]byte{0x02, 0x00, 0x00, 0x02, 0x00, 0x10}, tm0CP56Time2aBytes...)...)},
+			[]MeasuredValueNormalInfo{
+				{0x000001, 1, QDSBlocked, tm0},
+				{0x000002, 2, QDSBlocked, tm0}},
+		},
+		{
+			"M_ME_ND_1 seq = false Number = 2",
+			fields{
+				ParamsWide,
+				Identifier{
+					Type:     M_ME_ND_1,
+					Variable: VariableStruct{IsSequence: false, Number: 2}},
+				[]byte{0x01, 0x00, 0x00, 0x01, 0x00, 0x02, 0x00, 0x00, 0x02, 0x00}},
+			[]MeasuredValueNormalInfo{
+				{0x000001, 1, QDSOK, time.Time{}},
+				{0x000002, 2, QDSOK, time.Time{}}},
+		},
+		{
+			"M_ME_ND_1 seq = true Number = 2",
+			fields{
+				ParamsWide,
+				Identifier{
+					Type:     M_ME_ND_1,
+					Variable: VariableStruct{IsSequence: true, Number: 2}},
+				[]byte{0x01, 0x00, 0x00, 0x01, 0x00, 0x02, 0x00}},
+			[]MeasuredValueNormalInfo{
+				{0x000001, 1, QDSOK, time.Time{}},
+				{0x000002, 2, QDSOK, time.Time{}}},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1840,10 +1899,68 @@ func TestASDU_GetMeasuredValueNormal(t *testing.T) {
 				Params:     tt.fields.Params,
 				Identifier: tt.fields.Identifier,
 				infoObj:    tt.fields.infoObj,
-				bootstrap:  tt.fields.bootstrap,
 			}
 			if got := this.GetMeasuredValueNormal(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ASDU.GetMeasuredValueNormal() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestASDU_GetMeasuredValueNormalCP24Time2a(t *testing.T) {
+	type fields struct {
+		Params     *Params
+		Identifier Identifier
+		infoObj    []byte
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   []MeasuredValueNormalInfo
+	}{
+
+		{
+			"M_ME_TA_1 CP24Time2a  Number = 2",
+			fields{
+				ParamsWide,
+				Identifier{
+					Type:     M_ME_TA_1,
+					Variable: VariableStruct{IsSequence: false, Number: 2}},
+				append(append([]byte{0x01, 0x00, 0x00, 0x01, 0x00, 0x10}, tm0CP24Time2aBytes...),
+					append([]byte{0x02, 0x00, 0x00, 0x02, 0x00, 0x10}, tm0CP24Time2aBytes...)...)},
+			[]MeasuredValueNormalInfo{
+				{0x000001, 1, QDSBlocked, tm0},
+				{0x000002, 2, QDSBlocked, tm0}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			this := &ASDU{
+				Params:     tt.fields.Params,
+				Identifier: tt.fields.Identifier,
+				infoObj:    tt.fields.infoObj,
+			}
+			got := this.GetMeasuredValueNormal()
+			for i, v := range got {
+				isError := false
+				if !reflect.DeepEqual(v.Ioa, tt.want[i].Ioa) {
+					isError = true
+				}
+				if !reflect.DeepEqual(v.Value, tt.want[i].Value) {
+					isError = true
+				}
+				if !reflect.DeepEqual(v.Qds, tt.want[i].Qds) {
+					isError = true
+				}
+				if v.Time.Second() != tt.want[i].Time.Second() {
+					isError = true
+				}
+				if v.Time.Nanosecond() != tt.want[i].Time.Nanosecond() {
+					isError = true
+				}
+				if isError {
+					t.Errorf("ASDU.GetSinglePoint() = %v, want %v", v, tt.want[i])
+				}
 			}
 		})
 	}
@@ -1854,14 +1971,49 @@ func TestASDU_GetMeasuredValueScaled(t *testing.T) {
 		Params     *Params
 		Identifier Identifier
 		infoObj    []byte
-		bootstrap  [ASDUSizeMax]byte
 	}
 	tests := []struct {
 		name   string
 		fields fields
 		want   []MeasuredValueScaledInfo
 	}{
-		// TODO: Add test cases.
+		{
+			"M_ME_NB_1 seq = false Number = 2",
+			fields{
+				ParamsWide,
+				Identifier{
+					Type:     M_ME_NB_1,
+					Variable: VariableStruct{IsSequence: false, Number: 2}},
+				[]byte{0x01, 0x00, 0x00, 0x01, 0x00, 0x10, 0x02, 0x00, 0x00, 0x02, 0x00, 0x10}},
+			[]MeasuredValueScaledInfo{
+				{0x000001, 1, QDSBlocked, time.Time{}},
+				{0x000002, 2, QDSBlocked, time.Time{}}},
+		},
+		{
+			"M_ME_NB_1 seq = true Number = 2",
+			fields{
+				ParamsWide,
+				Identifier{
+					Type:     M_ME_NB_1,
+					Variable: VariableStruct{IsSequence: true, Number: 2}},
+				[]byte{0x01, 0x00, 0x00, 0x01, 0x00, 0x10, 0x02, 0x00, 0x10}},
+			[]MeasuredValueScaledInfo{
+				{0x000001, 1, QDSBlocked, time.Time{}},
+				{0x000002, 2, QDSBlocked, time.Time{}}},
+		},
+		{
+			"M_ME_TE_1 CP56Time2a  Number = 2",
+			fields{
+				ParamsWide,
+				Identifier{
+					Type:     M_ME_TE_1,
+					Variable: VariableStruct{IsSequence: false, Number: 2}},
+				append(append([]byte{0x01, 0x00, 0x00, 0x01, 0x00, 0x10}, tm0CP56Time2aBytes...),
+					append([]byte{0x02, 0x00, 0x00, 0x02, 0x00, 0x10}, tm0CP56Time2aBytes...)...)},
+			[]MeasuredValueScaledInfo{
+				{0x000001, 1, QDSBlocked, tm0},
+				{0x000002, 2, QDSBlocked, tm0}},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1869,7 +2021,6 @@ func TestASDU_GetMeasuredValueScaled(t *testing.T) {
 				Params:     tt.fields.Params,
 				Identifier: tt.fields.Identifier,
 				infoObj:    tt.fields.infoObj,
-				bootstrap:  tt.fields.bootstrap,
 			}
 			if got := this.GetMeasuredValueScaled(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ASDU.GetMeasuredValueScaled() = %v, want %v", got, tt.want)
@@ -1878,19 +2029,30 @@ func TestASDU_GetMeasuredValueScaled(t *testing.T) {
 	}
 }
 
-func TestASDU_GetMeasuredValueFloat(t *testing.T) {
+func TestASDU_GetMeasuredValueScaledCP24Time2a(t *testing.T) {
 	type fields struct {
 		Params     *Params
 		Identifier Identifier
 		infoObj    []byte
-		bootstrap  [ASDUSizeMax]byte
 	}
 	tests := []struct {
 		name   string
 		fields fields
-		want   []MeasuredValueFloatInfo
+		want   []MeasuredValueScaledInfo
 	}{
-		// TODO: Add test cases.
+		{
+			"M_ME_TB_1 CP24Time2a  Number = 2",
+			fields{
+				ParamsWide,
+				Identifier{
+					Type:     M_ME_TB_1,
+					Variable: VariableStruct{IsSequence: false, Number: 2}},
+				append(append([]byte{0x01, 0x00, 0x00, 0x01, 0x00, 0x10}, tm0CP24Time2aBytes...),
+					append([]byte{0x02, 0x00, 0x00, 0x02, 0x00, 0x10}, tm0CP24Time2aBytes...)...)},
+			[]MeasuredValueScaledInfo{
+				{0x000001, 1, QDSBlocked, tm0},
+				{0x000002, 2, QDSBlocked, tm0}},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1898,10 +2060,157 @@ func TestASDU_GetMeasuredValueFloat(t *testing.T) {
 				Params:     tt.fields.Params,
 				Identifier: tt.fields.Identifier,
 				infoObj:    tt.fields.infoObj,
-				bootstrap:  tt.fields.bootstrap,
+			}
+			got := this.GetMeasuredValueScaled()
+			for i, v := range got {
+				isError := false
+				if !reflect.DeepEqual(v.Ioa, tt.want[i].Ioa) {
+					isError = true
+				}
+				if !reflect.DeepEqual(v.Value, tt.want[i].Value) {
+					isError = true
+				}
+				if !reflect.DeepEqual(v.Qds, tt.want[i].Qds) {
+					isError = true
+				}
+				if v.Time.Second() != tt.want[i].Time.Second() {
+					isError = true
+				}
+				if v.Time.Nanosecond() != tt.want[i].Time.Nanosecond() {
+					isError = true
+				}
+				if isError {
+					t.Errorf("ASDU.GetSinglePoint() = %v, want %v", v, tt.want[i])
+				}
+			}
+		})
+	}
+}
+
+func TestASDU_GetMeasuredValueFloat(t *testing.T) {
+	bits1 := math.Float32bits(100)
+	bits2 := math.Float32bits(101)
+	type fields struct {
+		Params     *Params
+		Identifier Identifier
+		infoObj    []byte
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   []MeasuredValueFloatInfo
+	}{
+		{
+			"M_ME_NC_1 seq = false Number = 2",
+			fields{
+				ParamsWide,
+				Identifier{
+					Type:     M_ME_NC_1,
+					Variable: VariableStruct{IsSequence: false, Number: 2}},
+				[]byte{
+					0x01, 0x00, 0x00, byte(bits1), byte(bits1 >> 8), byte(bits1 >> 16), byte(bits1 >> 24), 0x10,
+					0x02, 0x00, 0x00, byte(bits2), byte(bits2 >> 8), byte(bits2 >> 16), byte(bits2 >> 24), 0x10}},
+			[]MeasuredValueFloatInfo{
+				{0x000001, 100, QDSBlocked, time.Time{}},
+				{0x000002, 101, QDSBlocked, time.Time{}}},
+		},
+		{
+			"M_ME_NC_1 seq = true Number = 2",
+			fields{
+				ParamsWide,
+				Identifier{
+					Type:     M_ME_NC_1,
+					Variable: VariableStruct{IsSequence: true, Number: 2}},
+				[]byte{
+					0x01, 0x00, 0x00, byte(bits1), byte(bits1 >> 8), byte(bits1 >> 16), byte(bits1 >> 24), 0x10,
+					byte(bits2), byte(bits2 >> 8), byte(bits2 >> 16), byte(bits2 >> 24), 0x10}},
+			[]MeasuredValueFloatInfo{
+				{0x000001, 100, QDSBlocked, time.Time{}},
+				{0x000002, 101, QDSBlocked, time.Time{}}},
+		},
+		{
+			"M_ME_TF_1 CP56Time2a  Number = 2",
+			fields{
+				ParamsWide,
+				Identifier{
+					Type:     M_ME_TF_1,
+					Variable: VariableStruct{IsSequence: false, Number: 2}},
+				append(append([]byte{0x01, 0x00, 0x00, byte(bits1), byte(bits1 >> 8), byte(bits1 >> 16), byte(bits1 >> 24), 0x10}, tm0CP56Time2aBytes...),
+					append([]byte{0x02, 0x00, 0x00, byte(bits2), byte(bits2 >> 8), byte(bits2 >> 16), byte(bits2 >> 24), 0x10}, tm0CP56Time2aBytes...)...)},
+			[]MeasuredValueFloatInfo{
+				{0x000001, 100, QDSBlocked, tm0},
+				{0x000002, 101, QDSBlocked, tm0}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			this := &ASDU{
+				Params:     tt.fields.Params,
+				Identifier: tt.fields.Identifier,
+				infoObj:    tt.fields.infoObj,
 			}
 			if got := this.GetMeasuredValueFloat(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ASDU.GetMeasuredValueFloat() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestASDU_GetMeasuredValueFloatCP24Time2a(t *testing.T) {
+	bits1 := math.Float32bits(100)
+	bits2 := math.Float32bits(101)
+	type fields struct {
+		Params     *Params
+		Identifier Identifier
+		infoObj    []byte
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   []MeasuredValueFloatInfo
+	}{
+		{
+			"M_ME_TC_1 CP24Time2a  Number = 2",
+			fields{
+				ParamsWide,
+				Identifier{
+					Type:     M_ME_TC_1,
+					Variable: VariableStruct{IsSequence: false, Number: 2}},
+				append(append([]byte{0x01, 0x00, 0x00, byte(bits1), byte(bits1 >> 8), byte(bits1 >> 16), byte(bits1 >> 24), 0x10}, tm0CP24Time2aBytes...),
+					append([]byte{0x02, 0x00, 0x00, byte(bits2), byte(bits2 >> 8), byte(bits2 >> 16), byte(bits2 >> 24), 0x10}, tm0CP24Time2aBytes...)...)},
+			[]MeasuredValueFloatInfo{
+				{0x000001, 100, QDSBlocked, tm0},
+				{0x000002, 101, QDSBlocked, tm0}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			this := &ASDU{
+				Params:     tt.fields.Params,
+				Identifier: tt.fields.Identifier,
+				infoObj:    tt.fields.infoObj,
+			}
+			got := this.GetMeasuredValueFloat()
+			for i, v := range got {
+				isError := false
+				if !reflect.DeepEqual(v.Ioa, tt.want[i].Ioa) {
+					isError = true
+				}
+				if !reflect.DeepEqual(v.Value, tt.want[i].Value) {
+					isError = true
+				}
+				if !reflect.DeepEqual(v.Qds, tt.want[i].Qds) {
+					isError = true
+				}
+				if v.Time.Second() != tt.want[i].Time.Second() {
+					isError = true
+				}
+				if v.Time.Nanosecond() != tt.want[i].Time.Nanosecond() {
+					isError = true
+				}
+				if isError {
+					t.Errorf("ASDU.GetSinglePoint() = %v, want %v", v, tt.want[i])
+				}
 			}
 		})
 	}
