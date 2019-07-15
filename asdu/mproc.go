@@ -11,8 +11,8 @@ type Connect interface {
 	Send(a *ASDU) error
 }
 
-func checkValid(c Connect, typeID TypeID, isSequence bool, attrsLen int) error {
-	if attrsLen == 0 {
+func checkValid(c Connect, typeID TypeID, isSequence bool, infosLen int) error {
+	if infosLen == 0 {
 		return ErrNotAnyObjInfo
 	}
 	objSize, err := GetInfoObjSize(typeID)
@@ -26,9 +26,9 @@ func checkValid(c Connect, typeID TypeID, isSequence bool, attrsLen int) error {
 
 	var asduLen int
 	if isSequence {
-		asduLen = param.IdentifierSize() + attrsLen*objSize + param.InfoObjAddrSize
+		asduLen = param.IdentifierSize() + infosLen*objSize + param.InfoObjAddrSize
 	} else {
-		asduLen = param.IdentifierSize() + attrsLen*(objSize+param.InfoObjAddrSize)
+		asduLen = param.IdentifierSize() + infosLen*(objSize+param.InfoObjAddrSize)
 	}
 
 	if asduLen > ASDUSizeMax {
@@ -51,12 +51,12 @@ type SinglePointInfo struct {
 	Time time.Time
 }
 
-// Single sends a type identification M_SP_NA_1, M_SP_TA_1 or M_SP_TB_1.
+// single sends a type identification M_SP_NA_1, M_SP_TA_1 or M_SP_TB_1.
 // subclass 7.3.1.1 - 7.3.1.2
 // 单点信息
-func Single(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
-	ca CommonAddr, attrs ...SinglePointInfo) error {
-	if err := checkValid(c, typeID, isSequence, len(attrs)); err != nil {
+func single(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
+	ca CommonAddr, infos ...SinglePointInfo) error {
+	if err := checkValid(c, typeID, isSequence, len(infos)); err != nil {
 		return err
 	}
 
@@ -67,11 +67,11 @@ func Single(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 		0,
 		ca,
 	})
-	if err := u.SetVariableNumber(len(attrs)); err != nil {
+	if err := u.SetVariableNumber(len(infos)); err != nil {
 		return err
 	}
 	once := false
-	for _, v := range attrs {
+	for _, v := range infos {
 		if !isSequence || !once {
 			once = true
 			if err := u.AppendInfoObjAddr(v.Ioa); err != nil {
@@ -97,6 +97,34 @@ func Single(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 	return c.Send(u)
 }
 
+func Single(c Connect, isSequence bool, coa CauseOfTransmission,
+	ca CommonAddr, infos ...SinglePointInfo) error {
+	if !(coa.Cause == Back || coa.Cause == Spont || coa.Cause == Req ||
+		coa.Cause == Retrem || coa.Cause == Retloc ||
+		(coa.Cause >= Inrogen && coa.Cause <= Inro16)) {
+		return ErrCmdCause
+	}
+	return single(c, M_SP_NA_1, isSequence, coa, ca, infos...)
+}
+
+func SingleCP24Time2a(c Connect, coa CauseOfTransmission,
+	ca CommonAddr, infos ...SinglePointInfo) error {
+	if !(coa.Cause == Spont || coa.Cause == Req ||
+		coa.Cause == Retrem || coa.Cause == Retloc) {
+		return ErrCmdCause
+	}
+	return single(c, M_SP_TA_1, false, coa, ca, infos...)
+}
+
+func SingleCP56Time2a(c Connect, coa CauseOfTransmission,
+	ca CommonAddr, infos ...SinglePointInfo) error {
+	if !(coa.Cause == Spont || coa.Cause == Req ||
+		coa.Cause == Retrem || coa.Cause == Retloc) {
+		return ErrCmdCause
+	}
+	return single(c, M_SP_TB_1, false, coa, ca, infos...)
+}
+
 // DoublePointInfo are the measured value attributes.
 type DoublePointInfo struct {
 	Ioa InfoObjAddr
@@ -110,12 +138,12 @@ type DoublePointInfo struct {
 	Time time.Time
 }
 
-// Double sends a type identification M_DP_NA_1, M_DP_TA_1 or M_DP_TB_1.
+// double sends a type identification M_DP_NA_1, M_DP_TA_1 or M_DP_TB_1.
 // subclass 7.3.1.3 - 7.3.1.4
 // 双点信息
-func Double(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
-	ca CommonAddr, attrs ...DoublePointInfo) error {
-	if err := checkValid(c, typeID, isSequence, len(attrs)); err != nil {
+func double(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
+	ca CommonAddr, infos ...DoublePointInfo) error {
+	if err := checkValid(c, typeID, isSequence, len(infos)); err != nil {
 		return err
 	}
 
@@ -126,11 +154,11 @@ func Double(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 		0,
 		ca,
 	})
-	if err := u.SetVariableNumber(len(attrs)); err != nil {
+	if err := u.SetVariableNumber(len(infos)); err != nil {
 		return err
 	}
 	once := false
-	for _, v := range attrs {
+	for _, v := range infos {
 		if !isSequence || !once {
 			once = true
 			if err := u.AppendInfoObjAddr(v.Ioa); err != nil {
@@ -152,6 +180,34 @@ func Double(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 	return c.Send(u)
 }
 
+func Double(c Connect, isSequence bool, coa CauseOfTransmission,
+	ca CommonAddr, infos ...DoublePointInfo) error {
+	if !(coa.Cause == Back || coa.Cause == Spont || coa.Cause == Req ||
+		coa.Cause == Retrem || coa.Cause == Retloc ||
+		(coa.Cause >= Inrogen && coa.Cause <= Inro16)) {
+		return ErrCmdCause
+	}
+	return double(c, M_DP_NA_1, isSequence, coa, ca, infos...)
+}
+
+func DoubleCP24Time2a(c Connect, coa CauseOfTransmission,
+	ca CommonAddr, infos ...DoublePointInfo) error {
+	if !(coa.Cause == Spont || coa.Cause == Req ||
+		coa.Cause == Retrem || coa.Cause == Retloc) {
+		return ErrCmdCause
+	}
+	return double(c, M_DP_TA_1, false, coa, ca, infos...)
+}
+
+func DoubleCP56Time2a(c Connect, coa CauseOfTransmission,
+	ca CommonAddr, infos ...DoublePointInfo) error {
+	if !(coa.Cause == Spont || coa.Cause == Req ||
+		coa.Cause == Retrem || coa.Cause == Retloc) {
+		return ErrCmdCause
+	}
+	return double(c, M_DP_TB_1, false, coa, ca, infos...)
+}
+
 // StepPositionInfo are the measured value attributes.
 type StepPositionInfo struct {
 	Ioa InfoObjAddr
@@ -165,12 +221,12 @@ type StepPositionInfo struct {
 	Time time.Time
 }
 
-// Step sends a type identification M_ST_NA_1, M_ST_TA_1 or M_ST_TB_1.
+// step sends a type identification M_ST_NA_1, M_ST_TA_1 or M_ST_TB_1.
 // subclass 7.3.1.5 - 7.3.1.6
 // 步位置信息
-func Step(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
-	ca CommonAddr, attrs ...StepPositionInfo) error {
-	if err := checkValid(c, typeID, isSequence, len(attrs)); err != nil {
+func step(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
+	ca CommonAddr, infos ...StepPositionInfo) error {
+	if err := checkValid(c, typeID, isSequence, len(infos)); err != nil {
 		return err
 	}
 
@@ -181,11 +237,11 @@ func Step(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 		0,
 		ca,
 	})
-	if err := u.SetVariableNumber(len(attrs)); err != nil {
+	if err := u.SetVariableNumber(len(infos)); err != nil {
 		return err
 	}
 	once := false
-	for _, v := range attrs {
+	for _, v := range infos {
 		if !isSequence || !once {
 			once = true
 			if err := u.AppendInfoObjAddr(v.Ioa); err != nil {
@@ -207,6 +263,34 @@ func Step(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 	return c.Send(u)
 }
 
+func Step(c Connect, isSequence bool, coa CauseOfTransmission,
+	ca CommonAddr, infos ...StepPositionInfo) error {
+	if !(coa.Cause == Back || coa.Cause == Spont || coa.Cause == Req ||
+		coa.Cause == Retrem || coa.Cause == Retloc ||
+		(coa.Cause >= Inrogen && coa.Cause <= Inro16)) {
+		return ErrCmdCause
+	}
+	return step(c, M_ST_NA_1, isSequence, coa, ca, infos...)
+}
+
+func StepCP24Time2a(c Connect, coa CauseOfTransmission,
+	ca CommonAddr, infos ...StepPositionInfo) error {
+	if !(coa.Cause == Spont || coa.Cause == Req ||
+		coa.Cause == Retrem || coa.Cause == Retloc) {
+		return ErrCmdCause
+	}
+	return step(c, M_ST_TA_1, false, coa, ca, infos...)
+}
+
+func StepCP56Time2a(c Connect, coa CauseOfTransmission,
+	ca CommonAddr, infos ...StepPositionInfo) error {
+	if !(coa.Cause == Spont || coa.Cause == Req ||
+		coa.Cause == Retrem || coa.Cause == Retloc) {
+		return ErrCmdCause
+	}
+	return step(c, M_SP_TB_1, false, coa, ca, infos...)
+}
+
 // BitString32Info are the measured value attributes.
 type BitString32Info struct {
 	Ioa InfoObjAddr
@@ -223,9 +307,9 @@ type BitString32Info struct {
 // Bits sends a type identificationM_BO_NA_1, M_BO_TA_1 or M_BO_TB_1.
 // subclass 7.3.1.7 - 7.3.1.8
 // 比特位串
-func BitString32(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
-	ca CommonAddr, attrs ...BitString32Info) error {
-	if err := checkValid(c, typeID, isSequence, len(attrs)); err != nil {
+func bitString32(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
+	ca CommonAddr, infos ...BitString32Info) error {
+	if err := checkValid(c, typeID, isSequence, len(infos)); err != nil {
 		return err
 	}
 
@@ -236,11 +320,11 @@ func BitString32(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmiss
 		0,
 		ca,
 	})
-	if err := u.SetVariableNumber(len(attrs)); err != nil {
+	if err := u.SetVariableNumber(len(infos)); err != nil {
 		return err
 	}
 	once := false
-	for _, v := range attrs {
+	for _, v := range infos {
 		if !isSequence || !once {
 			once = true
 			if err := u.AppendInfoObjAddr(v.Ioa); err != nil {
@@ -262,6 +346,31 @@ func BitString32(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmiss
 	return c.Send(u)
 }
 
+func BitString32(c Connect, isSequence bool, coa CauseOfTransmission,
+	ca CommonAddr, infos ...BitString32Info) error {
+	if !(coa.Cause == Back || coa.Cause == Spont || coa.Cause == Req ||
+		(coa.Cause >= Inrogen && coa.Cause <= Inro16)) {
+		return ErrCmdCause
+	}
+	return bitString32(c, M_BO_NA_1, isSequence, coa, ca, infos...)
+}
+
+func BitString32CP24Time2a(c Connect, coa CauseOfTransmission,
+	ca CommonAddr, infos ...BitString32Info) error {
+	if !(coa.Cause == Spont || coa.Cause == Req) {
+		return ErrCmdCause
+	}
+	return bitString32(c, M_BO_TA_1, false, coa, ca, infos...)
+}
+
+func BitString32CP56Time2a(c Connect, coa CauseOfTransmission,
+	ca CommonAddr, infos ...BitString32Info) error {
+	if !(coa.Cause == Spont || coa.Cause == Req) {
+		return ErrCmdCause
+	}
+	return bitString32(c, M_BO_TB_1, false, coa, ca, infos...)
+}
+
 // MeasuredValueNormalInfo are the measured value attributes.
 type MeasuredValueNormalInfo struct {
 	Ioa InfoObjAddr
@@ -275,11 +384,11 @@ type MeasuredValueNormalInfo struct {
 	Time time.Time
 }
 
-// MeasuredValueNormal sends a type identification M_ME_NA_1, M_ME_TA_1, M_ME_TD_1 or M_ME_ND_1.
+// measuredValueNormal sends a type identification M_ME_NA_1, M_ME_TA_1, M_ME_TD_1 or M_ME_ND_1.
 // subclass 7.3.1.9 - 7.3.1.10
 // The quality descriptor must default to info.OK for type M_ME_ND_1.
 // 测量值,规一化值
-func MeasuredValueNormal(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
+func measuredValueNormal(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 	ca CommonAddr, attrs ...MeasuredValueNormalInfo) error {
 	if err := checkValid(c, typeID, isSequence, len(attrs)); err != nil {
 		return err
@@ -319,6 +428,41 @@ func MeasuredValueNormal(c Connect, typeID TypeID, isSequence bool, coa CauseOfT
 	return c.Send(u)
 }
 
+func MeasuredValueNormal(c Connect, isSequence bool, coa CauseOfTransmission,
+	ca CommonAddr, infos ...MeasuredValueNormalInfo) error {
+	if !(coa.Cause == Percyc || coa.Cause == Back ||
+		coa.Cause == Spont || coa.Cause == Req ||
+		(coa.Cause >= Inrogen && coa.Cause <= Inro16)) {
+		return ErrCmdCause
+	}
+	return measuredValueNormal(c, M_ME_NA_1, isSequence, coa, ca, infos...)
+}
+
+func MeasuredValueNormalCP24Time2a(c Connect, coa CauseOfTransmission,
+	ca CommonAddr, infos ...MeasuredValueNormalInfo) error {
+	if !(coa.Cause == Spont || coa.Cause == Req) {
+		return ErrCmdCause
+	}
+	return measuredValueNormal(c, M_ME_TA_1, false, coa, ca, infos...)
+}
+
+func MeasuredValueNormalCP56Time2a(c Connect, coa CauseOfTransmission,
+	ca CommonAddr, infos ...MeasuredValueNormalInfo) error {
+	if !(coa.Cause == Spont || coa.Cause == Req) {
+		return ErrCmdCause
+	}
+	return measuredValueNormal(c, M_ME_TD_1, false, coa, ca, infos...)
+}
+func MeasuredValueNormalNoQuality(c Connect, isSequence bool, coa CauseOfTransmission,
+	ca CommonAddr, infos ...MeasuredValueNormalInfo) error {
+	if !(coa.Cause == Percyc || coa.Cause == Back ||
+		coa.Cause == Spont || coa.Cause == Req ||
+		(coa.Cause >= Inrogen && coa.Cause <= Inro16)) {
+		return ErrCmdCause
+	}
+	return measuredValueNormal(c, M_ME_ND_1, isSequence, coa, ca, infos...)
+}
+
 // MeasuredValueScaledInfo are the measured value attributes.
 type MeasuredValueScaledInfo struct {
 	Ioa InfoObjAddr
@@ -332,12 +476,12 @@ type MeasuredValueScaledInfo struct {
 	Time time.Time
 }
 
-// MeasuredValueScaled sends a type identification M_ME_NB_1, M_ME_TB_1 or M_ME_TE_1.
+// measuredValueScaled sends a type identification M_ME_NB_1, M_ME_TB_1 or M_ME_TE_1.
 // subclass 7.3.1.11 - 7.3.1.12
 // 测量值,标度化值
-func MeasuredValueScaled(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
-	ca CommonAddr, attrs ...MeasuredValueScaledInfo) error {
-	if err := checkValid(c, typeID, isSequence, len(attrs)); err != nil {
+func measuredValueScaled(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
+	ca CommonAddr, infos ...MeasuredValueScaledInfo) error {
+	if err := checkValid(c, typeID, isSequence, len(infos)); err != nil {
 		return err
 	}
 
@@ -348,11 +492,11 @@ func MeasuredValueScaled(c Connect, typeID TypeID, isSequence bool, coa CauseOfT
 		0,
 		ca,
 	})
-	if err := u.SetVariableNumber(len(attrs)); err != nil {
+	if err := u.SetVariableNumber(len(infos)); err != nil {
 		return err
 	}
 	once := false
-	for _, v := range attrs {
+	for _, v := range infos {
 		if !isSequence || !once {
 			once = true
 			if err := u.AppendInfoObjAddr(v.Ioa); err != nil {
@@ -373,6 +517,32 @@ func MeasuredValueScaled(c Connect, typeID TypeID, isSequence bool, coa CauseOfT
 	return c.Send(u)
 }
 
+func MeasuredValueScaled(c Connect, isSequence bool, coa CauseOfTransmission,
+	ca CommonAddr, infos ...MeasuredValueScaledInfo) error {
+	if !(coa.Cause == Percyc || coa.Cause == Back ||
+		coa.Cause == Spont || coa.Cause == Req ||
+		(coa.Cause >= Inrogen && coa.Cause <= Inro16)) {
+		return ErrCmdCause
+	}
+	return measuredValueScaled(c, M_ME_NB_1, isSequence, coa, ca, infos...)
+}
+
+func MeasuredValueScaledCP24Time2a(c Connect, coa CauseOfTransmission,
+	ca CommonAddr, infos ...MeasuredValueScaledInfo) error {
+	if !(coa.Cause == Spont || coa.Cause == Req) {
+		return ErrCmdCause
+	}
+	return measuredValueScaled(c, M_ME_TB_1, false, coa, ca, infos...)
+}
+
+func MeasuredValueScaledCP56Time2a(c Connect, coa CauseOfTransmission,
+	ca CommonAddr, infos ...MeasuredValueScaledInfo) error {
+	if !(coa.Cause == Spont || coa.Cause == Req) {
+		return ErrCmdCause
+	}
+	return measuredValueScaled(c, M_ME_TE_1, false, coa, ca, infos...)
+}
+
 // MeasuredValueFloatInfo are the measured value attributes.
 type MeasuredValueFloatInfo struct {
 	Ioa InfoObjAddr
@@ -386,12 +556,12 @@ type MeasuredValueFloatInfo struct {
 	Time time.Time
 }
 
-// MeasuredValueFloat sends a type identification M_ME_NC_1, M_ME_TC_1 or M_ME_TF_1.
+// measuredValueFloat sends a type identification M_ME_NC_1, M_ME_TC_1 or M_ME_TF_1.
 // subclass 7.3.1.13 - 7.3.1.14 - 7.3.1.28
 // 测量值,短浮点数
-func MeasuredValueFloat(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
-	ca CommonAddr, attrs ...MeasuredValueFloatInfo) error {
-	if err := checkValid(c, typeID, isSequence, len(attrs)); err != nil {
+func measuredValueFloat(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
+	ca CommonAddr, infos ...MeasuredValueFloatInfo) error {
+	if err := checkValid(c, typeID, isSequence, len(infos)); err != nil {
 		return err
 	}
 
@@ -402,11 +572,11 @@ func MeasuredValueFloat(c Connect, typeID TypeID, isSequence bool, coa CauseOfTr
 		0,
 		ca,
 	})
-	if err := u.SetVariableNumber(len(attrs)); err != nil {
+	if err := u.SetVariableNumber(len(infos)); err != nil {
 		return err
 	}
 	once := false
-	for _, v := range attrs {
+	for _, v := range infos {
 		if !isSequence || !once {
 			once = true
 			if err := u.AppendInfoObjAddr(v.Ioa); err != nil {
@@ -426,6 +596,32 @@ func MeasuredValueFloat(c Connect, typeID TypeID, isSequence bool, coa CauseOfTr
 		}
 	}
 	return c.Send(u)
+}
+
+func MeasuredValueFloat(c Connect, isSequence bool, coa CauseOfTransmission,
+	ca CommonAddr, infos ...MeasuredValueFloatInfo) error {
+	if !(coa.Cause == Percyc || coa.Cause == Back ||
+		coa.Cause == Spont || coa.Cause == Req ||
+		(coa.Cause >= Inrogen && coa.Cause <= Inro16)) {
+		return ErrCmdCause
+	}
+	return measuredValueFloat(c, M_ME_NC_1, isSequence, coa, ca, infos...)
+}
+
+func MeasuredValueFloatCP24Time2a(c Connect, coa CauseOfTransmission,
+	ca CommonAddr, infos ...MeasuredValueFloatInfo) error {
+	if !(coa.Cause == Spont || coa.Cause == Req) {
+		return ErrCmdCause
+	}
+	return measuredValueFloat(c, M_ME_TC_1, false, coa, ca, infos...)
+}
+
+func MeasuredValueFloatCP56Time2a(c Connect, coa CauseOfTransmission,
+	ca CommonAddr, infos ...MeasuredValueFloatInfo) error {
+	if !(coa.Cause == Spont || coa.Cause == Req) {
+		return ErrCmdCause
+	}
+	return measuredValueFloat(c, M_ME_TF_1, false, coa, ca, infos...)
 }
 
 func (this *ASDU) GetSinglePoint() ([]SinglePointInfo, error) {
