@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/thinkgos/go-iecp5/asdu"
-	"github.com/thinkgos/library/elog"
+	"github.com/thinkgos/go-iecp5/clog"
 )
 
 // TimeoutResolution is seconds according to companion standard 104,
@@ -32,6 +32,8 @@ type Server struct {
 	params *asdu.Params
 	conn   net.Conn
 
+	handler ServerHandlerInterface
+
 	in   chan []byte
 	out  chan []byte
 	recv chan []byte // for recvLoop
@@ -51,7 +53,7 @@ type Server struct {
 	idleSince  time.Time
 	cancelFunc context.CancelFunc
 	ctx        context.Context
-	*elog.Elog
+	*clog.Clog
 }
 
 // NewServer returns a cs104 server
@@ -78,17 +80,29 @@ func NewServer(conf *Config, params *asdu.Params, conn net.Conn) (*Server, error
 		idleSince:  time.Now(),
 		cancelFunc: cancel,
 		ctx:        ctx,
-		Elog:       elog.GetElog(),
+		Clog:       clog.NewWithPrefix("cs104 server-> "),
 	}
 	go t.recvLoop()
 	go t.sendLoop()
 	go t.run()
+	go t.runHandler()
 	return t, nil
+}
+
+func (this *Server) Close() error {
+	this.cancelFunc()
+	return nil
+}
+
+func (this *Server) SetHandler(handler ServerHandlerInterface) {
+	if handler != nil {
+		this.handler = handler
+	}
 }
 
 // RecvLoop feeds t.recv.
 func (t *Server) recvLoop() {
-	t.Info("cs104 server: recvLoop start!")
+	t.Debug("recvLoop start!")
 	// 临时错误恢复，过长和过短不适合，这个需要再调试
 	retryTicker := time.NewTicker(200 * time.Millisecond)
 
@@ -96,7 +110,7 @@ func (t *Server) recvLoop() {
 		close(t.recv)
 		retryTicker.Stop()
 		t.cancelFunc()
-		t.Info("cs104 server: recvLoop stop!")
+		t.Debug("recvLoop stop!")
 	}()
 
 	var deadline time.Time
@@ -107,18 +121,19 @@ func (t *Server) recvLoop() {
 			byteCount, err := io.ReadFull(t.conn, datagram[rdCnt:length])
 			if err != nil {
 				// See: https://github.com/golang/go/issues/4373
-				if err != io.EOF && err != io.ErrClosedPipe || strings.Contains(err.Error(), "use of closed network connection") {
-					t.Error("cs104 server: %v", err)
+				if err != io.EOF && err != io.ErrClosedPipe ||
+					strings.Contains(err.Error(), "use of closed network connection") {
+					t.Error("%v", err)
 					return
 				}
 
 				if e, ok := err.(net.Error); ok && !e.Temporary() {
-					t.Error("cs104 server: %v", err)
+					t.Error("%v", err)
 					return
 				}
 
 				if byteCount == 0 && err == io.EOF {
-					t.Error("cs104 server: remote connect closed,%v", err)
+					t.Error("remote connect closed,%v", err)
 					return
 				}
 				// temporary error may be recoverable
@@ -149,7 +164,7 @@ func (t *Server) recvLoop() {
 				}
 				if rdCnt == length {
 					apdu := datagram[:length]
-					t.Debug("cs104 server: Raw RX [% x]", apdu)
+					t.Debug("Raw RX [% x]", apdu)
 					t.recv <- apdu // copy
 				}
 			}
@@ -159,24 +174,24 @@ func (t *Server) recvLoop() {
 
 // SendLoop drains t.send.
 func (t *Server) sendLoop() {
-	t.Info("cs104 server: sendLoop start!")
+	t.Debug("sendLoop start!")
 	defer func() {
 		t.cancelFunc()
-		t.Info("cs104 server server: sendLoop stop!")
+		t.Debug("sendLoop stop!")
 	}()
 
 	for apdu := range t.send {
-		t.Debug("cs104 server: Raw TX [% x]", apdu)
+		t.Debug("Raw TX [% x]", apdu)
 		for wrCnt := 0; len(apdu) > wrCnt; {
 			byteCount, err := t.conn.Write(apdu[wrCnt:])
 			if err != nil {
 				// See: https://github.com/golang/go/issues/4373
 				if err != io.EOF && err != io.ErrClosedPipe || strings.Contains(err.Error(), "use of closed network connection") {
-					t.Error("cs104 server: %v", err)
+					t.Error("%v", err)
 					return
 				}
 				if e, ok := err.(net.Error); !ok || !e.Temporary() {
-					t.Error("cs104 server: %v", err)
+					t.Error("%v", err)
 					return
 				}
 				// temporary error may be recoverable
@@ -188,7 +203,7 @@ func (t *Server) sendLoop() {
 
 // Run is the big fat state machine.
 func (this *Server) run() {
-	this.Info("cs104 server: run start!")
+	this.Debug("run start!")
 	// when connected establish and not enable "data transfer" yet
 	// defualt: STOPDT
 	isActive := false
@@ -221,7 +236,7 @@ func (this *Server) run() {
 		}
 
 		close(this.in)
-		this.Info("cs104 server: run stop!")
+		this.Debug("run stop!")
 	}()
 
 	// transmission timestamps for timeout calculation
@@ -286,16 +301,19 @@ func (this *Server) run() {
 			this.idleSince = time.Now() // 每收到一个i帧,S帧,U帧, 重置空闲定时器
 			switch f {
 			case sFrame:
+				this.Debug("sFrame")
 				if !this.updateAckNoOut(head.(sAPCI).rcvSN) {
 					return
 				}
 
 			case iFrame:
+				this.Debug("iFrame")
 				if !isActive {
+					this.Error("not active")
 					break // not active, discard apdu
 				}
-				ihead := head.(iAPCI)
-				if !this.updateAckNoOut(ihead.rcvSN) || ihead.sendSN != this.seqNoIn {
+				iHead := head.(iAPCI)
+				if !this.updateAckNoOut(iHead.rcvSN) || iHead.sendSN != this.seqNoIn {
 					return
 				}
 
@@ -311,6 +329,7 @@ func (this *Server) run() {
 				}
 
 			case uFrame:
+				this.Debug("uFrame")
 				switch head.(uAPCI).function {
 				case uStartDtActive:
 					this.send <- newUFrame(uStartDtConfirm)
@@ -329,17 +348,17 @@ func (this *Server) run() {
 				case uTestFrConfirm:
 					testFrAliveSendSince = willNotTimeout
 				default:
-					this.Error("cs104 server: illegal U-Frame functions[%v]", head.(uAPCI).function)
+					this.Error("illegal U-Frame functions[%v]", head.(uAPCI).function)
 				}
 			}
 		}
 	}
 }
 
-func (t *Server) submit(asdu []byte) {
+func (t *Server) submit(asdu1 []byte) {
 	seqNo := t.seqNoOut
 
-	datagram, err := newIFrame(asdu, seqNo, t.seqNoIn)
+	iframe, err := newIFrame(asdu1, seqNo, t.seqNoIn)
 	if err != nil {
 		return
 	}
@@ -349,7 +368,7 @@ func (t *Server) submit(asdu []byte) {
 	p := &t.pending[seqNo&32767]
 	p.send = time.Now()
 
-	t.send <- datagram
+	t.send <- iframe
 	t.idleSince = time.Now()
 }
 
@@ -379,7 +398,7 @@ func seqNoCount(nextAckNo, nextSeqNo uint16) uint16 {
 	return nextSeqNo - nextAckNo
 }
 
-// SendASDU
+// Send
 func (this *Server) Send(u *asdu.ASDU) error {
 	data, err := u.MarshalBinary()
 	if err != nil {
@@ -394,16 +413,120 @@ func (this *Server) Send(u *asdu.ASDU) error {
 	return nil
 }
 
-func (this *Server) Close() {
-	this.cancelFunc()
-}
-
 func (this *Server) Params() *asdu.Params {
 	return this.params
 }
 
 func (this *Server) runHandler() {
-	for asdu := range this.in {
-
+	for rawAsdu := range this.in {
+		asduPack := asdu.NewEmptyASDU(this.params)
+		if err := asduPack.UnmarshalBinary(rawAsdu); err != nil {
+			this.Error("asdu UnmarshalBinary failed,%+v", err)
+			continue
+		}
+		if err := this.serverHandler(asduPack); err != nil {
+			this.Error("serverHandler falied,%+v", err)
+		}
 	}
+}
+
+func (this *Server) serverHandler(asduPack *asdu.ASDU) error {
+	defer func() {
+		if err := recover(); err != nil {
+			this.Critical("serverhandler %+v", err)
+		}
+	}()
+
+	this.Debug("asduPack: %+v", asduPack)
+
+	switch asduPack.Identifier.Type {
+	case asdu.C_IC_NA_1: // InterrogationCmd
+		if !(asduPack.Identifier.Coa.Cause == asdu.Act ||
+			asduPack.Identifier.Coa.Cause == asdu.Deact) {
+			return asduPack.SendReplyMirror(this, asdu.UnkCause)
+		}
+		if asduPack.CommonAddr == asdu.InvalidCommonAddr {
+			return asduPack.SendReplyMirror(this, asdu.UnkAddr)
+		}
+		ioa, qoi := asduPack.GetInterrogationCmd()
+		if ioa != asdu.InfoObjIrrelevantAddr {
+			return asduPack.SendReplyMirror(this, asdu.UnkInfo)
+		}
+		this.handler.InterrogationHandler(this, asduPack, qoi)
+	case asdu.C_CI_NA_1: // CounterInterrogationCmd
+		if asduPack.Identifier.Coa.Cause != asdu.Act {
+			return asduPack.SendReplyMirror(this, asdu.UnkCause)
+		}
+		if asduPack.CommonAddr == asdu.InvalidCommonAddr {
+			return asduPack.SendReplyMirror(this, asdu.UnkAddr)
+		}
+		ioa, qcc := asduPack.GetCounterInterrogationCmd()
+		if ioa != asdu.InfoObjIrrelevantAddr {
+			return asduPack.SendReplyMirror(this, asdu.UnkInfo)
+		}
+		this.handler.CounterInterrogationHandler(this, asduPack, qcc)
+	case asdu.C_RD_NA_1: // ReadCmd
+		if asduPack.Identifier.Coa.Cause != asdu.Req {
+			return asduPack.SendReplyMirror(this, asdu.UnkCause)
+		}
+		if asduPack.CommonAddr == asdu.InvalidCommonAddr {
+			return asduPack.SendReplyMirror(this, asdu.UnkAddr)
+		}
+		this.handler.ReadHandler(this, asduPack, asduPack.GetReadCmd())
+	case asdu.C_CS_NA_1: // ClockSynchronizationCmd
+		if asduPack.Identifier.Coa.Cause != asdu.Act {
+			return asduPack.SendReplyMirror(this, asdu.UnkCause)
+		}
+		if asduPack.CommonAddr == asdu.InvalidCommonAddr {
+			return asduPack.SendReplyMirror(this, asdu.UnkAddr)
+		}
+
+		ioa, tm := asduPack.GetClockSynchronizationCmd()
+		if ioa != asdu.InfoObjIrrelevantAddr {
+			return asduPack.SendReplyMirror(this, asdu.UnkInfo)
+		}
+		this.handler.ClockSyncHandler(this, asduPack, tm)
+	case asdu.C_TS_NA_1: // TestCommand
+		if asduPack.Identifier.Coa.Cause != asdu.Act {
+			return asduPack.SendReplyMirror(this, asdu.UnkCause)
+		}
+		if asduPack.CommonAddr == asdu.InvalidCommonAddr {
+			return asduPack.SendReplyMirror(this, asdu.UnkAddr)
+		}
+		ioa, _ := asduPack.GetTestCommand()
+		if ioa != asdu.InfoObjIrrelevantAddr {
+			return asduPack.SendReplyMirror(this, asdu.UnkInfo)
+		}
+		asduPack.SendReplyMirror(this, asdu.Act)
+	case asdu.C_RP_NA_1: // ResetProcessCmd
+		if asduPack.Identifier.Coa.Cause != asdu.Act {
+			return asduPack.SendReplyMirror(this, asdu.UnkCause)
+		}
+		if asduPack.CommonAddr == asdu.InvalidCommonAddr {
+			return asduPack.SendReplyMirror(this, asdu.UnkAddr)
+		}
+		ioa, qrp := asduPack.GetResetProcessCmd()
+		if ioa != asdu.InfoObjIrrelevantAddr {
+			return asduPack.SendReplyMirror(this, asdu.UnkInfo)
+		}
+		this.handler.ResetProcessHandler(this, asduPack, qrp)
+	case asdu.C_CD_NA_1: // DelayAcquireCommand
+		if !(asduPack.Identifier.Coa.Cause == asdu.Act ||
+			asduPack.Identifier.Coa.Cause == asdu.Spont) {
+			return asduPack.SendReplyMirror(this, asdu.UnkCause)
+		}
+		if asduPack.CommonAddr == asdu.InvalidCommonAddr {
+			return asduPack.SendReplyMirror(this, asdu.UnkAddr)
+		}
+		ioa, msec := asduPack.GetDelayAcquireCommand()
+		if ioa != asdu.InfoObjIrrelevantAddr {
+			return asduPack.SendReplyMirror(this, asdu.UnkInfo)
+		}
+		this.handler.DelayAcquisitionHandler(this, asduPack, msec)
+	default:
+		if err := this.handler.ASDUHandler(this, asduPack); err != nil {
+			asduPack.SendReplyMirror(this, asdu.UnkType)
+		}
+	}
+	return nil
 }
