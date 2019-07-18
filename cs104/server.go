@@ -2,10 +2,10 @@ package cs104
 
 import (
 	"context"
-	"errors"
 	"io"
 	"net"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/thinkgos/go-iecp5/asdu"
@@ -13,19 +13,14 @@ import (
 )
 
 // TimeoutResolution is seconds according to companion standard 104,
-// subclass 6.9, caption "Definition of time outs". However, thenths
+// subclass 6.9, caption "Definition of time outs". However, then
 // of a second make this system much more responsive i.c.w. S-frames.
 const timeoutResolution = 100 * time.Millisecond
 
-var (
-	errSeqNo            = errors.New("cs104: fatal incomming sequence number disruption")
-	errAckNo            = errors.New("cs104: fatal incomming acknowledge either earlier than previous or later than send")
-	errAckExpire        = errors.New("cs104: fatal transmission timeout t₁")
-	errStartDtAckExpire = errors.New("cs104: fatal STARTDT acknowledge timeout t₁")
-	errStopDtAckExpire  = errors.New("cs104: fatal STOPDT acknowledge timeout t₁")
-	errTestFrAckExpire  = errors.New("cs104: fatal TESTFR acknowledge timeout t₁")
-	errAPCIIllegalFunc  = errors.New("cs104: illegal function ignored")
-)
+type seqPending struct {
+	seq      uint16
+	sendTime time.Time
+}
 
 type Server struct {
 	Config
@@ -34,10 +29,10 @@ type Server struct {
 
 	handler ServerHandlerInterface
 
-	in   chan []byte
-	out  chan []byte
-	recv chan []byte // for recvLoop
-	send chan []byte // for sendLoop
+	in   chan []byte // for received asdu
+	out  chan []byte // for sendTime asdu
+	recv chan []byte // for recvLoop raw cs104 frame
+	send chan []byte // for sendLoop raw cs104 frame
 
 	// see subclass 5.1 — Protection against loss and duplication of messages
 	seqNoOut uint16 // sequence number of next outbound I-frame
@@ -45,11 +40,11 @@ type Server struct {
 	seqNoIn  uint16 // sequence number of next inbound I-frame
 	ackNoIn  uint16 // inbound sequence number yet to be confirmed
 
-	// maps send I-frames to their respective sequence number
-	pending [1 << 15]struct {
-		send time.Time
-	}
+	//// maps sendTime I-frames to their respective sequence number
+	//pending []seqPending
+	seqManage
 
+	wg         sync.WaitGroup
 	idleSince  time.Time
 	cancelFunc context.CancelFunc
 	ctx        context.Context
@@ -72,16 +67,17 @@ func NewServer(conf *Config, params *asdu.Params, conn net.Conn) (*Server, error
 		params: params,
 		conn:   conn,
 
-		in:   make(chan []byte),
-		out:  make(chan []byte),
+		in:   make(chan []byte, conf.RecvUnackLimitW),
+		out:  make(chan []byte, conf.SendUnackLimitK),
 		recv: make(chan []byte, conf.RecvUnackLimitW),
 		send: make(chan []byte, conf.SendUnackLimitK), // may not block!
 
 		idleSince:  time.Now(),
 		cancelFunc: cancel,
 		ctx:        ctx,
-		Clog:       clog.NewWithPrefix("cs104 server-> "),
+		Clog:       clog.NewWithPrefix("cs104 server => "),
 	}
+	t.wg.Add(4)
 	go t.recvLoop()
 	go t.sendLoop()
 	go t.run()
@@ -91,6 +87,7 @@ func NewServer(conf *Config, params *asdu.Params, conn net.Conn) (*Server, error
 
 func (this *Server) Close() error {
 	this.cancelFunc()
+	this.wg.Wait()
 	return nil
 }
 
@@ -101,48 +98,37 @@ func (this *Server) SetHandler(handler ServerHandlerInterface) {
 }
 
 // RecvLoop feeds t.recv.
-func (t *Server) recvLoop() {
-	t.Debug("recvLoop start!")
-	// 临时错误恢复，过长和过短不适合，这个需要再调试
-	retryTicker := time.NewTicker(200 * time.Millisecond)
+func (this *Server) recvLoop() {
+	this.Debug("recvLoop start!")
 
 	defer func() {
-		close(t.recv)
-		retryTicker.Stop()
-		t.cancelFunc()
-		t.Debug("recvLoop stop!")
+		close(this.recv)
+		this.cancelFunc()
+		this.wg.Done()
+		this.Debug("recvLoop stop!")
 	}()
 
-	var deadline time.Time
+	//var deadline time.Time
 	for {
 		datagram := make([]byte, APDUSizeMax)
 		length := 2
 		for rdCnt := 0; rdCnt < length; {
-			byteCount, err := io.ReadFull(t.conn, datagram[rdCnt:length])
+			byteCount, err := io.ReadFull(this.conn, datagram[rdCnt:length])
 			if err != nil {
 				// See: https://github.com/golang/go/issues/4373
 				if err != io.EOF && err != io.ErrClosedPipe ||
 					strings.Contains(err.Error(), "use of closed network connection") {
-					t.Error("%v", err)
+					this.Error("receive failed, %v", err)
 					return
 				}
 
 				if e, ok := err.(net.Error); ok && !e.Temporary() {
-					t.Error("%v", err)
+					this.Error("receive failed, %v", err)
 					return
 				}
 
 				if byteCount == 0 && err == io.EOF {
-					t.Error("remote connect closed,%v", err)
-					return
-				}
-				// temporary error may be recoverable
-				now := <-retryTicker.C
-				switch {
-				case deadline.IsZero():
-					deadline = now.Add(t.SendUnackTimeout1)
-				case now.After(deadline):
-					t.Error("%v", errAckExpire)
+					this.Error("remote connect closed,%v", err)
 					return
 				}
 			}
@@ -164,34 +150,37 @@ func (t *Server) recvLoop() {
 				}
 				if rdCnt == length {
 					apdu := datagram[:length]
-					t.Debug("Raw RX [% x]", apdu)
-					t.recv <- apdu // copy
+					this.Debug("RX Raw[% x]", apdu)
+					this.recv <- apdu
 				}
 			}
 		}
 	}
 }
 
-// SendLoop drains t.send.
-func (t *Server) sendLoop() {
-	t.Debug("sendLoop start!")
+// sendLoop drains t.sendTime.
+func (this *Server) sendLoop() {
+	this.Debug("sendLoop start!")
+
 	defer func() {
-		t.cancelFunc()
-		t.Debug("sendLoop stop!")
+		this.cancelFunc()
+		this.wg.Done()
+		this.Debug("sendLoop stop!")
 	}()
 
-	for apdu := range t.send {
-		t.Debug("Raw TX [% x]", apdu)
+	for apdu := range this.send {
+		this.Debug("TX Raw[% x]", apdu)
 		for wrCnt := 0; len(apdu) > wrCnt; {
-			byteCount, err := t.conn.Write(apdu[wrCnt:])
+			byteCount, err := this.conn.Write(apdu[wrCnt:])
 			if err != nil {
 				// See: https://github.com/golang/go/issues/4373
-				if err != io.EOF && err != io.ErrClosedPipe || strings.Contains(err.Error(), "use of closed network connection") {
-					t.Error("%v", err)
+				if err != io.EOF && err != io.ErrClosedPipe ||
+					strings.Contains(err.Error(), "use of closed network connection") {
+					this.Error("sendTime failed, %v", err)
 					return
 				}
 				if e, ok := err.(net.Error); !ok || !e.Temporary() {
-					t.Error("%v", err)
+					this.Error("sendTime failed, %v", err)
 					return
 				}
 				// temporary error may be recoverable
@@ -204,10 +193,11 @@ func (t *Server) sendLoop() {
 // Run is the big fat state machine.
 func (this *Server) run() {
 	this.Debug("run start!")
-	// when connected establish and not enable "data transfer" yet
-	// defualt: STOPDT
+
+	// defualt: STOPDT, when connected establish and not enable "data transfer" yet
 	isActive := false
 	checkTicker := time.NewTicker(timeoutResolution)
+
 	defer func() {
 		checkTicker.Stop()
 		if this.ackNoIn != this.seqNoIn {
@@ -218,7 +208,7 @@ func (this *Server) run() {
 			}
 		}
 
-		close(this.send) // kill send loop
+		close(this.send) // kill sendTime loop
 		this.conn.Close()
 
 		// await receive loop
@@ -235,13 +225,14 @@ func (this *Server) run() {
 			}
 		}
 
-		close(this.in)
+		close(this.in) // kill runHandler
+		this.wg.Done()
 		this.Debug("run stop!")
 	}()
 
 	// transmission timestamps for timeout calculation
 	var willNotTimeout = time.Now().Add(time.Hour * 24 * 365 * 100)
-	var unAckRecvdSince = willNotTimeout
+	var unAckRcvSince = willNotTimeout
 	var testFrAliveSendSince = willNotTimeout
 	// 对于server端，无需对应的U-Frame 无需判断
 	// var startDtActiveSendSince = willNotTimeout
@@ -254,9 +245,9 @@ func (this *Server) run() {
 				if !ok {
 					return
 				}
-				this.submit(o)
+				this.sendIFrame(o)
 				continue
-			default:
+			default: // make no block
 			}
 		}
 		select {
@@ -272,20 +263,21 @@ func (this *Server) run() {
 			}
 			// check oldest unacknowledged outbound
 			if this.ackNoOut != this.seqNoOut &&
-				now.Sub(this.pending[this.ackNoOut].send) >= this.SendUnackTimeout1 {
+				now.Sub(this.peek()) >= this.SendUnackTimeout1 {
 				this.ackNoOut++
+				this.Error("fatal transmission timeout t₁")
 				return
 			}
 
-			// 确定最早发送的i-Frame是否超时
+			// 确定最早发送的i-Frame是否超时,超时则回复sFrame
 			if this.ackNoIn != this.seqNoIn &&
-				(now.Sub(unAckRecvdSince) >= this.RecvUnackTimeout2 ||
+				(now.Sub(unAckRcvSince) >= this.RecvUnackTimeout2 ||
 					now.Sub(this.idleSince) >= timeoutResolution) {
 				this.send <- newSFrame(this.seqNoIn)
 				this.ackNoIn = this.seqNoIn
 			}
 
-			// 空闲时间到，发送TestFrActive帧
+			// 空闲时间到，发送TestFrActive帧,保活
 			if now.Sub(this.idleSince) >= this.IdleTimeout3 {
 				this.send <- newUFrame(uTestFrActive)
 				testFrAliveSendSince = time.Now()
@@ -301,25 +293,27 @@ func (this *Server) run() {
 			this.idleSince = time.Now() // 每收到一个i帧,S帧,U帧, 重置空闲定时器
 			switch f {
 			case sFrame:
-				this.Debug("sFrame")
+				this.Debug("sFrame %+v", head)
 				if !this.updateAckNoOut(head.(sAPCI).rcvSN) {
+					this.Error("fatal incomming acknowledge either earlier than previous or later than sendTime")
 					return
 				}
 
 			case iFrame:
-				this.Debug("iFrame")
+				this.Debug("iFrame %+v", head)
 				if !isActive {
 					this.Error("not active")
 					break // not active, discard apdu
 				}
 				iHead := head.(iAPCI)
 				if !this.updateAckNoOut(iHead.rcvSN) || iHead.sendSN != this.seqNoIn {
+					this.Error("fatal incomming acknowledge either earlier than previous or later than sendTime")
 					return
 				}
 
 				this.in <- asdu
 				if this.ackNoIn == this.seqNoIn { // first unacked
-					unAckRecvdSince = time.Now()
+					unAckRcvSince = time.Now()
 				}
 
 				this.seqNoIn = (this.seqNoIn + 1) & 32767
@@ -329,7 +323,7 @@ func (this *Server) run() {
 				}
 
 			case uFrame:
-				this.Debug("uFrame")
+				this.Debug("uFrame %+v", head)
 				switch head.(uAPCI).function {
 				case uStartDtActive:
 					this.send <- newUFrame(uStartDtConfirm)
@@ -348,45 +342,64 @@ func (this *Server) run() {
 				case uTestFrConfirm:
 					testFrAliveSendSince = willNotTimeout
 				default:
-					this.Error("illegal U-Frame functions[%v]", head.(uAPCI).function)
+					this.Error("illegal U-Frame functions[%v] ignored", head.(uAPCI).function)
 				}
 			}
 		}
 	}
 }
 
-func (t *Server) submit(asdu1 []byte) {
-	seqNo := t.seqNoOut
+func (this *Server) runHandler() {
+	this.Debug("runHandler start")
+	for rawAsdu := range this.in {
+		asduPack := asdu.NewEmptyASDU(this.params)
+		if err := asduPack.UnmarshalBinary(rawAsdu); err != nil {
+			this.Error("asdu UnmarshalBinary failed,%+v", err)
+			continue
+		}
+		if err := this.serverHandler(asduPack); err != nil {
+			this.Error("serverHandler falied,%+v", err)
+		}
+	}
+	this.wg.Done()
+	this.Debug("runHandler stop")
+}
 
-	iframe, err := newIFrame(asdu1, seqNo, t.seqNoIn)
+func (this *Server) sendIFrame(asdu1 []byte) {
+	seqNo := this.seqNoOut
+
+	iframe, err := newIFrame(asdu1, seqNo, this.seqNoIn)
 	if err != nil {
 		return
 	}
-	t.ackNoIn = t.seqNoIn
-	t.seqNoOut = (seqNo + 1) & 32767
+	this.ackNoIn = this.seqNoIn
+	this.seqNoOut = (seqNo + 1) & 32767
 
-	p := &t.pending[seqNo&32767]
-	p.send = time.Now()
+	this.push(seqPending{seqNo & 32767, time.Now()})
 
-	t.send <- iframe
-	t.idleSince = time.Now()
+	this.send <- iframe
+	this.idleSince = time.Now()
 }
 
-func (t *Server) updateAckNoOut(ackNo uint16) (ok bool) {
-	if ackNo == t.ackNoOut {
+func (this *Server) updateAckNoOut(ackNo uint16) (ok bool) {
+	if ackNo == this.ackNoOut {
 		return true
 	}
 	// new acks validate， ack 不能在 req seq 前面,出错
-	if seqNoCount(t.ackNoOut, t.seqNoOut) < seqNoCount(ackNo, t.seqNoOut) {
+	if seqNoCount(this.ackNoOut, this.seqNoOut) < seqNoCount(ackNo, this.seqNoOut) {
 		return false
 	}
 
 	// confirm reception
-	for ackNo != t.ackNoOut {
-		t.ackNoOut = (t.ackNoOut + 1) & 32767
-	}
+	//for i, v := range this.pending {
+	//	if v.seq+1 == (ackNo - 1) {
+	//		this.pending = this.pending[i+1:]
+	//		return
+	//	}
+	//}
+	this.confirmRecep(ackNo)
 
-	t.ackNoOut = ackNo
+	this.ackNoOut = ackNo
 	return true
 }
 
@@ -398,7 +411,7 @@ func seqNoCount(nextAckNo, nextSeqNo uint16) uint16 {
 	return nextSeqNo - nextAckNo
 }
 
-// Send
+// Send asdu frame
 func (this *Server) Send(u *asdu.ASDU) error {
 	data, err := u.MarshalBinary()
 	if err != nil {
@@ -417,27 +430,14 @@ func (this *Server) Params() *asdu.Params {
 	return this.params
 }
 
-func (this *Server) runHandler() {
-	for rawAsdu := range this.in {
-		asduPack := asdu.NewEmptyASDU(this.params)
-		if err := asduPack.UnmarshalBinary(rawAsdu); err != nil {
-			this.Error("asdu UnmarshalBinary failed,%+v", err)
-			continue
-		}
-		if err := this.serverHandler(asduPack); err != nil {
-			this.Error("serverHandler falied,%+v", err)
-		}
-	}
-}
-
 func (this *Server) serverHandler(asduPack *asdu.ASDU) error {
 	defer func() {
 		if err := recover(); err != nil {
-			this.Critical("serverhandler %+v", err)
+			this.Critical("server handler %+v", err)
 		}
 	}()
 
-	this.Debug("asduPack: %+v", asduPack)
+	this.Debug("ASDU %+v", asduPack)
 
 	switch asduPack.Identifier.Type {
 	case asdu.C_IC_NA_1: // InterrogationCmd
@@ -525,7 +525,7 @@ func (this *Server) serverHandler(asduPack *asdu.ASDU) error {
 		this.handler.DelayAcquisitionHandler(this, asduPack, msec)
 	default:
 		if err := this.handler.ASDUHandler(this, asduPack); err != nil {
-			asduPack.SendReplyMirror(this, asdu.UnkType)
+			return asduPack.SendReplyMirror(this, asdu.UnkType)
 		}
 	}
 	return nil
