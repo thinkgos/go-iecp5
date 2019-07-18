@@ -34,10 +34,10 @@ func InterrogationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 	return c.Send(u)
 }
 
-// QuantityInterrogationCmd send Quantity Interrogation command [C_CI_NA_1]
+// CounterInterrogationCmd send Counter Interrogation command [C_CI_NA_1]
 // subclass 7.3.4.2
 // 计数量召唤命令
-func QuantityInterrogationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
+func CounterInterrogationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 	qcc QualifierCountCall) error {
 	if coa.Cause != Act {
 		return ErrCmdCause
@@ -60,7 +60,7 @@ func QuantityInterrogationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 	return c.Send(u)
 }
 
-// [C_RD_NA_1]
+// ReadCmd [C_RD_NA_1]
 // subclass 7.3.4.3
 // 计数量召唤命令
 func ReadCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
@@ -86,7 +86,7 @@ func ReadCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 	return c.Send(u)
 }
 
-// [C_CS_NA_1]
+// ClockSynchronizationCmd [C_CS_NA_1]
 // subclass 7.3.4.4
 // 时钟同步命令
 func ClockSynchronizationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
@@ -112,7 +112,7 @@ func ClockSynchronizationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 	return c.Send(u)
 }
 
-// [C_TS_NA_1]
+// TestCommand [C_TS_NA_1]
 // subclass 7.3.4.5
 // 测试命令
 func TestCommand(c Connect, coa CauseOfTransmission, ca CommonAddr) error {
@@ -137,7 +137,7 @@ func TestCommand(c Connect, coa CauseOfTransmission, ca CommonAddr) error {
 	return c.Send(u)
 }
 
-// [C_RP_NA_1]
+// ResetProcessCmd [C_RP_NA_1]
 // subclass 7.3.4.6
 // 复位进程命令
 func ResetProcessCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
@@ -163,7 +163,7 @@ func ResetProcessCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 	return c.Send(u)
 }
 
-// [C_CD_NA_1]
+// DelayAcquireCommand [C_CD_NA_1]
 // subclass 7.3.4.7
 // 延时获得命令
 func DelayAcquireCommand(c Connect, coa CauseOfTransmission, ca CommonAddr,
@@ -189,36 +189,31 @@ func DelayAcquireCommand(c Connect, coa CauseOfTransmission, ca CommonAddr,
 	return c.Send(u)
 }
 
-func (this *ASDU) GetInterrogationCmd() QualifierOfInterrogation {
-	// pass InfoObjAddr
-	return QualifierOfInterrogation(this.infoObj[this.InfoObjAddrSize])
+func (this *ASDU) GetInterrogationCmd() (InfoObjAddr, QualifierOfInterrogation) {
+	return this.DecodeInfoObjAddr(), QualifierOfInterrogation(this.infoObj[0])
 }
 
-func (this *ASDU) GetQuantityInterrogationCmd() QualifierCountCall {
-	// pass InfoObjAddr
-	return ParseQualifierCountCall(this.infoObj[this.InfoObjAddrSize])
+func (this *ASDU) GetCounterInterrogationCmd() (InfoObjAddr, QualifierCountCall) {
+	return this.DecodeInfoObjAddr(), ParseQualifierCountCall(this.infoObj[0])
 }
 
 func (this *ASDU) GetReadCmd() InfoObjAddr {
 	return this.DecodeInfoObjAddr()
 }
 
-func (this *ASDU) GetClockSynchronizationCmd() time.Time {
-	// pass InfoObjAddr
-	return ParseCP56Time2a(this.infoObj[this.InfoObjAddrSize:], this.InfoObjTimeZone)
+func (this *ASDU) GetClockSynchronizationCmd() (InfoObjAddr, time.Time) {
+	return this.DecodeInfoObjAddr(), ParseCP56Time2a(this.infoObj, this.InfoObjTimeZone)
 }
 
-func (this *ASDU) GetTestCommand() bool {
-	// pass InfoObjAddr
-	return binary.LittleEndian.Uint16(this.infoObj[this.InfoObjAddrSize:]) == FBPTestWord
+func (this *ASDU) GetTestCommand() (InfoObjAddr, bool) {
+	return this.DecodeInfoObjAddr(), binary.LittleEndian.Uint16(this.infoObj) == FBPTestWord
 }
 
-func (this *ASDU) GetResetProcessCmd() QualifierOfResetProcessCmd {
-	// pass InfoObjAddr
-	return QualifierOfResetProcessCmd(this.infoObj[this.InfoObjAddrSize])
+func (this *ASDU) GetResetProcessCmd() (InfoObjAddr, QualifierOfResetProcessCmd) {
+
+	return this.DecodeInfoObjAddr(), QualifierOfResetProcessCmd(this.infoObj[0])
 }
 
-func (this *ASDU) GetDelayAcquireCommand() uint16 {
-	// pass InfoObjAddr
-	return binary.LittleEndian.Uint16(this.infoObj[this.InfoObjAddrSize:])
+func (this *ASDU) GetDelayAcquireCommand() (InfoObjAddr, uint16) {
+	return this.DecodeInfoObjAddr(), binary.LittleEndian.Uint16(this.infoObj)
 }

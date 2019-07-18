@@ -154,6 +154,11 @@ func (this *ASDU) Reply(c Cause, addr CommonAddr) *ASDU {
 	return r
 }
 
+func (this *ASDU) ReplyMirror(c Cause) *ASDU {
+	this.Coa.Cause = c
+	return this
+}
+
 //// String returns a full description.
 //func (u *ASDU) String() string {
 //	dataSize, err := GetInfoObjSize(u.Type)
@@ -246,37 +251,37 @@ func (this *ASDU) MarshalBinary() (data []byte, err error) {
 
 // UnmarshalBinary honors the encoding.BinaryUnmarshaler interface.
 // ASDUParams must be set in advance. All other fields are initialized.
-func (this *ASDU) UnmarshalBinary(data []byte) error {
+func (this *ASDU) UnmarshalBinary(rawAsdu []byte) error {
 	if !(this.CauseSize == 1 || this.CauseSize == 2) ||
 		!(this.CommonAddrSize == 1 || this.CommonAddrSize == 2) {
 		return ErrParam
 	}
 
-	// data unit identifier size check
+	// rawAsdu unit identifier size check
 	lenDUI := this.IdentifierSize()
-	if lenDUI > len(data) {
+	if lenDUI > len(rawAsdu) {
 		return io.EOF
 	}
 
-	// parse data unit identifier
-	this.Type = TypeID(data[0])
-	this.Variable = ParseVariableStruct(data[1])
-	this.Coa = ParseCauseOfTransmission(data[2])
+	// parse rawAsdu unit identifier
+	this.Type = TypeID(rawAsdu[0])
+	this.Variable = ParseVariableStruct(rawAsdu[1])
+	this.Coa = ParseCauseOfTransmission(rawAsdu[2])
 	if this.CauseSize == 1 {
 		this.OrigAddr = 0
 	} else {
-		this.OrigAddr = OriginAddr(data[3])
+		this.OrigAddr = OriginAddr(rawAsdu[3])
 	}
 	if this.CommonAddrSize == 1 {
-		this.CommonAddr = CommonAddr(data[lenDUI-1])
+		this.CommonAddr = CommonAddr(rawAsdu[lenDUI-1])
 		if this.CommonAddr == 255 { // map 8-bit variant to 16-bit equivalent
 			this.CommonAddr = GlobalCommonAddr
 		}
 	} else { // 2
-		this.CommonAddr = CommonAddr(data[lenDUI-2]) | CommonAddr(data[lenDUI-1])<<8
+		this.CommonAddr = CommonAddr(rawAsdu[lenDUI-2]) | CommonAddr(rawAsdu[lenDUI-1])<<8
 	}
 	// information object
-	this.infoObj = append(this.bootstrap[lenDUI:lenDUI], data[lenDUI:]...)
+	this.infoObj = append(this.bootstrap[lenDUI:lenDUI], rawAsdu[lenDUI:]...)
 	return this.fixInfoObjSize()
 }
 

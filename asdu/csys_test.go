@@ -47,7 +47,7 @@ func TestInterrogationCmd(t *testing.T) {
 	}
 }
 
-func TestQuantityInterrogationCmd(t *testing.T) {
+func TestCounterInterrogationCmd(t *testing.T) {
 	type args struct {
 		c   Connect
 		coa CauseOfTransmission
@@ -81,8 +81,8 @@ func TestQuantityInterrogationCmd(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := QuantityInterrogationCmd(tt.args.c, tt.args.coa, tt.args.ca, tt.args.qcc); (err != nil) != tt.wantErr {
-				t.Errorf("QuantityInterrogationCmd() error = %v, wantErr %v", err, tt.wantErr)
+			if err := CounterInterrogationCmd(tt.args.c, tt.args.coa, tt.args.ca, tt.args.qcc); (err != nil) != tt.wantErr {
+				t.Errorf("CounterInterrogationCmd() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -298,11 +298,13 @@ func TestASDU_GetInterrogationCmd(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   QualifierOfInterrogation
+		want   InfoObjAddr
+		want1  QualifierOfInterrogation
 	}{
 		{
 			"C_IC_NA_1",
 			fields{ParamsWide, []byte{0x00, 0x00, 0x00, 21}},
+			0,
 			QOIInro1,
 		},
 	}
@@ -312,14 +314,19 @@ func TestASDU_GetInterrogationCmd(t *testing.T) {
 				Params:  tt.fields.Params,
 				infoObj: tt.fields.infoObj,
 			}
-			if got := this.GetInterrogationCmd(); got != tt.want {
-				t.Errorf("ASDU.GetInterrogationCmd() = %v, want %v", got, tt.want)
+			got, got1 := this.GetInterrogationCmd()
+			if got != tt.want {
+				t.Errorf("ASDU.GetInterrogationCmd() QOI = %v, want %v", got, tt.want)
 			}
+			if got1 != tt.want1 {
+				t.Errorf("ASDU.GetInterrogationCmd() InfoObjAddr = %v, want %v", got1, tt.want1)
+			}
+
 		})
 	}
 }
 
-func TestASDU_GetQuantityInterrogationCmd(t *testing.T) {
+func TestASDU_GetCounterInterrogationCmd(t *testing.T) {
 	type fields struct {
 		Params  *Params
 		infoObj []byte
@@ -327,11 +334,13 @@ func TestASDU_GetQuantityInterrogationCmd(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   QualifierCountCall
+		want   InfoObjAddr
+		want1  QualifierCountCall
 	}{
 		{
 			"C_CI_NA_1",
 			fields{ParamsWide, []byte{0x00, 0x00, 0x00, 0x01}},
+			0,
 			QualifierCountCall{QCCGroup1, QCCFzeRead},
 		},
 	}
@@ -341,8 +350,12 @@ func TestASDU_GetQuantityInterrogationCmd(t *testing.T) {
 				Params:  tt.fields.Params,
 				infoObj: tt.fields.infoObj,
 			}
-			if got := this.GetQuantityInterrogationCmd(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ASDU.GetQuantityInterrogationCmd() = %v, want %v", got, tt.want)
+			got, got1 := this.GetCounterInterrogationCmd()
+			if got != tt.want {
+				t.Errorf("ASDU.GetQuantityInterrogationCmd() InfoObjAddr = %v, want %v", got, tt.want)
+			}
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("ASDU.GetQuantityInterrogationCmd() QCC = %v, want %v", got1, tt.want1)
 			}
 		})
 	}
@@ -386,11 +399,13 @@ func TestASDU_GetClockSynchronizationCmd(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   time.Time
+		want   InfoObjAddr
+		want1  time.Time
 	}{
 		{
 			"C_CS_NA_1",
 			fields{ParamsWide, append([]byte{0x00, 0x00, 0x00}, tm0CP56Time2aBytes...)},
+			0,
 			tm0,
 		},
 	}
@@ -400,9 +415,12 @@ func TestASDU_GetClockSynchronizationCmd(t *testing.T) {
 				Params:  tt.fields.Params,
 				infoObj: tt.fields.infoObj,
 			}
-			got := this.GetClockSynchronizationCmd()
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ASDU.GetClockSynchronizationCmd() = %v, want %v", got, tt.want)
+			got, got1 := this.GetClockSynchronizationCmd()
+			if got != tt.want {
+				t.Errorf("ASDU.GetClockSynchronizationCmd() InfoObjAddr = %v, want %v", got, tt.want)
+			}
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("ASDU.GetClockSynchronizationCmd() time = %v, want %v", got1, tt.want1)
 			}
 		})
 	}
@@ -416,11 +434,13 @@ func TestASDU_GetTestCommand(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   bool
+		want   InfoObjAddr
+		want1  bool
 	}{
 		{
 			"C_CS_NA_1",
 			fields{ParamsWide, []byte{0x00, 0x00, 0x00, 0xaa, 0x55}},
+			0,
 			true,
 		},
 	}
@@ -430,8 +450,12 @@ func TestASDU_GetTestCommand(t *testing.T) {
 				Params:  tt.fields.Params,
 				infoObj: tt.fields.infoObj,
 			}
-			if got := this.GetTestCommand(); got != tt.want {
-				t.Errorf("ASDU.GetTestCommand() = %v, want %v", got, tt.want)
+			got, got1 := this.GetTestCommand()
+			if got != tt.want {
+				t.Errorf("ASDU.GetTestCommand() InfoObjAddr = %v, want %v", got, tt.want)
+			}
+			if got1 != tt.want1 {
+				t.Errorf("ASDU.GetTestCommand() bool = %v, want %v", got1, tt.want1)
 			}
 		})
 	}
@@ -445,11 +469,13 @@ func TestASDU_GetResetProcessCmd(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   QualifierOfResetProcessCmd
+		want   InfoObjAddr
+		want1  QualifierOfResetProcessCmd
 	}{
 		{
 			"C_RP_NA_1",
 			fields{ParamsWide, []byte{0x00, 0x00, 0x00, 0x01}},
+			0,
 			QPRTotal,
 		},
 	}
@@ -459,8 +485,12 @@ func TestASDU_GetResetProcessCmd(t *testing.T) {
 				Params:  tt.fields.Params,
 				infoObj: tt.fields.infoObj,
 			}
-			if got := this.GetResetProcessCmd(); got != tt.want {
-				t.Errorf("ASDU.GetResetProcessCmd() = %v, want %v", got, tt.want)
+			got, got1 := this.GetResetProcessCmd()
+			if got != tt.want {
+				t.Errorf("ASDU.GetResetProcessCmd() InfoObjAddr = %v, want %v", got, tt.want)
+			}
+			if got1 != tt.want1 {
+				t.Errorf("ASDU.GetResetProcessCmd() QOP = %v, want %v", got1, tt.want1)
 			}
 		})
 	}
@@ -474,11 +504,13 @@ func TestASDU_GetDelayAcquireCommand(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   uint16
+		want   InfoObjAddr
+		want1  uint16
 	}{
 		{
 			"C_CD_NA_1",
 			fields{ParamsWide, []byte{0x00, 0x00, 0x00, 0x10, 0x27}},
+			0,
 			10000,
 		},
 	}
@@ -488,8 +520,12 @@ func TestASDU_GetDelayAcquireCommand(t *testing.T) {
 				Params:  tt.fields.Params,
 				infoObj: tt.fields.infoObj,
 			}
-			if got := this.GetDelayAcquireCommand(); got != tt.want {
-				t.Errorf("ASDU.GetDelayAcquireCommand() = %v, want %v", got, tt.want)
+			got, got1 := this.GetDelayAcquireCommand()
+			if got != tt.want {
+				t.Errorf("ASDU.GetDelayAcquireCommand() InfoObjAddr = %v, want %v", got, tt.want)
+			}
+			if got1 != tt.want1 {
+				t.Errorf("ASDU.GetDelayAcquireCommand() msec = %v, want %v", got1, tt.want1)
 			}
 		})
 	}
