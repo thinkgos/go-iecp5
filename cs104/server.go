@@ -2,6 +2,7 @@ package cs104
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net"
 	"strings"
@@ -22,10 +23,8 @@ type Server struct {
 	params *asdu.Params
 	conn   net.Conn
 
-	handler ServerHandlerInterface
-
 	in   chan []byte // for received asdu
-	out  chan []byte // for sendTime asdu
+	out  chan []byte // for send asdu
 	recv chan []byte // for recvLoop raw cs104 frame
 	send chan []byte // for sendLoop raw cs104 frame
 
@@ -35,9 +34,11 @@ type Server struct {
 	seqNoIn  uint16 // sequence number of next inbound I-frame
 	ackNoIn  uint16 // inbound sequence number yet to be confirmed
 
-	//// maps sendTime I-frames to their respective sequence number
+	// maps sendTime I-frames to their respective sequence number
 	pending []seqPending
 	//seqManage
+
+	handler ServerHandlerInterface
 
 	wg         sync.WaitGroup
 	idleSince  time.Time
@@ -47,7 +48,10 @@ type Server struct {
 }
 
 // NewServer returns a cs104 server
-func NewServer(conf *Config, params *asdu.Params, conn net.Conn) (*Server, error) {
+func NewServer(conn net.Conn, conf *Config, params *asdu.Params, handler ServerHandlerInterface) (*Server, error) {
+	if handler == nil {
+		return nil, errors.New("invalid handler")
+	}
 	if err := conf.Valid(); err != nil {
 		return nil, err
 	}
@@ -57,39 +61,35 @@ func NewServer(conf *Config, params *asdu.Params, conn net.Conn) (*Server, error
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	t := &Server{
+	srv := &Server{
 		Config: *conf,
 		params: params,
 		conn:   conn,
 
-		in:   make(chan []byte, conf.RecvUnackLimitW),
-		out:  make(chan []byte, conf.SendUnackLimitK),
-		recv: make(chan []byte, conf.RecvUnackLimitW),
-		send: make(chan []byte, conf.SendUnackLimitK), // may not block!
+		in:   make(chan []byte, conf.RecvUnAckLimitW),
+		out:  make(chan []byte, conf.SendUnAckLimitK),
+		recv: make(chan []byte, conf.RecvUnAckLimitW),
+		send: make(chan []byte, conf.SendUnAckLimitK), // may not block!
+
+		handler: handler,
 
 		idleSince:  time.Now(),
 		cancelFunc: cancel,
 		ctx:        ctx,
 		Clog:       clog.NewWithPrefix("cs104 server => "),
 	}
-	t.wg.Add(4)
-	go t.recvLoop()
-	go t.sendLoop()
-	go t.run()
-	go t.runHandler()
-	return t, nil
+	srv.wg.Add(4)
+	go srv.recvLoop()
+	go srv.sendLoop()
+	go srv.run()
+	go srv.runHandler()
+	return srv, nil
 }
 
 func (this *Server) Close() error {
 	this.cancelFunc()
 	this.wg.Wait()
 	return nil
-}
-
-func (this *Server) SetHandler(handler ServerHandlerInterface) {
-	if handler != nil {
-		this.handler = handler
-	}
 }
 
 // RecvLoop feeds t.recv.
@@ -105,10 +105,10 @@ func (this *Server) recvLoop() {
 
 	//var deadline time.Time
 	for {
-		datagram := make([]byte, APDUSizeMax)
+		rawData := make([]byte, APDUSizeMax)
 		length := 2
 		for rdCnt := 0; rdCnt < length; {
-			byteCount, err := io.ReadFull(this.conn, datagram[rdCnt:length])
+			byteCount, err := io.ReadFull(this.conn, rawData[rdCnt:length])
 			if err != nil {
 				// See: https://github.com/golang/go/issues/4373
 				if err != io.EOF && err != io.ErrClosedPipe ||
@@ -132,19 +132,19 @@ func (this *Server) recvLoop() {
 			if rdCnt == 0 {
 				break
 			} else if rdCnt == 1 {
-				if datagram[0] != startFrame {
+				if rawData[0] != startFrame {
 					break
 				}
 			} else {
-				if datagram[0] != startFrame {
+				if rawData[0] != startFrame {
 					break
 				}
-				length = int(datagram[1]) + 2
+				length = int(rawData[1]) + 2
 				if length < APCICtlFiledSize+2 || length > APDUSizeMax {
 					break
 				}
 				if rdCnt == length {
-					apdu := datagram[:length]
+					apdu := rawData[:length]
 					this.Debug("RX Raw[% x]", apdu)
 					this.recv <- apdu
 				}
@@ -189,7 +189,7 @@ func (this *Server) sendLoop() {
 func (this *Server) run() {
 	this.Debug("run start!")
 
-	// defualt: STOPDT, when connected establish and not enable "data transfer" yet
+	// default: STOPDT, when connected establish and not enable "data transfer" yet
 	isActive := false
 	checkTicker := time.NewTicker(timeoutResolution)
 
@@ -234,7 +234,7 @@ func (this *Server) run() {
 	// var stopDtActiveSendSince = willNotTimeout
 
 	for {
-		if isActive && seqNoCount(this.ackNoOut, this.seqNoOut) <= this.SendUnackLimitK {
+		if isActive && seqNoCount(this.ackNoOut, this.seqNoOut) <= this.SendUnAckLimitK {
 			select {
 			case o, ok := <-this.out:
 				if !ok {
@@ -251,15 +251,15 @@ func (this *Server) run() {
 
 		case now := <-checkTicker.C:
 			// check all timeouts
-			if now.Sub(testFrAliveSendSince) >= this.SendUnackTimeout1 {
-				// now.Sub(startDtActiveSendSince) >= t.SendUnackTimeout1 ||
-				// now.Sub(stopDtActiveSendSince) >= t.SendUnackTimeout1 ||
+			if now.Sub(testFrAliveSendSince) >= this.SendUnAckTimeout1 {
+				// now.Sub(startDtActiveSendSince) >= t.SendUnAckTimeout1 ||
+				// now.Sub(stopDtActiveSendSince) >= t.SendUnAckTimeout1 ||
 				return
 			}
 			// check oldest unacknowledged outbound
 			if this.ackNoOut != this.seqNoOut &&
-				//now.Sub(this.peek()) >= this.SendUnackTimeout1 {
-				now.Sub(this.pending[0].sendTime) >= this.SendUnackTimeout1 {
+				//now.Sub(this.peek()) >= this.SendUnAckTimeout1 {
+				now.Sub(this.pending[0].sendTime) >= this.SendUnAckTimeout1 {
 				this.ackNoOut++
 				this.Error("fatal transmission timeout t₁")
 				return
@@ -267,7 +267,7 @@ func (this *Server) run() {
 
 			// 确定最早发送的i-Frame是否超时,超时则回复sFrame
 			if this.ackNoIn != this.seqNoIn &&
-				(now.Sub(unAckRcvSince) >= this.RecvUnackTimeout2 ||
+				(now.Sub(unAckRcvSince) >= this.RecvUnAckTimeout2 ||
 					now.Sub(this.idleSince) >= timeoutResolution) {
 				this.send <- newSFrame(this.seqNoIn)
 				this.ackNoIn = this.seqNoIn
@@ -313,7 +313,7 @@ func (this *Server) run() {
 				}
 
 				this.seqNoIn = (this.seqNoIn + 1) & 32767
-				if seqNoCount(this.ackNoIn, this.seqNoIn) >= this.RecvUnackLimitW {
+				if seqNoCount(this.ackNoIn, this.seqNoIn) >= this.RecvUnAckLimitW {
 					this.send <- newSFrame(this.seqNoIn)
 					this.ackNoIn = this.seqNoIn
 				}
@@ -448,7 +448,8 @@ func (this *Server) serverHandler(asduPack *asdu.ASDU) error {
 		if ioa != asdu.InfoObjIrrelevantAddr {
 			return asduPack.SendReplyMirror(this, asdu.UnkInfo)
 		}
-		this.handler.InterrogationHandler(this, asduPack, qoi)
+		return this.handler.InterrogationHandler(this, asduPack, qoi)
+
 	case asdu.C_CI_NA_1: // CounterInterrogationCmd
 		if asduPack.Identifier.Coa.Cause != asdu.Act {
 			return asduPack.SendReplyMirror(this, asdu.UnkCause)
@@ -460,7 +461,8 @@ func (this *Server) serverHandler(asduPack *asdu.ASDU) error {
 		if ioa != asdu.InfoObjIrrelevantAddr {
 			return asduPack.SendReplyMirror(this, asdu.UnkInfo)
 		}
-		this.handler.CounterInterrogationHandler(this, asduPack, qcc)
+		return this.handler.CounterInterrogationHandler(this, asduPack, qcc)
+
 	case asdu.C_RD_NA_1: // ReadCmd
 		if asduPack.Identifier.Coa.Cause != asdu.Req {
 			return asduPack.SendReplyMirror(this, asdu.UnkCause)
@@ -468,7 +470,8 @@ func (this *Server) serverHandler(asduPack *asdu.ASDU) error {
 		if asduPack.CommonAddr == asdu.InvalidCommonAddr {
 			return asduPack.SendReplyMirror(this, asdu.UnkAddr)
 		}
-		this.handler.ReadHandler(this, asduPack, asduPack.GetReadCmd())
+		return this.handler.ReadHandler(this, asduPack, asduPack.GetReadCmd())
+
 	case asdu.C_CS_NA_1: // ClockSynchronizationCmd
 		if asduPack.Identifier.Coa.Cause != asdu.Act {
 			return asduPack.SendReplyMirror(this, asdu.UnkCause)
@@ -481,7 +484,8 @@ func (this *Server) serverHandler(asduPack *asdu.ASDU) error {
 		if ioa != asdu.InfoObjIrrelevantAddr {
 			return asduPack.SendReplyMirror(this, asdu.UnkInfo)
 		}
-		this.handler.ClockSyncHandler(this, asduPack, tm)
+		return this.handler.ClockSyncHandler(this, asduPack, tm)
+
 	case asdu.C_TS_NA_1: // TestCommand
 		if asduPack.Identifier.Coa.Cause != asdu.Act {
 			return asduPack.SendReplyMirror(this, asdu.UnkCause)
@@ -493,7 +497,8 @@ func (this *Server) serverHandler(asduPack *asdu.ASDU) error {
 		if ioa != asdu.InfoObjIrrelevantAddr {
 			return asduPack.SendReplyMirror(this, asdu.UnkInfo)
 		}
-		asduPack.SendReplyMirror(this, asdu.Act)
+		return asduPack.SendReplyMirror(this, asdu.Act)
+
 	case asdu.C_RP_NA_1: // ResetProcessCmd
 		if asduPack.Identifier.Coa.Cause != asdu.Act {
 			return asduPack.SendReplyMirror(this, asdu.UnkCause)
@@ -505,7 +510,7 @@ func (this *Server) serverHandler(asduPack *asdu.ASDU) error {
 		if ioa != asdu.InfoObjIrrelevantAddr {
 			return asduPack.SendReplyMirror(this, asdu.UnkInfo)
 		}
-		this.handler.ResetProcessHandler(this, asduPack, qrp)
+		return this.handler.ResetProcessHandler(this, asduPack, qrp)
 	case asdu.C_CD_NA_1: // DelayAcquireCommand
 		if !(asduPack.Identifier.Coa.Cause == asdu.Act ||
 			asduPack.Identifier.Coa.Cause == asdu.Spont) {
@@ -518,11 +523,11 @@ func (this *Server) serverHandler(asduPack *asdu.ASDU) error {
 		if ioa != asdu.InfoObjIrrelevantAddr {
 			return asduPack.SendReplyMirror(this, asdu.UnkInfo)
 		}
-		this.handler.DelayAcquisitionHandler(this, asduPack, msec)
-	default:
-		if err := this.handler.ASDUHandler(this, asduPack); err != nil {
-			return asduPack.SendReplyMirror(this, asdu.UnkType)
-		}
+		return this.handler.DelayAcquisitionHandler(this, asduPack, msec)
+	}
+
+	if err := this.handler.ASDUHandler(this, asduPack); err != nil {
+		return asduPack.SendReplyMirror(this, asdu.UnkType)
 	}
 	return nil
 }
