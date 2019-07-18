@@ -60,15 +60,6 @@ func TestCounterInterrogationCmd(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			"cause not Act",
-			args{
-				newConn(nil, t),
-				CauseOfTransmission{Cause: Unused},
-				0x1234,
-				QualifierCountCall{QCCGroup1, QCCFzeRead}},
-			true,
-		},
-		{
 			"C_CI_NA_1",
 			args{
 				newConn([]byte{byte(C_CI_NA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
@@ -100,15 +91,6 @@ func TestReadCmd(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
-		{
-			"cause not standard",
-			args{
-				newConn(nil, t),
-				CauseOfTransmission{Cause: Unused},
-				0x1234,
-				0x567890},
-			true,
-		},
 		{
 			"C_RD_NA_1",
 			args{
@@ -142,15 +124,6 @@ func TestClockSynchronizationCmd(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			"cause not act",
-			args{
-				newConn(nil, t),
-				CauseOfTransmission{Cause: Unused},
-				0x1234,
-				time.Time{}},
-			true,
-		},
-		{
 			"C_CS_NA_1",
 			args{
 				newConn(append([]byte{byte(C_CS_NA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
@@ -182,14 +155,6 @@ func TestTestCommand(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			"cause not act",
-			args{
-				newConn(nil, t),
-				CauseOfTransmission{Cause: Unused},
-				0x1234},
-			true,
-		},
-		{
 			"C_TS_NA_1",
 			args{
 				newConn([]byte{byte(C_TS_NA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
@@ -220,15 +185,6 @@ func TestResetProcessCmd(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
-		{
-			"cause not act",
-			args{
-				newConn(nil, t),
-				CauseOfTransmission{Cause: Unused},
-				0x1234,
-				QPRTotal},
-			true,
-		},
 		{
 			"C_RP_NA_1",
 			args{

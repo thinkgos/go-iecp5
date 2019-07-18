@@ -113,7 +113,7 @@ func TestCommand(c Connect, coa CauseOfTransmission, ca CommonAddr) error {
 	if err := c.Params().Valid(); err != nil {
 		return err
 	}
-	coa.Cause = Req
+	coa.Cause = Act
 	u := NewASDU(c.Params(), Identifier{
 		C_TS_NA_1,
 		VariableStruct{IsSequence: false, Number: 1},
@@ -137,7 +137,7 @@ func ResetProcessCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 	if err := c.Params().Valid(); err != nil {
 		return err
 	}
-	coa.Cause = Req
+	coa.Cause = Act
 	u := NewASDU(c.Params(), Identifier{
 		C_RP_NA_1,
 		VariableStruct{IsSequence: false, Number: 1},
