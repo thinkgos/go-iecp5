@@ -17,7 +17,7 @@ func (this *seqManage) push(pending seqPending) {
 
 }
 
-func (this *seqManage) confirmRecep(ackNo uint16) {
+func (this *seqManage) confirmReception(ackNo uint16) {
 	for i, v := range this.list {
 		if v.seq == (ackNo - 1) {
 			this.list = this.list[i+1:]

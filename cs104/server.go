@@ -41,8 +41,8 @@ type Server struct {
 	ackNoIn  uint16 // inbound sequence number yet to be confirmed
 
 	//// maps sendTime I-frames to their respective sequence number
-	//pending []seqPending
-	seqManage
+	pending []seqPending
+	//seqManage
 
 	wg         sync.WaitGroup
 	idleSince  time.Time
@@ -263,7 +263,8 @@ func (this *Server) run() {
 			}
 			// check oldest unacknowledged outbound
 			if this.ackNoOut != this.seqNoOut &&
-				now.Sub(this.peek()) >= this.SendUnackTimeout1 {
+				//now.Sub(this.peek()) >= this.SendUnackTimeout1 {
+				now.Sub(this.pending[0].sendTime) >= this.SendUnackTimeout1 {
 				this.ackNoOut++
 				this.Error("fatal transmission timeout t₁")
 				return
@@ -375,8 +376,8 @@ func (this *Server) sendIFrame(asdu1 []byte) {
 	this.ackNoIn = this.seqNoIn
 	this.seqNoOut = (seqNo + 1) & 32767
 
-	this.push(seqPending{seqNo & 32767, time.Now()})
-
+	//this.push(seqPending{seqNo & 32767, time.Now()})
+	this.pending = append(this.pending, seqPending{seqNo & 32767, time.Now()})
 	this.send <- iframe
 	this.idleSince = time.Now()
 }
@@ -391,13 +392,13 @@ func (this *Server) updateAckNoOut(ackNo uint16) (ok bool) {
 	}
 
 	// confirm reception
-	//for i, v := range this.pending {
-	//	if v.seq+1 == (ackNo - 1) {
-	//		this.pending = this.pending[i+1:]
-	//		return
-	//	}
-	//}
-	this.confirmRecep(ackNo)
+	for i, v := range this.pending {
+		if v.seq == (ackNo - 1) {
+			this.pending = this.pending[i+1:]
+			break
+		}
+	}
+	//this.confirmReception(ackNo)
 
 	this.ackNoOut = ackNo
 	return true
