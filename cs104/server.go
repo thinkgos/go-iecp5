@@ -17,11 +17,6 @@ import (
 // of a second make this system much more responsive i.c.w. S-frames.
 const timeoutResolution = 100 * time.Millisecond
 
-type seqPending struct {
-	seq      uint16
-	sendTime time.Time
-}
-
 type Server struct {
 	Config
 	params *asdu.Params
