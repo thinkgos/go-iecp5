@@ -331,7 +331,6 @@ func (this *Session) cleanUp() {
 	this.seqNoOut = 0
 	this.pending = nil
 	// clear sending chan buffer
-	this.Debug("cap: %d", cap(this.out))
 loop:
 	for {
 		select {
@@ -514,11 +513,14 @@ func (this *Session) Send(u *asdu.ASDU) error {
 	}
 	select {
 	case this.out <- data:
-		this.Debug("here1111")
 	default:
 		return ErrBufferFulled
 	}
 	return nil
+}
+
+func (this *Session) UnderlyingConn() net.Conn {
+	return this.conn
 }
 
 func (this *Session) Close() error {

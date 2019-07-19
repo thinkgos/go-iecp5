@@ -110,7 +110,6 @@ func (this *serverSpec) Connect() error {
 		return errors.New("empty remote server")
 	}
 
-	this.Debug("haha len: %d cap: %d", len(this.out), cap(this.out))
 	go this.connect()
 	return nil
 }

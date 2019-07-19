@@ -2,6 +2,7 @@ package asdu
 
 import (
 	"math"
+	"net"
 	"reflect"
 	"testing"
 	"time"
@@ -17,7 +18,8 @@ func newConn(want []byte, t *testing.T) *conn {
 	return &conn{ParamsWide, want, t}
 }
 
-func (this *conn) Params() *Params { return this.p }
+func (this *conn) Params() *Params          { return this.p }
+func (this *conn) UnderlyingConn() net.Conn { return nil }
 
 // Send
 func (this *conn) Send(u *ASDU) error {
