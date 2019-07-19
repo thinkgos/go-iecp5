@@ -63,7 +63,7 @@ func (this *Server) Run() {
 		this.Close()
 		this.Debug("Server stop")
 	}()
-	this.Debug("Server running")
+	this.Debug("Server run")
 	for {
 		conn, err := listen.Accept()
 		if err != nil {
@@ -73,34 +73,20 @@ func (this *Server) Run() {
 
 		this.wg.Add(1)
 		go func() {
-			lctx, cancelf := context.WithCancel(ctx)
+
 			sess := &Session{
-				Config: this.conf,
-				params: this.params,
-				conn:   conn,
+				Config:  this.conf,
+				params:  this.params,
+				handler: this.handler,
 
 				in:   make(chan []byte, this.conf.RecvUnAckLimitW),
 				out:  make(chan []byte, this.conf.SendUnAckLimitK),
 				recv: make(chan []byte, this.conf.RecvUnAckLimitW),
 				send: make(chan []byte, this.conf.SendUnAckLimitK), // may not block!
 
-				closed: make(chan struct{}, 1),
-
-				handler:   this.handler,
-				idleSince: time.Now(),
-
 				Clog: this.Clog,
-
-				cancelFunc: cancelf,
-				ctx:        lctx,
 			}
-
-			sess.wg.Add(3)
-			go sess.recvLoop()
-			go sess.sendLoop()
-			go sess.runHandler()
-			sess.runMonitor()
-			sess.wg.Wait()
+			sess.run(ctx, conn)
 			this.wg.Done()
 		}()
 	}

@@ -6,36 +6,41 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/thinkgos/go-iecp5/asdu"
 	"github.com/thinkgos/go-iecp5/clog"
 )
 
+const (
+	disconnected uint32 = iota
+	connecting
+	connected
+)
+
 type Session struct {
 	*Config
-	params *asdu.Params
-	conn   net.Conn
+	params  *asdu.Params
+	conn    net.Conn
+	handler ServerHandlerInterface
 
 	in   chan []byte // for received asdu
 	out  chan []byte // for send asdu
 	recv chan []byte // for recvLoop raw cs104 frame
 	send chan []byte // for sendLoop raw cs104 frame
 
-	closed chan struct{}
-
 	// see subclass 5.1 — Protection against loss and duplication of messages
 	seqNoOut uint16 // sequence number of next outbound I-frame
 	ackNoOut uint16 // outbound sequence number yet to be confirmed
 	seqNoIn  uint16 // sequence number of next inbound I-frame
 	ackNoIn  uint16 // inbound sequence number yet to be confirmed
-
 	// maps sendTime I-frames to their respective sequence number
 	pending []seqPending
 	//seqManage
 
-	handler   ServerHandlerInterface
-	idleSince time.Time
+	status uint32
+	rwMux  sync.RWMutex
 
 	*clog.Clog
 
@@ -47,15 +52,12 @@ type Session struct {
 // RecvLoop feeds t.recv.
 func (this *Session) recvLoop() {
 	this.Debug("recvLoop start!")
-
 	defer func() {
-		close(this.recv)
 		this.cancelFunc()
 		this.wg.Done()
 		this.Debug("recvLoop stop!")
 	}()
 
-	//var deadline time.Time
 	for {
 		rawData := make([]byte, APDUSizeMax)
 		length := 2
@@ -108,73 +110,65 @@ func (this *Session) recvLoop() {
 // sendLoop drains t.sendTime.
 func (this *Session) sendLoop() {
 	this.Debug("sendLoop start!")
-
 	defer func() {
 		this.cancelFunc()
 		this.wg.Done()
 		this.Debug("sendLoop stop!")
 	}()
 
-	for apdu := range this.send {
-		this.Debug("TX Raw[% x]", apdu)
-		for wrCnt := 0; len(apdu) > wrCnt; {
-			byteCount, err := this.conn.Write(apdu[wrCnt:])
-			if err != nil {
-				// See: https://github.com/golang/go/issues/4373
-				if err != io.EOF && err != io.ErrClosedPipe ||
-					strings.Contains(err.Error(), "use of closed network connection") {
-					this.Error("send failed, %v", err)
-					return
+	for {
+		select {
+		case <-this.ctx.Done():
+			return
+		case apdu := <-this.send:
+			this.Debug("TX Raw[% x]", apdu)
+			for wrCnt := 0; len(apdu) > wrCnt; {
+				byteCount, err := this.conn.Write(apdu[wrCnt:])
+				if err != nil {
+					// See: https://github.com/golang/go/issues/4373
+					if err != io.EOF && err != io.ErrClosedPipe ||
+						strings.Contains(err.Error(), "use of closed network connection") {
+						this.Error("send failed, %v", err)
+						return
+					}
+					if e, ok := err.(net.Error); !ok || !e.Temporary() {
+						this.Error("send failed, %v", err)
+						return
+					}
+					// temporary error may be recoverable
 				}
-				if e, ok := err.(net.Error); !ok || !e.Temporary() {
-					this.Error("send failed, %v", err)
-					return
-				}
-				// temporary error may be recoverable
+				wrCnt += byteCount
 			}
-			wrCnt += byteCount
 		}
 	}
 }
 
 // Run is the big fat state machine.
-func (this *Session) runMonitor() {
-	this.Debug("runMonitor start!")
+func (this *Session) run(ctx context.Context, conn net.Conn) {
+	this.Debug("run start!")
+	// before any  thing make sure init
+	this.cleanUp()
+
+	this.ctx, this.cancelFunc = context.WithCancel(ctx)
+	this.conn = conn
+	this.setConnectStatus(connected)
+	this.wg.Add(3)
+	go this.recvLoop()
+	go this.sendLoop()
+	go this.runHandler()
 
 	// default: STOPDT, when connected establish and not enable "data transfer" yet
 	isActive := false
+
 	checkTicker := time.NewTicker(timeoutResolution)
+	idleSince := time.Now()
 
 	defer func() {
-		this.notifyClose()
+		this.setConnectStatus(disconnected)
 		checkTicker.Stop()
-		if this.ackNoIn != this.seqNoIn {
-			select {
-			case this.send <- newSFrame(this.seqNoIn):
-				this.ackNoIn = this.seqNoIn
-			default:
-			}
-		}
-
-		close(this.send) // kill send loop
-		this.conn.Close()
-
-		// await receive loop
-		for apdu := range this.recv {
-			apci, _ := parse(apdu)
-			switch head, f := apci.parse(); f {
-			case iFrame:
-				this.updateAckNoOut(head.(iAPCI).rcvSN)
-
-			case sFrame:
-				this.updateAckNoOut(head.(sAPCI).rcvSN)
-			default:
-				// discard
-			}
-		}
-
-		close(this.in) // kill runHandler
-		this.Debug("runMonitor stop!")
+		this.conn.Close() // 连锁引发cancel
+		this.wg.Wait()
+		this.Debug("run stop!")
 	}()
 
 	// transmission timestamps for timeout calculation
@@ -188,23 +182,18 @@ func (this *Session) runMonitor() {
 	for {
 		if isActive && seqNoCount(this.ackNoOut, this.seqNoOut) <= this.SendUnAckLimitK {
 			select {
-			case o, ok := <-this.out:
-				if !ok {
-					return
-				}
+			case o := <-this.out:
 				this.sendIFrame(o)
+				idleSince = time.Now()
 				continue
 			case <-this.ctx.Done():
-				this.Debug("donononono")
 				return
 			default: // make no block
 			}
 		}
 		select {
 		case <-this.ctx.Done():
-			this.Debug("donononono")
 			return
-
 		case now := <-checkTicker.C:
 			// check all timeouts
 			if now.Sub(testFrAliveSendSince) >= this.SendUnAckTimeout1 {
@@ -224,25 +213,22 @@ func (this *Session) runMonitor() {
 			// 确定最早发送的i-Frame是否超时,超时则回复sFrame
 			if this.ackNoIn != this.seqNoIn &&
 				(now.Sub(unAckRcvSince) >= this.RecvUnAckTimeout2 ||
-					now.Sub(this.idleSince) >= timeoutResolution) {
+					now.Sub(idleSince) >= timeoutResolution) {
 				this.send <- newSFrame(this.seqNoIn)
 				this.ackNoIn = this.seqNoIn
 			}
 
 			// 空闲时间到，发送TestFrActive帧,保活
-			if now.Sub(this.idleSince) >= this.IdleTimeout3 {
+			if now.Sub(idleSince) >= this.IdleTimeout3 {
 				this.send <- newUFrame(uTestFrActive)
 				testFrAliveSendSince = time.Now()
-				this.idleSince = testFrAliveSendSince
+				idleSince = testFrAliveSendSince
 			}
 
-		case apdu, ok := <-this.recv:
-			if !ok {
-				return
-			}
+		case apdu := <-this.recv:
 			apci, asdu := parse(apdu)
 			head, f := apci.parse()
-			this.idleSince = time.Now() // 每收到一个i帧,S帧,U帧, 重置空闲定时器
+			idleSince = time.Now() // 每收到一个i帧,S帧,U帧, 重置空闲定时器
 			switch f {
 			case sFrame:
 				this.Debug("sFrame %+v", head)
@@ -303,18 +289,60 @@ func (this *Session) runMonitor() {
 
 func (this *Session) runHandler() {
 	this.Debug("runHandler start")
-	for rawAsdu := range this.in {
-		asduPack := asdu.NewEmptyASDU(this.params)
-		if err := asduPack.UnmarshalBinary(rawAsdu); err != nil {
-			this.Error("asdu UnmarshalBinary failed,%+v", err)
-			continue
-		}
-		if err := this.serverHandler(asduPack); err != nil {
-			this.Error("serverHandler falied,%+v", err)
+	defer func() {
+		this.wg.Done()
+		this.Debug("runHandler stop")
+	}()
+
+	for {
+		select {
+		case <-this.ctx.Done():
+			return
+		case rawAsdu := <-this.in:
+			asduPack := asdu.NewEmptyASDU(this.params)
+			if err := asduPack.UnmarshalBinary(rawAsdu); err != nil {
+				this.Error("asdu UnmarshalBinary failed,%+v", err)
+				continue
+			}
+			if err := this.serverHandler(asduPack); err != nil {
+				this.Error("serverHandler falied,%+v", err)
+			}
 		}
 	}
-	this.wg.Done()
-	this.Debug("runHandler stop")
+}
+
+func (this *Session) setConnectStatus(status uint32) {
+	this.rwMux.Lock()
+	atomic.StoreUint32(&this.status, status)
+	this.rwMux.Unlock()
+}
+
+func (this *Session) connectStatus() uint32 {
+	this.rwMux.RLock()
+	status := atomic.LoadUint32(&this.status)
+	this.rwMux.RUnlock()
+	return status
+}
+
+func (this *Session) cleanUp() {
+	this.ackNoIn = 0
+	this.ackNoOut = 0
+	this.seqNoIn = 0
+	this.seqNoOut = 0
+	this.pending = nil
+	// clear sending chan buffer
+	this.Debug("cap: %d", cap(this.out))
+loop:
+	for {
+		select {
+		case <-this.send:
+		case <-this.recv:
+		case <-this.in:
+		case <-this.out:
+		default:
+			break loop
+		}
+	}
 }
 
 // 回绕机制
@@ -338,7 +366,6 @@ func (this *Session) sendIFrame(asdu1 []byte) {
 	//this.push(seqPending{seqNo & 32767, time.Now()})
 	this.pending = append(this.pending, seqPending{seqNo & 32767, time.Now()})
 	this.send <- iframe
-	this.idleSince = time.Now()
 }
 
 func (this *Session) updateAckNoOut(ackNo uint16) (ok bool) {
@@ -358,33 +385,8 @@ func (this *Session) updateAckNoOut(ackNo uint16) (ok bool) {
 		}
 	}
 	//this.confirmReception(ackNo)
-
 	this.ackNoOut = ackNo
 	return true
-}
-
-func (this *Session) Params() *asdu.Params {
-	return this.params
-}
-
-// Send asdu frame
-func (this *Session) Send(u *asdu.ASDU) error {
-	select {
-	case <-this.closed:
-		this.notifyClose()
-		return ErrUseClosedConnection
-	default:
-		data, err := u.MarshalBinary()
-		if err != nil {
-			return err
-		}
-		select {
-		case this.out <- data:
-		default:
-			return ErrBufferFulled
-		}
-	}
-	return nil
 }
 
 func (this *Session) serverHandler(asduPack *asdu.ASDU) error {
@@ -493,9 +495,40 @@ func (this *Session) serverHandler(asduPack *asdu.ASDU) error {
 	return nil
 }
 
-func (this *Session) notifyClose() {
-	select {
-	case this.closed <- struct{}{}:
-	default:
+func (this *Session) IsConnected() bool {
+	return this.connectStatus() == connected
+}
+
+func (this *Session) Params() *asdu.Params {
+	return this.params
+}
+
+// Send asdu frame
+func (this *Session) Send(u *asdu.ASDU) error {
+	if !this.IsConnected() {
+		return ErrUseClosedConnection
 	}
+	data, err := u.MarshalBinary()
+	if err != nil {
+		return err
+	}
+	select {
+	case this.out <- data:
+		this.Debug("here1111")
+	default:
+		return ErrBufferFulled
+	}
+	return nil
+}
+
+func (this *Session) Close() error {
+	if this.connectStatus() == disconnected {
+		return ErrUseClosedConnection
+	}
+	if this.cancelFunc != nil {
+		this.cancelFunc()
+	}
+
+	this.wg.Wait()
+	return nil
 }

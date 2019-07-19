@@ -7,7 +7,7 @@ import (
 	"net"
 	"net/url"
 	"strings"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/thinkgos/go-iecp5/asdu"
@@ -15,17 +15,16 @@ import (
 )
 
 const (
-	DefaultConnectTimeout       = 30 * time.Second
-	DefaultReconnectInterval    = 1 * time.Minute
-	DefaultMaxReconnectInterval = 10 * time.Minute
+	DefaultConnectTimeout    = 30 * time.Second
+	DefaultReconnectInterval = 1 * time.Minute
 )
 
-type OnConnectHandler func(c *ServerSpec)
-type ConnectionLostHandler func(c *ServerSpec)
-type ErrorHandler func(err error)
+type OnConnectHandler func(c ServerSpecial)
+type ConnectionLostHandler func(c ServerSpecial)
 
 type ServerSpecial interface {
 	asdu.Connect
+
 	IsConnected() bool
 	Connect() error
 	Close() error
@@ -34,24 +33,35 @@ type ServerSpecial interface {
 	AddRemoteServer(server string) error
 	SetOnConnectHandler(f OnConnectHandler)
 	SetConnectionLostHandler(f ConnectionLostHandler)
+
+	LogMode(enable bool)
+	SetLogProvider(p clog.LogProvider)
 }
 
-type ServerSpec struct {
+type serverSpec struct {
 	Session
 
-	Server               *url.URL      // 连接的服务器端
-	connectTimeout       time.Duration // 连接超时时间
-	autoReconnect        bool          // 是否启动重连
-	MaxReconnectInterval time.Duration // 重连间隔时间
-	rw                   sync.RWMutex
-	status               bool
-	TLSConfig            *tls.Config
-	onConnect            OnConnectHandler
-	onConnectionLost     ConnectionLostHandler
+	Server            *url.URL      // 连接的服务器端
+	connectTimeout    time.Duration // 连接超时时间
+	autoReconnect     bool          // 是否启动重连
+	ReconnectInterval time.Duration // 重连间隔时间
+	TLSConfig         *tls.Config
+	onConnect         OnConnectHandler
+	onConnectionLost  ConnectionLostHandler
 }
 
-func NewServerSpecial(conf *Config, params *asdu.Params, handler ServerHandlerInterface) *ServerSpec {
-	return &ServerSpec{
+func NewServerSpecial(conf *Config, params *asdu.Params, handler ServerHandlerInterface) (ServerSpecial, error) {
+	if handler == nil {
+		return nil, errors.New("invalid handler")
+	}
+	if err := conf.Valid(); err != nil {
+		return nil, err
+	}
+	if err := params.Valid(); err != nil {
+		return nil, err
+	}
+
+	return &serverSpec{
 		Session: Session{
 			Config:  conf,
 			params:  params,
@@ -62,17 +72,17 @@ func NewServerSpecial(conf *Config, params *asdu.Params, handler ServerHandlerIn
 			recv: make(chan []byte, conf.RecvUnAckLimitW),
 			send: make(chan []byte, conf.SendUnAckLimitK), // may not block!
 
-			Clog: clog.NewWithPrefix("cs104 ServerSpec => "),
+			Clog: clog.NewWithPrefix("cs104 serverSpec => "),
 		},
-		connectTimeout:       DefaultConnectTimeout,
-		autoReconnect:        true,
-		MaxReconnectInterval: DefaultReconnectInterval,
-		onConnect:            func(*ServerSpec) {},
-		onConnectionLost:     func(*ServerSpec) {},
-	}
+		connectTimeout:    DefaultConnectTimeout,
+		autoReconnect:     true,
+		ReconnectInterval: DefaultReconnectInterval,
+		onConnect:         func(ServerSpecial) {},
+		onConnectionLost:  func(ServerSpecial) {},
+	}, nil
 }
 
-func (this *ServerSpec) SetTLSConfig(t *tls.Config) {
+func (this *serverSpec) SetTLSConfig(t *tls.Config) {
 	this.TLSConfig = t
 }
 
@@ -80,7 +90,7 @@ func (this *ServerSpec) SetTLSConfig(t *tls.Config) {
 // The format should be scheme://host:port
 // Default values for hostname is "127.0.0.1", for schema is "tcp://".
 // An example broker URI would look like: tcp://foobar.com:1204
-func (this *ServerSpec) AddRemoteServer(server string) error {
+func (this *serverSpec) AddRemoteServer(server string) error {
 	if len(server) > 0 && server[0] == ':' {
 		server = "127.0.0.1" + server
 	}
@@ -95,70 +105,64 @@ func (this *ServerSpec) AddRemoteServer(server string) error {
 	return nil
 }
 
-func (this *ServerSpec) IsConnected() bool {
-	this.rw.RLock()
-	b := this.status
-	this.rw.RUnlock()
-	return b
-}
-
-func (this *ServerSpec) Connect() error {
+func (this *serverSpec) Connect() error {
 	if this.Server == nil {
 		return errors.New("empty remote server")
 	}
-	if this.handler == nil {
-		return errors.New("invalid handler")
-	}
-	if err := this.Config.Valid(); err != nil {
-		return err
-	}
-	if err := this.params.Valid(); err != nil {
-		return err
-	}
+
+	this.Debug("haha len: %d cap: %d", len(this.out), cap(this.out))
 	go this.connect()
 	return nil
 }
 
 // 增加30秒 重连间隔
-func (this *ServerSpec) connect() {
-	this.rw.Lock()
-	conn, err := openConnection(this.Server, this.TLSConfig, this.connectTimeout)
-	if err != nil {
-		this.rw.Unlock()
-		if this.autoReconnect {
-			go this.connect()
-		}
+func (this *serverSpec) connect() {
+	this.rwMux.Lock()
+	if atomic.LoadUint32(&this.status) > disconnected {
+		this.rwMux.Unlock()
 		return
 	}
-	this.status = true
-	this.ctx, this.cancelFunc = context.WithCancel(context.Background())
-	this.conn = conn
-	this.in = make(chan []byte, this.Config.RecvUnAckLimitW)
-	this.out = make(chan []byte, this.Config.SendUnAckLimitK)
-	this.recv = make(chan []byte, this.Config.RecvUnAckLimitW)
-	this.send = make(chan []byte, this.Config.SendUnAckLimitK) // may not block!
-	this.rw.Unlock()
+	atomic.StoreUint32(&this.status, connecting)
+	this.rwMux.Unlock()
+
+	var conn net.Conn
+	var err error
+	tm := time.NewTimer(this.ReconnectInterval)
+	for {
+		conn, err = openConnection(this.Server, this.TLSConfig, this.connectTimeout)
+		if err != nil {
+			this.Error("connecting failed, %v", err)
+			if !this.autoReconnect {
+				this.setConnectStatus(disconnected)
+				tm.Stop()
+				return
+			}
+			tm.Reset(this.ReconnectInterval)
+			<-tm.C
+			this.Debug("try to connecting server %+v", this.Server)
+		} else {
+			break
+		}
+	}
+	tm.Stop()
+
 	this.onConnect(this)
-	this.wg.Add(3)
-	go this.recvLoop()
-	go this.sendLoop()
-	go this.runHandler()
-	this.runMonitor()
-	this.wg.Wait()
+	this.run(context.Background(), conn)
 	this.onConnectionLost(this)
 	if this.autoReconnect {
 		go this.connect()
 	}
 }
-func (this *ServerSpec) Close() error {
-	return nil
-}
 
-func (this *ServerSpec) SetOnConnectHandler(f OnConnectHandler) {
-	this.onConnect = f
+func (this *serverSpec) SetOnConnectHandler(f OnConnectHandler) {
+	if f != nil {
+		this.onConnect = f
+	}
 }
-func (this *ServerSpec) SetConnectionLostHandler(f ConnectionLostHandler) {
-	this.onConnectionLost = f
+func (this *serverSpec) SetConnectionLostHandler(f ConnectionLostHandler) {
+	if f != nil {
+		this.onConnectionLost = f
+	}
 }
 
 func openConnection(uri *url.URL, tlsc *tls.Config, timeout time.Duration) (net.Conn, error) {
