@@ -156,8 +156,10 @@ func (this *ASDU) Reply(c Cause, addr CommonAddr) *ASDU {
 
 // SendReplyMirror send a reply of the mirror request but cause different
 func (this *ASDU) SendReplyMirror(c Connect, cause Cause) error {
-	this.Coa.Cause = cause
-	return c.Send(this)
+	r := NewASDU(this.Params, this.Identifier)
+	r.Coa.Cause = cause
+	r.infoObj = append(r.infoObj, this.infoObj...)
+	return c.Send(r)
 }
 
 //// String returns a full description.

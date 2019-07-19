@@ -2,6 +2,7 @@ package cs104
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"io"
 	"net"
@@ -19,7 +20,107 @@ import (
 const timeoutResolution = 100 * time.Millisecond
 
 type Server struct {
-	Config
+	conf      *Config
+	params    *asdu.Params
+	handler   ServerHandlerInterface
+	TLSConfig *tls.Config
+	mux       sync.Mutex
+	listen    net.Listener
+	*clog.Clog
+	wg sync.WaitGroup
+}
+
+func NewServer(conf *Config, params *asdu.Params, handler ServerHandlerInterface) (*Server, error) {
+	if handler == nil {
+		return nil, errors.New("invalid handler")
+	}
+	if err := conf.Valid(); err != nil {
+		return nil, err
+	}
+	if err := params.Valid(); err != nil {
+		return nil, err
+	}
+
+	return &Server{
+		conf:    conf,
+		params:  params,
+		handler: handler,
+		Clog:    clog.NewWithPrefix("cs104 server => "),
+	}, nil
+}
+
+func (this *Server) Run() {
+	listen, err := net.Listen("tcp", ":2404")
+	if err != nil {
+		this.Error("Server run failed, %v", err)
+		return
+	}
+	this.mux.Lock()
+	this.listen = listen
+	this.mux.Unlock()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer func() {
+		this.Close()
+		cancel()
+		this.wg.Wait()
+		this.Debug("Server stop")
+	}()
+	this.Debug("Server running")
+	for {
+		conn, err := this.listen.Accept()
+		if err != nil {
+			this.Error("Server run failed, %v", err)
+			return
+		}
+
+		this.wg.Add(1)
+		go func() {
+			ctx, cancel := context.WithCancel(ctx)
+			sess := &Session{
+				Config: this.conf,
+				params: this.params,
+				conn:   conn,
+
+				in:   make(chan []byte, this.conf.RecvUnAckLimitW),
+				out:  make(chan []byte, this.conf.SendUnAckLimitK),
+				recv: make(chan []byte, this.conf.RecvUnAckLimitW),
+				send: make(chan []byte, this.conf.SendUnAckLimitK), // may not block!
+
+				handler: this.handler,
+
+				idleSince:  time.Now(),
+				cancelFunc: cancel,
+				ctx:        ctx,
+				Clog:       this.Clog,
+			}
+
+			sess.wg.Add(3)
+			go sess.recvLoop()
+			go sess.sendLoop()
+			go sess.runHandler()
+			sess.runMonitor()
+			sess.wg.Wait()
+			this.wg.Done()
+		}()
+	}
+}
+
+func (this *Server) Close() error {
+	var err error
+
+	this.mux.Lock()
+	if this.listen != nil {
+		err = this.listen.Close()
+		this.listen = nil
+	}
+	this.mux.Unlock()
+	this.wg.Wait()
+	return err
+}
+
+type Session struct {
+	*Config
 	params *asdu.Params
 	conn   net.Conn
 
@@ -47,53 +148,8 @@ type Server struct {
 	*clog.Clog
 }
 
-// NewServer returns a cs104 server
-func NewServer(conn net.Conn, conf *Config, params *asdu.Params, handler ServerHandlerInterface) (*Server, error) {
-	if handler == nil {
-		return nil, errors.New("invalid handler")
-	}
-	if err := conf.Valid(); err != nil {
-		return nil, err
-	}
-	if err := params.Valid(); err != nil {
-		return nil, err
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-
-	srv := &Server{
-		Config: *conf,
-		params: params,
-		conn:   conn,
-
-		in:   make(chan []byte, conf.RecvUnAckLimitW),
-		out:  make(chan []byte, conf.SendUnAckLimitK),
-		recv: make(chan []byte, conf.RecvUnAckLimitW),
-		send: make(chan []byte, conf.SendUnAckLimitK), // may not block!
-
-		handler: handler,
-
-		idleSince:  time.Now(),
-		cancelFunc: cancel,
-		ctx:        ctx,
-		Clog:       clog.NewWithPrefix("cs104 server => "),
-	}
-	srv.wg.Add(4)
-	go srv.recvLoop()
-	go srv.sendLoop()
-	go srv.run()
-	go srv.runHandler()
-	return srv, nil
-}
-
-func (this *Server) Close() error {
-	this.cancelFunc()
-	this.wg.Wait()
-	return nil
-}
-
 // RecvLoop feeds t.recv.
-func (this *Server) recvLoop() {
+func (this *Session) recvLoop() {
 	this.Debug("recvLoop start!")
 
 	defer func() {
@@ -154,7 +210,7 @@ func (this *Server) recvLoop() {
 }
 
 // sendLoop drains t.sendTime.
-func (this *Server) sendLoop() {
+func (this *Session) sendLoop() {
 	this.Debug("sendLoop start!")
 
 	defer func() {
@@ -171,11 +227,11 @@ func (this *Server) sendLoop() {
 				// See: https://github.com/golang/go/issues/4373
 				if err != io.EOF && err != io.ErrClosedPipe ||
 					strings.Contains(err.Error(), "use of closed network connection") {
-					this.Error("sendTime failed, %v", err)
+					this.Error("send failed, %v", err)
 					return
 				}
 				if e, ok := err.(net.Error); !ok || !e.Temporary() {
-					this.Error("sendTime failed, %v", err)
+					this.Error("send failed, %v", err)
 					return
 				}
 				// temporary error may be recoverable
@@ -186,8 +242,8 @@ func (this *Server) sendLoop() {
 }
 
 // Run is the big fat state machine.
-func (this *Server) run() {
-	this.Debug("run start!")
+func (this *Session) runMonitor() {
+	this.Debug("runMonitor start!")
 
 	// default: STOPDT, when connected establish and not enable "data transfer" yet
 	isActive := false
@@ -203,7 +259,7 @@ func (this *Server) run() {
 			}
 		}
 
-		close(this.send) // kill sendTime loop
+		close(this.send) // kill send loop
 		this.conn.Close()
 
 		// await receive loop
@@ -221,8 +277,7 @@ func (this *Server) run() {
 		}
 
 		close(this.in) // kill runHandler
-		this.wg.Done()
-		this.Debug("run stop!")
+		this.Debug("runMonitor stop!")
 	}()
 
 	// transmission timestamps for timeout calculation
@@ -345,7 +400,7 @@ func (this *Server) run() {
 	}
 }
 
-func (this *Server) runHandler() {
+func (this *Session) runHandler() {
 	this.Debug("runHandler start")
 	for rawAsdu := range this.in {
 		asduPack := asdu.NewEmptyASDU(this.params)
@@ -361,7 +416,7 @@ func (this *Server) runHandler() {
 	this.Debug("runHandler stop")
 }
 
-func (this *Server) sendIFrame(asdu1 []byte) {
+func (this *Session) sendIFrame(asdu1 []byte) {
 	seqNo := this.seqNoOut
 
 	iframe, err := newIFrame(asdu1, seqNo, this.seqNoIn)
@@ -377,7 +432,7 @@ func (this *Server) sendIFrame(asdu1 []byte) {
 	this.idleSince = time.Now()
 }
 
-func (this *Server) updateAckNoOut(ackNo uint16) (ok bool) {
+func (this *Session) updateAckNoOut(ackNo uint16) (ok bool) {
 	if ackNo == this.ackNoOut {
 		return true
 	}
@@ -408,7 +463,7 @@ func seqNoCount(nextAckNo, nextSeqNo uint16) uint16 {
 }
 
 // Send asdu frame
-func (this *Server) Send(u *asdu.ASDU) error {
+func (this *Session) Send(u *asdu.ASDU) error {
 	data, err := u.MarshalBinary()
 	if err != nil {
 		return err
@@ -422,11 +477,11 @@ func (this *Server) Send(u *asdu.ASDU) error {
 	return nil
 }
 
-func (this *Server) Params() *asdu.Params {
+func (this *Session) Params() *asdu.Params {
 	return this.params
 }
 
-func (this *Server) serverHandler(asduPack *asdu.ASDU) error {
+func (this *Session) serverHandler(asduPack *asdu.ASDU) error {
 	defer func() {
 		if err := recover(); err != nil {
 			this.Critical("server handler %+v", err)
