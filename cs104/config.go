@@ -70,6 +70,10 @@ type Config struct {
 
 // Valid applies the default (defined by IEC) for each unspecified value.
 func (this *Config) Valid() error {
+	if this == nil {
+		return errors.New("invalid pointer")
+	}
+
 	if this.ConnectTimeout0 == 0 {
 		this.ConnectTimeout0 = 30 * time.Second
 	} else if this.ConnectTimeout0 < ConnectTimeout0Min || this.ConnectTimeout0 > ConnectTimeout0Max {
