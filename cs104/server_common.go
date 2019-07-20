@@ -144,24 +144,31 @@ func (this *Session) sendLoop() {
 }
 
 // Run is the big fat state machine.
-func (this *Session) run(ctx context.Context, conn net.Conn) {
+func (this *Session) run(ctx context.Context) {
 	this.Debug("run start!")
 	// before any  thing make sure init
 	this.cleanUp()
 
 	this.ctx, this.cancelFunc = context.WithCancel(ctx)
-	this.conn = conn
 	this.setConnectStatus(connected)
 	this.wg.Add(3)
 	go this.recvLoop()
 	go this.sendLoop()
-	go this.runHandler()
+	go this.handlerLoop()
 
 	// default: STOPDT, when connected establish and not enable "data transfer" yet
-	isActive := false
+	var isActive = false
+	var checkTicker = time.NewTicker(timeoutResolution)
 
-	checkTicker := time.NewTicker(timeoutResolution)
-	idleSince := time.Now()
+	// transmission timestamps for timeout calculation
+	var willNotTimeout = time.Now().Add(time.Hour * 24 * 365 * 100)
+
+	var unAckRcvSince = willNotTimeout
+	var idleTimeout3Sine = time.Now()         // 空闲间隔发起testFrAlive
+	var testFrAliveSendSince = willNotTimeout // 当发起testFrAlive时,等待确认回复的超时间隔
+	// 对于server端，无需对应的U-Frame 无需判断
+	// var startDtActiveSendSince = willNotTimeout
+	// var stopDtActiveSendSince = willNotTimeout
 
 	defer func() {
 		this.setConnectStatus(disconnected)
@@ -171,20 +178,12 @@ func (this *Session) run(ctx context.Context, conn net.Conn) {
 		this.Debug("run stop!")
 	}()
 
-	// transmission timestamps for timeout calculation
-	var willNotTimeout = time.Now().Add(time.Hour * 24 * 365 * 100)
-	var unAckRcvSince = willNotTimeout
-	var testFrAliveSendSince = willNotTimeout
-	// 对于server端，无需对应的U-Frame 无需判断
-	// var startDtActiveSendSince = willNotTimeout
-	// var stopDtActiveSendSince = willNotTimeout
-
 	for {
 		if isActive && seqNoCount(this.ackNoOut, this.seqNoOut) <= this.SendUnAckLimitK {
 			select {
 			case o := <-this.out:
 				this.sendIFrame(o)
-				idleSince = time.Now()
+				idleTimeout3Sine = time.Now()
 				continue
 			case <-this.ctx.Done():
 				return
@@ -213,39 +212,39 @@ func (this *Session) run(ctx context.Context, conn net.Conn) {
 			// 确定最早发送的i-Frame是否超时,超时则回复sFrame
 			if this.ackNoIn != this.seqNoIn &&
 				(now.Sub(unAckRcvSince) >= this.RecvUnAckTimeout2 ||
-					now.Sub(idleSince) >= timeoutResolution) {
+					now.Sub(idleTimeout3Sine) >= timeoutResolution) {
 				this.send <- newSFrame(this.seqNoIn)
 				this.ackNoIn = this.seqNoIn
 			}
 
 			// 空闲时间到，发送TestFrActive帧,保活
-			if now.Sub(idleSince) >= this.IdleTimeout3 {
+			if now.Sub(idleTimeout3Sine) >= this.IdleTimeout3 {
 				this.send <- newUFrame(uTestFrActive)
 				testFrAliveSendSince = time.Now()
-				idleSince = testFrAliveSendSince
+				idleTimeout3Sine = testFrAliveSendSince
 			}
 
 		case apdu := <-this.recv:
 			apci, asdu := parse(apdu)
 			head, f := apci.parse()
-			idleSince = time.Now() // 每收到一个i帧,S帧,U帧, 重置空闲定时器
+			idleTimeout3Sine = time.Now() // 每收到一个i帧,S帧,U帧, 重置空闲定时器, t3
 			switch f {
 			case sFrame:
-				this.Debug("sFrame %+v", head)
+				this.Debug("sFrame %v", apci)
 				if !this.updateAckNoOut(head.(sAPCI).rcvSN) {
-					this.Error("fatal incomming acknowledge either earlier than previous or later than sendTime")
+					this.Error("fatal incoming acknowledge either earlier than previous or later than sendTime")
 					return
 				}
 
 			case iFrame:
-				this.Debug("iFrame %+v", head)
+				this.Debug("iFrame %v", apci)
 				if !isActive {
-					this.Error("not active")
+					this.Warn("station not active")
 					break // not active, discard apdu
 				}
 				iHead := head.(iAPCI)
 				if !this.updateAckNoOut(iHead.rcvSN) || iHead.sendSN != this.seqNoIn {
-					this.Error("fatal incomming acknowledge either earlier than previous or later than sendTime")
+					this.Error("fatal incoming acknowledge either earlier than previous or later than sendTime")
 					return
 				}
 
@@ -261,7 +260,7 @@ func (this *Session) run(ctx context.Context, conn net.Conn) {
 				}
 
 			case uFrame:
-				this.Debug("uFrame %+v", head)
+				this.Debug("uFrame %v", apci)
 				switch head.(uAPCI).function {
 				case uStartDtActive:
 					this.send <- newUFrame(uStartDtConfirm)
@@ -287,11 +286,11 @@ func (this *Session) run(ctx context.Context, conn net.Conn) {
 	}
 }
 
-func (this *Session) runHandler() {
-	this.Debug("runHandler start")
+func (this *Session) handlerLoop() {
+	this.Debug("handlerLoop start")
 	defer func() {
 		this.wg.Done()
-		this.Debug("runHandler stop")
+		this.Debug("handlerLoop stop")
 	}()
 
 	for {

@@ -4,13 +4,11 @@ package asdu
 // 初始化结束
 func EndOfInitialization(c Connect, coa CauseOfTransmission, ca CommonAddr,
 	ioa InfoObjAddr, coi CauseOfInitial) error {
-	if coa.Cause != Init {
-		return ErrCmdCause
-	}
 	if err := c.Params().Valid(); err != nil {
 		return err
 	}
 
+	coa.Cause = Init
 	u := NewASDU(c.Params(), Identifier{
 		M_EI_NA_1,
 		VariableStruct{IsSequence: false, Number: 1},

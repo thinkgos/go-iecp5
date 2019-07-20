@@ -126,29 +126,26 @@ func (this *serverSpec) connect() {
 
 	var conn net.Conn
 	var err error
-	tm := time.NewTimer(this.ReconnectInterval)
 	for {
 		conn, err = openConnection(this.Server, this.TLSConfig, this.connectTimeout)
 		if err != nil {
 			this.Error("connecting failed, %v", err)
 			if !this.autoReconnect {
 				this.setConnectStatus(disconnected)
-				tm.Stop()
 				return
 			}
-			tm.Reset(this.ReconnectInterval)
-			<-tm.C
+			time.Sleep(this.ReconnectInterval)
 			this.Debug("try to connecting server %+v", this.Server)
 		} else {
 			break
 		}
 	}
-	tm.Stop()
-
+	this.conn = conn
 	this.onConnect(this)
-	this.run(context.Background(), conn)
+	this.run(context.Background())
 	this.onConnectionLost(this)
 	if this.autoReconnect {
+		time.Sleep(time.Second * 5)
 		go this.connect()
 	}
 }

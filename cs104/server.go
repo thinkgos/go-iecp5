@@ -78,15 +78,15 @@ func (this *Server) Run() {
 				Config:  this.conf,
 				params:  this.params,
 				handler: this.handler,
-
-				in:   make(chan []byte, this.conf.RecvUnAckLimitW),
-				out:  make(chan []byte, this.conf.SendUnAckLimitK),
-				recv: make(chan []byte, this.conf.RecvUnAckLimitW),
-				send: make(chan []byte, this.conf.SendUnAckLimitK), // may not block!
+				conn:    conn,
+				in:      make(chan []byte, this.conf.RecvUnAckLimitW),
+				out:     make(chan []byte, this.conf.SendUnAckLimitK),
+				recv:    make(chan []byte, this.conf.RecvUnAckLimitW),
+				send:    make(chan []byte, this.conf.SendUnAckLimitK), // may not block!
 
 				Clog: this.Clog,
 			}
-			sess.run(ctx, conn)
+			sess.run(ctx)
 			this.wg.Done()
 		}()
 	}

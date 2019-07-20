@@ -52,7 +52,7 @@ type Config struct {
 	// See IEC 60870-5-104, figure 18.
 	SendUnAckTimeout1 time.Duration
 
-	// 接收端最迟在接收了w次I-frames应用规约数据单元以后发出认可。 w不超过2/3k(2/3 SendUnackMax)
+	// 接收端最迟在接收了w次I-frames应用规约数据单元以后发出认可。 w不超过2/3k(2/3 SendUnAckLimitK)
 	// "w" 范围 [1， 32767] 默认 8.
 	// See IEC 60870-5-104, subclass 5.5.
 	RecvUnAckLimitW uint16

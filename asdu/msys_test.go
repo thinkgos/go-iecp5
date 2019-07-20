@@ -19,16 +19,6 @@ func TestEndOfInitialization(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			"cause not Init",
-			args{
-				newConn(nil, t),
-				CauseOfTransmission{Cause: Unused},
-				0x1234,
-				0x567890,
-				CauseOfInitial{COIlocalHandReset, false}},
-			true,
-		},
-		{
 			"M_EI_NA_1",
 			args{
 				newConn([]byte{byte(M_EI_NA_1), 0x01, 0x04, 0x00, 0x34, 0x12,

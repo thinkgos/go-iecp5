@@ -87,11 +87,11 @@ func (this APCI) String() string {
 
 	switch format {
 	case sFrame:
-		return fmt.Sprintf("S[recv=%04X]", acpi.(sAPCI).rcvSN)
+		return fmt.Sprintf("S[recvNo = %04X]", acpi.(sAPCI).rcvSN)
 	case iFrame:
-		return fmt.Sprintf("I[send=%04X, recv=%04X]", acpi.(iAPCI).rcvSN, acpi.(iAPCI).sendSN)
+		return fmt.Sprintf("I[sendNo = %04X, recvNo = %04X]", acpi.(iAPCI).rcvSN, acpi.(iAPCI).sendSN)
 	default: // uFrame
-		return fmt.Sprintf("U[%04x]", acpi.(uAPCI).function)
+		return fmt.Sprintf("U[function = %04x]", acpi.(uAPCI).function)
 	}
 }
 
