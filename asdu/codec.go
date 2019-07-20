@@ -6,17 +6,20 @@ import (
 	"time"
 )
 
+// AppendBytes append some bytes to info object
 func (this *ASDU) AppendBytes(b ...byte) *ASDU {
 	this.infoObj = append(this.infoObj, b...)
 	return this
 }
 
+// DecodeByte decode a byte then the pass it
 func (this *ASDU) DecodeByte() byte {
 	v := this.infoObj[0]
 	this.infoObj = this.infoObj[1:]
 	return v
 }
 
+// AppendInfoObjAddr append info object address to info object
 func (this *ASDU) AppendInfoObjAddr(addr InfoObjAddr) error {
 	switch this.InfoObjAddrSize {
 	case 1:
@@ -40,6 +43,7 @@ func (this *ASDU) AppendInfoObjAddr(addr InfoObjAddr) error {
 	return nil
 }
 
+// DecodeByte decode info object address then the pass it
 func (this *ASDU) DecodeInfoObjAddr() InfoObjAddr {
 	var ioa InfoObjAddr
 	switch this.InfoObjAddrSize {
@@ -58,6 +62,7 @@ func (this *ASDU) DecodeInfoObjAddr() InfoObjAddr {
 	return ioa
 }
 
+// AppendNormalize append a Normalize value to info object
 func (this *ASDU) AppendNormalize(n Normalize) *ASDU {
 	this.infoObj = append(this.infoObj, byte(n), byte(n>>8))
 	return this
@@ -69,6 +74,7 @@ func (this *ASDU) DecodeNormalize() Normalize {
 	return n
 }
 
+// AppendScaled append a Scaled value to info object
 func (this *ASDU) AppendScaled(i int16) *ASDU {
 	this.infoObj = append(this.infoObj, byte(i), byte(i>>8))
 	return this
@@ -80,6 +86,7 @@ func (this *ASDU) DecodeScaled() int16 {
 	return s
 }
 
+// AppendFloat32 append a float32 value to info object
 func (this *ASDU) AppendFloat32(f float32) *ASDU {
 	bits := math.Float32bits(f)
 	this.infoObj = append(this.infoObj, byte(bits), byte(bits>>8), byte(bits>>16), byte(bits>>24))
@@ -92,6 +99,7 @@ func (this *ASDU) DecodeFloat() float32 {
 	return f
 }
 
+// AppendBitsString32 append a bits string value to info object
 func (this *ASDU) AppendBitsString32(v uint32) *ASDU {
 	this.infoObj = append(this.infoObj, byte(v), byte(v>>8), byte(v>>16), byte(v>>24))
 	return this
@@ -103,6 +111,7 @@ func (this *ASDU) DecodeBitsString32() uint32 {
 	return v
 }
 
+// AppendNormalize append a CP56Time2a value to info object
 func (this *ASDU) DecodeCP56Time2a() time.Time {
 	t := ParseCP56Time2a(this.infoObj, this.Params.InfoObjTimeZone)
 	this.infoObj = this.infoObj[7:]

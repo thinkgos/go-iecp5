@@ -14,14 +14,19 @@ import (
 	"github.com/thinkgos/go-iecp5/clog"
 )
 
+// defined default value
 const (
 	DefaultConnectTimeout    = 30 * time.Second
 	DefaultReconnectInterval = 1 * time.Minute
 )
 
+// OnConnectHandler when connected it will be call
 type OnConnectHandler func(c ServerSpecial)
+
+// ConnectionLostHandler when Connection lost it will be call
 type ConnectionLostHandler func(c ServerSpecial)
 
+// ServerSpecial server special interface
 type ServerSpecial interface {
 	asdu.Connect
 
@@ -39,7 +44,7 @@ type ServerSpecial interface {
 }
 
 type serverSpec struct {
-	Session
+	SrvSession
 
 	Server            *url.URL      // 连接的服务器端
 	connectTimeout    time.Duration // 连接超时时间
@@ -50,6 +55,7 @@ type serverSpec struct {
 	onConnectionLost  ConnectionLostHandler
 }
 
+// NewServerSpecial new special server
 func NewServerSpecial(conf *Config, params *asdu.Params, handler ServerHandlerInterface) (ServerSpecial, error) {
 	if handler == nil {
 		return nil, errors.New("invalid handler")
@@ -62,7 +68,7 @@ func NewServerSpecial(conf *Config, params *asdu.Params, handler ServerHandlerIn
 	}
 
 	return &serverSpec{
-		Session: Session{
+		SrvSession: SrvSession{
 			Config:  conf,
 			params:  params,
 			handler: handler,
@@ -164,22 +170,13 @@ func (this *serverSpec) SetConnectionLostHandler(f ConnectionLostHandler) {
 func openConnection(uri *url.URL, tlsc *tls.Config, timeout time.Duration) (net.Conn, error) {
 	switch uri.Scheme {
 	case "tcp":
-		conn, err := net.DialTimeout("tcp", uri.Host, timeout)
-		if err != nil {
-			return nil, err
-		}
-		return conn, nil
+		return net.DialTimeout("tcp", uri.Host, timeout)
 	case "ssl":
 		fallthrough
 	case "tls":
 		fallthrough
 	case "tcps":
-		conn, err := tls.DialWithDialer(&net.Dialer{Timeout: timeout}, "tcp", uri.Host, tlsc)
-		if err != nil {
-			return nil, err
-		}
-		return conn, nil
-
+		return tls.DialWithDialer(&net.Dialer{Timeout: timeout}, "tcp", uri.Host, tlsc)
 	}
 	return nil, errors.New("Unknown protocol")
 }

@@ -19,7 +19,8 @@ const (
 	connected
 )
 
-type Session struct {
+// SrvSession the cs104 server session
+type SrvSession struct {
 	*Config
 	params  *asdu.Params
 	conn    net.Conn
@@ -50,7 +51,7 @@ type Session struct {
 }
 
 // RecvLoop feeds t.recv.
-func (this *Session) recvLoop() {
+func (this *SrvSession) recvLoop() {
 	this.Debug("recvLoop start!")
 	defer func() {
 		this.cancelFunc()
@@ -108,7 +109,7 @@ func (this *Session) recvLoop() {
 }
 
 // sendLoop drains t.sendTime.
-func (this *Session) sendLoop() {
+func (this *SrvSession) sendLoop() {
 	this.Debug("sendLoop start!")
 	defer func() {
 		this.cancelFunc()
@@ -143,8 +144,8 @@ func (this *Session) sendLoop() {
 	}
 }
 
-// Run is the big fat state machine.
-func (this *Session) run(ctx context.Context) {
+// run is the big fat state machine.
+func (this *SrvSession) run(ctx context.Context) {
 	this.Debug("run start!")
 	// before any thing make sure init
 	this.cleanUp()
@@ -285,7 +286,8 @@ func (this *Session) run(ctx context.Context) {
 	}
 }
 
-func (this *Session) handlerLoop() {
+// handlerLoop handler iFrame asdu
+func (this *SrvSession) handlerLoop() {
 	this.Debug("handlerLoop start")
 	defer func() {
 		this.wg.Done()
@@ -309,20 +311,20 @@ func (this *Session) handlerLoop() {
 	}
 }
 
-func (this *Session) setConnectStatus(status uint32) {
+func (this *SrvSession) setConnectStatus(status uint32) {
 	this.rwMux.Lock()
 	atomic.StoreUint32(&this.status, status)
 	this.rwMux.Unlock()
 }
 
-func (this *Session) connectStatus() uint32 {
+func (this *SrvSession) connectStatus() uint32 {
 	this.rwMux.RLock()
 	status := atomic.LoadUint32(&this.status)
 	this.rwMux.RUnlock()
 	return status
 }
 
-func (this *Session) cleanUp() {
+func (this *SrvSession) cleanUp() {
 	this.ackNoIn = 0
 	this.ackNoOut = 0
 	this.seqNoIn = 0
@@ -350,17 +352,17 @@ func seqNoCount(nextAckNo, nextSeqNo uint16) uint16 {
 	return nextSeqNo - nextAckNo
 }
 
-func (this *Session) sendSFrame(rcvSN uint16) {
+func (this *SrvSession) sendSFrame(rcvSN uint16) {
 	this.Debug("TX sFrame %v", sAPCI{rcvSN})
 	this.send <- newSFrame(rcvSN)
 }
 
-func (this *Session) sendUFrame(which byte) {
+func (this *SrvSession) sendUFrame(which byte) {
 	this.Debug("TX uFrame %v", uAPCI{which})
 	this.send <- newUFrame(which)
 }
 
-func (this *Session) sendIFrame(asdu1 []byte) {
+func (this *SrvSession) sendIFrame(asdu1 []byte) {
 	seqNo := this.seqNoOut
 
 	iframe, err := newIFrame(seqNo, this.seqNoIn, asdu1)
@@ -377,7 +379,7 @@ func (this *Session) sendIFrame(asdu1 []byte) {
 	this.send <- iframe
 }
 
-func (this *Session) updateAckNoOut(ackNo uint16) (ok bool) {
+func (this *SrvSession) updateAckNoOut(ackNo uint16) (ok bool) {
 	if ackNo == this.ackNoOut {
 		return true
 	}
@@ -398,7 +400,7 @@ func (this *Session) updateAckNoOut(ackNo uint16) (ok bool) {
 	return true
 }
 
-func (this *Session) serverHandler(asduPack *asdu.ASDU) error {
+func (this *SrvSession) serverHandler(asduPack *asdu.ASDU) error {
 	defer func() {
 		if err := recover(); err != nil {
 			this.Critical("server handler %+v", err)
@@ -504,16 +506,18 @@ func (this *Session) serverHandler(asduPack *asdu.ASDU) error {
 	return nil
 }
 
-func (this *Session) IsConnected() bool {
+// IsConnected get server session connected state
+func (this *SrvSession) IsConnected() bool {
 	return this.connectStatus() == connected
 }
 
-func (this *Session) Params() *asdu.Params {
+// Params get params
+func (this *SrvSession) Params() *asdu.Params {
 	return this.params
 }
 
 // Send asdu frame
-func (this *Session) Send(u *asdu.ASDU) error {
+func (this *SrvSession) Send(u *asdu.ASDU) error {
 	if !this.IsConnected() {
 		return ErrUseClosedConnection
 	}
@@ -529,11 +533,13 @@ func (this *Session) Send(u *asdu.ASDU) error {
 	return nil
 }
 
-func (this *Session) UnderlyingConn() net.Conn {
+// UnderlyingConn got under net.conn
+func (this *SrvSession) UnderlyingConn() net.Conn {
 	return this.conn
 }
 
-func (this *Session) Close() error {
+// Close close the server session
+func (this *SrvSession) Close() error {
 	if this.connectStatus() == disconnected {
 		return ErrUseClosedConnection
 	}

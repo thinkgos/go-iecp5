@@ -17,6 +17,7 @@ import (
 // of a second make this system much more responsive i.c.w. S-frames.
 const timeoutResolution = 100 * time.Millisecond
 
+// Server the common server
 type Server struct {
 	conf      *Config
 	params    *asdu.Params
@@ -28,6 +29,7 @@ type Server struct {
 	wg sync.WaitGroup
 }
 
+// NewServer new a server
 func NewServer(conf *Config, params *asdu.Params, handler ServerHandlerInterface) (*Server, error) {
 	if handler == nil {
 		return nil, errors.New("invalid handler")
@@ -47,6 +49,7 @@ func NewServer(conf *Config, params *asdu.Params, handler ServerHandlerInterface
 	}, nil
 }
 
+// Run run the server
 func (this *Server) Run() {
 	listen, err := net.Listen("tcp", ":2404")
 	if err != nil {
@@ -74,7 +77,7 @@ func (this *Server) Run() {
 		this.wg.Add(1)
 		go func() {
 
-			sess := &Session{
+			sess := &SrvSession{
 				Config:  this.conf,
 				params:  this.params,
 				handler: this.handler,
@@ -92,6 +95,7 @@ func (this *Server) Run() {
 	}
 }
 
+// Close close the server
 func (this *Server) Close() error {
 	var err error
 

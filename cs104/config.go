@@ -13,6 +13,7 @@ const (
 	PortSecure = 19998
 )
 
+// defines an IEC 60870-5-104 configuration range
 const (
 	// "t₀" 范围[1, 255]s 默认 30s
 	ConnectTimeout0Min = 1 * time.Second
@@ -35,7 +36,7 @@ const (
 	RecvUnAckLimitWMax = 32767
 )
 
-// TCPConf defines an IEC 60870-5-104 configuration.
+// Config defines an IEC 60870-5-104 configuration.
 // The default is applied for each unspecified value.
 type Config struct {
 	// tcp连接建立的最大超时时间
