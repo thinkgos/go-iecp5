@@ -77,7 +77,7 @@ func (this *Session) recvLoop() {
 				}
 
 				if byteCount == 0 && err == io.EOF {
-					this.Error("remote connect closed,%v", err)
+					this.Error("remote connect closed, %v", err)
 					return
 				}
 			}
@@ -146,7 +146,7 @@ func (this *Session) sendLoop() {
 // Run is the big fat state machine.
 func (this *Session) run(ctx context.Context) {
 	this.Debug("run start!")
-	// before any  thing make sure init
+	// before any thing make sure init
 	this.cleanUp()
 
 	this.ctx, this.cancelFunc = context.WithCancel(ctx)
@@ -198,6 +198,7 @@ func (this *Session) run(ctx context.Context) {
 			if now.Sub(testFrAliveSendSince) >= this.SendUnAckTimeout1 {
 				// now.Sub(startDtActiveSendSince) >= t.SendUnAckTimeout1 ||
 				// now.Sub(stopDtActiveSendSince) >= t.SendUnAckTimeout1 ||
+				this.Error("test frame alive confirm timeout t₁")
 				return
 			}
 			// check oldest unacknowledged outbound
@@ -213,31 +214,31 @@ func (this *Session) run(ctx context.Context) {
 			if this.ackNoIn != this.seqNoIn &&
 				(now.Sub(unAckRcvSince) >= this.RecvUnAckTimeout2 ||
 					now.Sub(idleTimeout3Sine) >= timeoutResolution) {
-				this.send <- newSFrame(this.seqNoIn)
+				this.sendSFrame(this.seqNoIn)
 				this.ackNoIn = this.seqNoIn
 			}
 
 			// 空闲时间到，发送TestFrActive帧,保活
 			if now.Sub(idleTimeout3Sine) >= this.IdleTimeout3 {
-				this.send <- newUFrame(uTestFrActive)
+				this.sendUFrame(uTestFrActive)
 				testFrAliveSendSince = time.Now()
 				idleTimeout3Sine = testFrAliveSendSince
 			}
 
 		case apdu := <-this.recv:
 			apci, asdu := parse(apdu)
-			head, f := apci.parse()
+			head, frameType := apci.parse()
 			idleTimeout3Sine = time.Now() // 每收到一个i帧,S帧,U帧, 重置空闲定时器, t3
-			switch f {
+			switch frameType {
 			case sFrame:
-				this.Debug("sFrame %v", apci)
+				this.Debug("RX sFrame %v", apci)
 				if !this.updateAckNoOut(head.(sAPCI).rcvSN) {
 					this.Error("fatal incoming acknowledge either earlier than previous or later than sendTime")
 					return
 				}
 
 			case iFrame:
-				this.Debug("iFrame %v", apci)
+				this.Debug("RX iFrame %v", apci)
 				if !isActive {
 					this.Warn("station not active")
 					break // not active, discard apdu
@@ -255,31 +256,31 @@ func (this *Session) run(ctx context.Context) {
 
 				this.seqNoIn = (this.seqNoIn + 1) & 32767
 				if seqNoCount(this.ackNoIn, this.seqNoIn) >= this.RecvUnAckLimitW {
-					this.send <- newSFrame(this.seqNoIn)
+					this.sendSFrame(this.seqNoIn)
 					this.ackNoIn = this.seqNoIn
 				}
 
 			case uFrame:
-				this.Debug("uFrame %v", apci)
+				this.Debug("RX uFrame %v", apci)
 				switch head.(uAPCI).function {
 				case uStartDtActive:
-					this.send <- newUFrame(uStartDtConfirm)
+					this.sendUFrame(uStartDtConfirm)
 					isActive = true
 				// case uStartDtConfirm:
 				// 	isActive = true
 				// 	startDtActiveSendSince = willNotTimeout
 				case uStopDtActive:
-					this.send <- newUFrame(uStopDtConfirm)
+					this.sendUFrame(uStopDtConfirm)
 					isActive = false
 				// case uStopDtConfirm:
 				// 	isActive = false
 				// 	stopDtActiveSendSince = willNotTimeout
 				case uTestFrActive:
-					this.send <- newUFrame(uTestFrConfirm)
+					this.sendUFrame(uTestFrConfirm)
 				case uTestFrConfirm:
 					testFrAliveSendSince = willNotTimeout
 				default:
-					this.Error("illegal U-Frame functions[%v] ignored", head.(uAPCI).function)
+					this.Error("illegal U-Frame functions[0x%02x] ignored", head.(uAPCI).function)
 				}
 			}
 		}
@@ -349,6 +350,14 @@ func seqNoCount(nextAckNo, nextSeqNo uint16) uint16 {
 		nextSeqNo += 32768
 	}
 	return nextSeqNo - nextAckNo
+}
+
+func (this *Session) sendSFrame(rcvSN uint16) {
+	this.send <- newSFrame(rcvSN)
+}
+
+func (this *Session) sendUFrame(which int) {
+	this.send <- newUFrame(which)
 }
 
 func (this *Session) sendIFrame(asdu1 []byte) {

@@ -252,7 +252,7 @@ func (this TypeID) String() string {
 	var s string
 	switch {
 	case 1 <= this && this <= 21:
-		this -= 1
+		this--
 		s = _TypeIDName0[this*9 : 9*(this+1)]
 	case 30 <= this && this <= 41:
 		this -= 30

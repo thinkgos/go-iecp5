@@ -87,11 +87,28 @@ func (this APCI) String() string {
 
 	switch format {
 	case sFrame:
-		return fmt.Sprintf("S[recvNo = %04X]", acpi.(sAPCI).rcvSN)
+		return fmt.Sprintf("S[recvNo: %d]", acpi.(sAPCI).rcvSN)
 	case iFrame:
-		return fmt.Sprintf("I[sendNo = %04X, recvNo = %04X]", acpi.(iAPCI).rcvSN, acpi.(iAPCI).sendSN)
+		return fmt.Sprintf("I[sendNo: %d, recvNo: %d]", acpi.(iAPCI).rcvSN, acpi.(iAPCI).sendSN)
 	default: // uFrame
-		return fmt.Sprintf("U[function = %04x]", acpi.(uAPCI).function)
+		var s string
+		switch acpi.(uAPCI).function {
+		case uStartDtActive: // 启动激活 0x04
+			s = "StartDtActive"
+		case uStartDtConfirm: // 启动确认 0x08
+			s = "StartDtConfirm"
+		case uStopDtActive: // 停止激活 0x10
+			s = "StopDtActive"
+		case uStopDtConfirm: // 停止确认 0x20
+			s = "StopDtConfirm"
+		case uTestFrActive: // 测试激活 0x40
+			s = "TestFrActive"
+		case uTestFrConfirm: // 测试确认 0x80
+			s = "TestFrConfirm"
+		default:
+			s = "Unknown"
+		}
+		return fmt.Sprintf("U[function: %s]", s)
 	}
 }
 
@@ -116,12 +133,12 @@ func newIFrame(asdus []byte, sendSN, RcvSN uint16) ([]byte, error) {
 
 // newSFrame 创建S帧,返回apdu
 func newSFrame(RcvSN uint16) []byte {
-	return []byte{startFrame, 4, 1, 0, byte(RcvSN << 1), byte(RcvSN >> 7)}
+	return []byte{startFrame, 4, 0x01, 0x00, byte(RcvSN << 1), byte(RcvSN >> 7)}
 }
 
 // newUFrame 创建U帧,返回apdu
 func newUFrame(which int) []byte {
-	return []byte{startFrame, 4, byte(which | 3), 0, 0, 0}
+	return []byte{startFrame, 4, byte(which | 0x03), 0x00, 0x00, 0x00}
 }
 
 // return
