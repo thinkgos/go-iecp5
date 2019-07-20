@@ -226,25 +226,23 @@ func (this *Session) run(ctx context.Context) {
 			}
 
 		case apdu := <-this.recv:
-			apci, asdu := parse(apdu)
-			head, frameType := apci.parse()
 			idleTimeout3Sine = time.Now() // 每收到一个i帧,S帧,U帧, 重置空闲定时器, t3
-			switch frameType {
-			case sFrame:
-				this.Debug("RX sFrame %v", apci)
-				if !this.updateAckNoOut(head.(sAPCI).rcvSN) {
+			apci, asdu := parse(apdu)
+			switch head := apci.(type) {
+			case sAPCI:
+				this.Debug("RX sFrame %v", head)
+				if !this.updateAckNoOut(head.rcvSN) {
 					this.Error("fatal incoming acknowledge either earlier than previous or later than sendTime")
 					return
 				}
 
-			case iFrame:
-				this.Debug("RX iFrame %v", apci)
+			case iAPCI:
+				this.Debug("RX iFrame %v", head)
 				if !isActive {
 					this.Warn("station not active")
 					break // not active, discard apdu
 				}
-				iHead := head.(iAPCI)
-				if !this.updateAckNoOut(iHead.rcvSN) || iHead.sendSN != this.seqNoIn {
+				if !this.updateAckNoOut(head.rcvSN) || head.sendSN != this.seqNoIn {
 					this.Error("fatal incoming acknowledge either earlier than previous or later than sendTime")
 					return
 				}
@@ -260,9 +258,9 @@ func (this *Session) run(ctx context.Context) {
 					this.ackNoIn = this.seqNoIn
 				}
 
-			case uFrame:
-				this.Debug("RX uFrame %v", apci)
-				switch head.(uAPCI).function {
+			case uAPCI:
+				this.Debug("RX uFrame %v", head)
+				switch head.function {
 				case uStartDtActive:
 					this.sendUFrame(uStartDtConfirm)
 					isActive = true
@@ -280,7 +278,7 @@ func (this *Session) run(ctx context.Context) {
 				case uTestFrConfirm:
 					testFrAliveSendSince = willNotTimeout
 				default:
-					this.Error("illegal U-Frame functions[0x%02x] ignored", head.(uAPCI).function)
+					this.Error("illegal U-Frame functions[0x%02x] ignored", head.function)
 				}
 			}
 		}
@@ -353,17 +351,19 @@ func seqNoCount(nextAckNo, nextSeqNo uint16) uint16 {
 }
 
 func (this *Session) sendSFrame(rcvSN uint16) {
+	this.Debug("TX sFrame %v", sAPCI{rcvSN})
 	this.send <- newSFrame(rcvSN)
 }
 
-func (this *Session) sendUFrame(which int) {
+func (this *Session) sendUFrame(which byte) {
+	this.Debug("TX uFrame %v", uAPCI{which})
 	this.send <- newUFrame(which)
 }
 
 func (this *Session) sendIFrame(asdu1 []byte) {
 	seqNo := this.seqNoOut
 
-	iframe, err := newIFrame(asdu1, seqNo, this.seqNoIn)
+	iframe, err := newIFrame(seqNo, this.seqNoIn, asdu1)
 	if err != nil {
 		return
 	}
@@ -372,6 +372,8 @@ func (this *Session) sendIFrame(asdu1 []byte) {
 
 	//this.push(seqPending{seqNo & 32767, time.Now()})
 	this.pending = append(this.pending, seqPending{seqNo & 32767, time.Now()})
+
+	this.Debug("TX iFrame %v", iAPCI{seqNo, this.seqNoIn})
 	this.send <- iframe
 }
 

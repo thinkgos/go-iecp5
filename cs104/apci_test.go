@@ -5,41 +5,45 @@ import (
 	"testing"
 )
 
-func TestAPCI_parse(t *testing.T) {
+func TestIAPCI_String(t *testing.T) {
 	tests := []struct {
-		name  string
-		this  APCI
-		want  interface{}
-		want1 string
+		name string
+		this iAPCI
+		want string
 	}{
-		{"iFrame", APCI{ctr1: 0x02, ctr3: 0x02}, iAPCI{sendSN: 0x01, rcvSN: 0x01}, iFrame},
-		{"sFrame", APCI{ctr1: 0x01, ctr3: 0x02}, sAPCI{rcvSN: 0x01}, sFrame},
-		{"uFrame", APCI{ctr1: 0x07}, uAPCI{function: uStartDtActive}, uFrame},
-		{"uFrame", APCI{ctr1: 0x0b}, uAPCI{function: uStartDtConfirm}, uFrame},
+		{"iFrame", iAPCI{sendSN: 0x02, rcvSN: 0x02}, "I[sendNO: 2, recvNO: 2]"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, got1 := tt.this.parse()
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("APCI.parse() got = % x, want % x", got, tt.want)
-			}
-			if got1 != tt.want1 {
-				t.Errorf("APCI.parse() got1 = %v, want %v", got1, tt.want1)
+			if got := tt.this.String(); got != tt.want {
+				t.Errorf("APCI.String() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
-
-func TestAPCI_String(t *testing.T) {
+func TestSAPCI_String(t *testing.T) {
 	tests := []struct {
 		name string
-		this APCI
+		this sAPCI
 		want string
 	}{
-		{"iFrame", APCI{ctr1: 0x02, ctr3: 0x02}, "I[send=0001, recv=0001]"},
-		{"sFrame", APCI{ctr1: 0x01, ctr3: 0x02}, "S[recv=0001]"},
-		{"uFrame", APCI{ctr1: 0x07}, "U[0004]"},
-		{"uFrame", APCI{ctr1: 0x0b}, "U[0008]"},
+		{"sFrame", sAPCI{rcvSN: 123}, "S[recvNO: 123]"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.this.String(); got != tt.want {
+				t.Errorf("APCI.String() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+func TestUAPCI_String(t *testing.T) {
+	tests := []struct {
+		name string
+		this uAPCI
+		want string
+	}{
+		{"uFrame", uAPCI{function: uStartDtActive}, "U[function: StartDtActive]"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -77,7 +81,7 @@ func Test_newIFrame(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := newIFrame(tt.args.asdu, tt.args.sendSN, tt.args.RcvSN)
+			got, err := newIFrame(tt.args.sendSN, tt.args.RcvSN, tt.args.asdu)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("newIFrame() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -136,13 +140,25 @@ func Test_parse(t *testing.T) {
 	tests := []struct {
 		name  string
 		args  args
-		want  APCI
+		want  interface{}
 		want1 []byte
 	}{
 		{
-			"",
-			args{[]byte{startFrame, 0x04, 0x13, 0x00, 0x00, 0x00}},
-			APCI{startFrame, 0x04, 0x13, 0x00, 0x00, 0x00},
+			"iAPCI",
+			args{[]byte{startFrame, 0x04, 0x02, 0x00, 0x03, 0x00}},
+			iAPCI{sendSN: 0x01, rcvSN: 0x01},
+			[]byte{},
+		},
+		{
+			"sAPCI",
+			args{[]byte{startFrame, 0x04, 0x01, 0x00, 0x02, 0x00}},
+			sAPCI{rcvSN: 0x01},
+			[]byte{},
+		},
+		{
+			"uAPCI",
+			args{[]byte{startFrame, 0x04, 0x07, 0x00, 0x00, 0x00}},
+			uAPCI{uStartDtActive},
 			[]byte{},
 		},
 	}
@@ -150,10 +166,10 @@ func Test_parse(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, got1 := parse(tt.args.apdu)
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("parse() got = %#v, want %#v", got, tt.want)
+				t.Errorf("parse() got = %v, want %v", got, tt.want)
 			}
 			if !reflect.DeepEqual(got1, tt.want1) {
-				t.Errorf("parse() got1 = % x, want % x", got1, tt.want1)
+				t.Errorf("parse() got1 = %v, want %v", got1, tt.want1)
 			}
 		})
 	}
