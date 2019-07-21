@@ -115,7 +115,7 @@ func Test_newSFrame(t *testing.T) {
 
 func Test_newUFrame(t *testing.T) {
 	type args struct {
-		which int
+		which byte
 	}
 	tests := []struct {
 		name string
