@@ -45,13 +45,13 @@ func NewServer(conf *Config, params *asdu.Params, handler ServerHandlerInterface
 		conf:    conf,
 		params:  params,
 		handler: handler,
-		Clog:    clog.NewWithPrefix("cs104 server => "),
+		Clog:    clog.NewWithPrefix("cs104 server =>"),
 	}, nil
 }
 
-// Run run the server
-func (this *Server) Run() {
-	listen, err := net.Listen("tcp", ":2404")
+// ListenAndServer run the server
+func (this *Server) ListenAndServer(addr string) {
+	listen, err := net.Listen("tcp", addr)
 	if err != nil {
 		this.Error("Server run failed, %v", err)
 		return
@@ -76,7 +76,6 @@ func (this *Server) Run() {
 
 		this.wg.Add(1)
 		go func() {
-
 			sess := &SrvSession{
 				Config:  this.conf,
 				params:  this.params,

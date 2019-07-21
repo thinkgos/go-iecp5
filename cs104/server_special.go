@@ -16,7 +16,7 @@ import (
 
 // defined default value
 const (
-	DefaultConnectTimeout    = 30 * time.Second
+	DefaultConnectTimeout    = 15 * time.Second
 	DefaultReconnectInterval = 1 * time.Minute
 )
 
@@ -31,7 +31,7 @@ type ServerSpecial interface {
 	asdu.Connect
 
 	IsConnected() bool
-	Connect() error
+	Start() error
 	Close() error
 
 	SetTLSConfig(t *tls.Config)
@@ -88,6 +88,21 @@ func NewServerSpecial(conf *Config, params *asdu.Params, handler ServerHandlerIn
 	}, nil
 }
 
+// SetConnectTimeout set tcp connect the host timeout
+func (this *serverSpec) SetConnectTimeout(t time.Duration) {
+	this.connectTimeout = t
+}
+
+// SetReconnectInterval set tcp  reconnect the host interval when connect failed after try
+func (this *serverSpec) SetReconnectInterval(t time.Duration) {
+	this.ReconnectInterval = t
+}
+
+func (this *serverSpec) EnableAutoReconnect(b bool) {
+	this.autoReconnect = b
+}
+
+// SetTLSConfig set tls config
 func (this *serverSpec) SetTLSConfig(t *tls.Config) {
 	this.TLSConfig = t
 }
@@ -111,56 +126,53 @@ func (this *serverSpec) AddRemoteServer(server string) error {
 	return nil
 }
 
-func (this *serverSpec) Connect() error {
+func (this *serverSpec) Start() error {
 	if this.Server == nil {
 		return errors.New("empty remote server")
 	}
 
-	go this.connect()
+	go this.running()
 	return nil
 }
 
 // 增加30秒 重连间隔
-func (this *serverSpec) connect() {
+func (this *serverSpec) running() {
 	this.rwMux.Lock()
-	if atomic.LoadUint32(&this.status) > disconnected {
+	if !atomic.CompareAndSwapUint32(&this.status, disconnected, connecting) {
 		this.rwMux.Unlock()
 		return
 	}
-	atomic.StoreUint32(&this.status, connecting)
 	this.rwMux.Unlock()
 
-	var conn net.Conn
-	var err error
 	for {
-		conn, err = openConnection(this.Server, this.TLSConfig, this.connectTimeout)
+		this.Debug("connecting server %+v", this.Server)
+		conn, err := openConnection(this.Server, this.TLSConfig, this.connectTimeout)
 		if err != nil {
-			this.Error("connecting failed, %v", err)
+			this.Error("connect failed, %v", err)
 			if !this.autoReconnect {
 				this.setConnectStatus(disconnected)
 				return
 			}
 			time.Sleep(this.ReconnectInterval)
-			this.Debug("try to connecting server %+v", this.Server)
-		} else {
-			break
+			continue
 		}
-	}
-	this.conn = conn
-	this.onConnect(this)
-	this.run(context.Background())
-	this.onConnectionLost(this)
-	if this.autoReconnect {
-		time.Sleep(time.Second * 5)
-		go this.connect()
+		this.Debug("connect success")
+		this.conn = conn
+		this.onConnect(this)
+		this.run(context.Background())
+		this.onConnectionLost(this)
+
 	}
 }
 
+// SetOnConnectHandler set on connect handler
 func (this *serverSpec) SetOnConnectHandler(f OnConnectHandler) {
 	if f != nil {
 		this.onConnect = f
 	}
 }
+
+// SetConnectionLostHandler set connection lost handler
 func (this *serverSpec) SetConnectionLostHandler(f ConnectionLostHandler) {
 	if f != nil {
 		this.onConnectionLost = f
