@@ -14,10 +14,10 @@ matrix:
       env: GO111MODULE=on
 
 before_install:
-  - go get -v ./...
+  - go get -t -v .
 
 install: 
-  - go test -v -race -benchmem -test.bench=".*" -coverprofile=coverage.txt -covermode=atomic
+  - go test -v -covermode=atomic -coverprofile=coverage.out
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
