@@ -5,11 +5,19 @@ go:
   - 1.12.x
   - tip
 
+matrix:
+  fast_finish: true
+  include:
+    - go: 1.11.x
+      env: GO111MODULE=on
+    - go: 1.12.x
+      env: GO111MODULE=on
+
 before_install:
   - go get -v ./...
 
 install: 
-  - go test -v -race ./... -benchmem -test.bench=".*" -coverprofile=coverage.txt -covermode=atomic
+  - go test -v -race -benchmem -test.bench=".*" -coverprofile=coverage.txt -covermode=atomic
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
