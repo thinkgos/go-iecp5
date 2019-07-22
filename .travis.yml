@@ -13,10 +13,10 @@ matrix:
     - go: 1.12.x
       env: GO111MODULE=on
 
-before_install:
-  - go get -t -v ./...
+install:
+  - go get -t -v .
 
-install: 
+script:
   - go test -v -covermode=atomic -coverprofile=coverage.out
 
 after_success:
