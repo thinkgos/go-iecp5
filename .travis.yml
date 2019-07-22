@@ -14,7 +14,7 @@ matrix:
       env: GO111MODULE=on
 
 before_install:
-  - go get -t -v .
+  - go get -t -v ./...
 
 install: 
   - go test -v -covermode=atomic -coverprofile=coverage.out
