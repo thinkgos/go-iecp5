@@ -16,7 +16,6 @@ import (
 
 // defined default value
 const (
-	DefaultConnectTimeout    = 15 * time.Second
 	DefaultReconnectInterval = 1 * time.Minute
 )
 
@@ -47,7 +46,6 @@ type serverSpec struct {
 	SrvSession
 
 	Server            *url.URL      // 连接的服务器端
-	connectTimeout    time.Duration // 连接超时时间
 	autoReconnect     bool          // 是否启动重连
 	ReconnectInterval time.Duration // 重连间隔时间
 	TLSConfig         *tls.Config
@@ -80,17 +78,11 @@ func NewServerSpecial(conf *Config, params *asdu.Params, handler ServerHandlerIn
 
 			Clog: clog.NewWithPrefix("cs104 serverSpec => "),
 		},
-		connectTimeout:    DefaultConnectTimeout,
 		autoReconnect:     true,
 		ReconnectInterval: DefaultReconnectInterval,
 		onConnect:         func(ServerSpecial) {},
 		onConnectionLost:  func(ServerSpecial) {},
 	}, nil
-}
-
-// SetConnectTimeout set tcp connect the host timeout
-func (this *serverSpec) SetConnectTimeout(t time.Duration) {
-	this.connectTimeout = t
 }
 
 // SetReconnectInterval set tcp  reconnect the host interval when connect failed after try
@@ -146,7 +138,7 @@ func (this *serverSpec) running() {
 
 	for {
 		this.Debug("connecting server %+v", this.Server)
-		conn, err := openConnection(this.Server, this.TLSConfig, this.connectTimeout)
+		conn, err := openConnection(this.Server, this.TLSConfig, this.Config.ConnectTimeout0)
 		if err != nil {
 			this.Error("connect failed, %v", err)
 			if !this.autoReconnect {
