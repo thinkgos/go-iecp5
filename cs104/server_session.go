@@ -471,7 +471,7 @@ func (this *SrvSession) serverHandler(asduPack *asdu.ASDU) error {
 		if ioa != asdu.InfoObjIrrelevantAddr {
 			return asduPack.SendReplyMirror(this, asdu.UnkInfo)
 		}
-		return asduPack.SendReplyMirror(this, asdu.Act)
+		return asduPack.SendReplyMirror(this, asdu.Actcon)
 
 	case asdu.C_RP_NA_1: // ResetProcessCmd
 		if asduPack.Identifier.Coa.Cause != asdu.Act {

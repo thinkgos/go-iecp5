@@ -81,10 +81,10 @@ func (this *Server) ListenAndServer(addr string) {
 				params:  this.params,
 				handler: this.handler,
 				conn:    conn,
-				in:      make(chan []byte, this.conf.RecvUnAckLimitW),
-				out:     make(chan []byte, this.conf.SendUnAckLimitK),
-				recv:    make(chan []byte, this.conf.RecvUnAckLimitW),
-				send:    make(chan []byte, this.conf.SendUnAckLimitK), // may not block!
+				in:      make(chan []byte, 1024),
+				out:     make(chan []byte, 1024),
+				recv:    make(chan []byte, 1024),
+				send:    make(chan []byte, 1024), // may not block!
 
 				Clog: this.Clog,
 			}

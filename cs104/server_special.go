@@ -71,10 +71,10 @@ func NewServerSpecial(conf *Config, params *asdu.Params, handler ServerHandlerIn
 			params:  params,
 			handler: handler,
 
-			in:   make(chan []byte, conf.RecvUnAckLimitW),
-			out:  make(chan []byte, conf.SendUnAckLimitK),
-			recv: make(chan []byte, conf.RecvUnAckLimitW),
-			send: make(chan []byte, conf.SendUnAckLimitK), // may not block!
+			in:   make(chan []byte, 1024),
+			out:  make(chan []byte, 1024),
+			recv: make(chan []byte, 1024),
+			send: make(chan []byte, 1024), // may not block!
 
 			Clog: clog.NewWithPrefix("cs104 serverSpec => "),
 		},
