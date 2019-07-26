@@ -20,7 +20,7 @@ const (
 )
 
 // OnConnectHandler when connected it will be call
-type OnConnectHandler func(c ServerSpecial)
+type OnConnectHandler func(c ServerSpecial) error
 
 // ConnectionLostHandler when Connection lost it will be call
 type ConnectionLostHandler func(c ServerSpecial)
@@ -80,7 +80,7 @@ func NewServerSpecial(conf *Config, params *asdu.Params, handler ServerHandlerIn
 		},
 		autoReconnect:     true,
 		ReconnectInterval: DefaultReconnectInterval,
-		onConnect:         func(ServerSpecial) {},
+		onConnect:         func(ServerSpecial) error { return nil },
 		onConnectionLost:  func(ServerSpecial) {},
 	}, nil
 }
@@ -150,10 +150,12 @@ func (this *serverSpec) running() {
 		}
 		this.Debug("connect success")
 		this.conn = conn
-		this.onConnect(this)
+		if err = this.onConnect(this); err != nil {
+			time.Sleep(this.ReconnectInterval)
+			continue
+		}
 		this.run(context.Background())
 		this.onConnectionLost(this)
-
 	}
 }
 
