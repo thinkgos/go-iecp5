@@ -17,7 +17,7 @@ import (
 // of a second make this system much more responsive i.c.w. S-frames.
 const timeoutResolution = 100 * time.Millisecond
 
-// Server the common server
+// server the common server
 type Server struct {
 	conf      *Config
 	params    *asdu.Params
@@ -53,7 +53,7 @@ func NewServer(conf *Config, params *asdu.Params, handler ServerHandlerInterface
 func (this *Server) ListenAndServer(addr string) {
 	listen, err := net.Listen("tcp", addr)
 	if err != nil {
-		this.Error("Server run failed, %v", err)
+		this.Error("server run failed, %v", err)
 		return
 	}
 	this.mux.Lock()
@@ -64,13 +64,13 @@ func (this *Server) ListenAndServer(addr string) {
 	defer func() {
 		cancel()
 		this.Close()
-		this.Debug("Server stop")
+		this.Debug("server stop")
 	}()
-	this.Debug("Server run")
+	this.Debug("server run")
 	for {
 		conn, err := listen.Accept()
 		if err != nil {
-			this.Error("Server run failed, %v", err)
+			this.Error("server run failed, %v", err)
 			return
 		}
 

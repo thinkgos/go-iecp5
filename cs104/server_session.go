@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	disconnected uint32 = iota
-	connecting
+	initial uint32 = iota
+	disconnected
 	connected
 )
 
@@ -536,17 +536,4 @@ func (this *SrvSession) Send(u *asdu.ASDU) error {
 // UnderlyingConn got under net.conn
 func (this *SrvSession) UnderlyingConn() net.Conn {
 	return this.conn
-}
-
-// Close close the server session
-func (this *SrvSession) Close() error {
-	if this.connectStatus() == disconnected {
-		return ErrUseClosedConnection
-	}
-	if this.cancelFunc != nil {
-		this.cancelFunc()
-	}
-
-	this.wg.Wait()
-	return nil
 }

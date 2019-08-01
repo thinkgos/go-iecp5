@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"math/rand"
 	"net"
 	"net/url"
 	"strings"
@@ -30,6 +31,7 @@ type ServerSpecial interface {
 	asdu.Connect
 
 	IsConnected() bool
+	IsClosed() bool
 	Start() error
 	Close() error
 
@@ -45,12 +47,14 @@ type ServerSpecial interface {
 type serverSpec struct {
 	SrvSession
 
-	Server            *url.URL      // 连接的服务器端
+	server            *url.URL      // 连接的服务器端
 	autoReconnect     bool          // 是否启动重连
-	ReconnectInterval time.Duration // 重连间隔时间
+	reconnectInterval time.Duration // 重连间隔时间
 	TLSConfig         *tls.Config
 	onConnect         OnConnectHandler
 	onConnectionLost  ConnectionLostHandler
+
+	cancel context.CancelFunc
 }
 
 // NewServerSpecial new special server
@@ -79,7 +83,7 @@ func NewServerSpecial(conf *Config, params *asdu.Params, handler ServerHandlerIn
 			Clog: clog.NewWithPrefix("cs104 serverSpec => "),
 		},
 		autoReconnect:     true,
-		ReconnectInterval: DefaultReconnectInterval,
+		reconnectInterval: DefaultReconnectInterval,
 		onConnect:         func(ServerSpecial) error { return nil },
 		onConnectionLost:  func(ServerSpecial) {},
 	}, nil
@@ -87,7 +91,7 @@ func NewServerSpecial(conf *Config, params *asdu.Params, handler ServerHandlerIn
 
 // SetReconnectInterval set tcp  reconnect the host interval when connect failed after try
 func (this *serverSpec) SetReconnectInterval(t time.Duration) {
-	this.ReconnectInterval = t
+	this.reconnectInterval = t
 }
 
 func (this *serverSpec) EnableAutoReconnect(b bool) {
@@ -114,12 +118,13 @@ func (this *serverSpec) AddRemoteServer(server string) error {
 	if err != nil {
 		return err
 	}
-	this.Server = remoteURL
+	this.server = remoteURL
 	return nil
 }
 
+// Start start the server,and return quickly,if it nil,the server will disconnected background,other failed
 func (this *serverSpec) Start() error {
-	if this.Server == nil {
+	if this.server == nil {
 		return errors.New("empty remote server")
 	}
 
@@ -127,35 +132,51 @@ func (this *serverSpec) Start() error {
 	return nil
 }
 
-// 增加30秒 重连间隔
+// 增加重连间隔
 func (this *serverSpec) running() {
+	var ctx context.Context
+
 	this.rwMux.Lock()
-	if !atomic.CompareAndSwapUint32(&this.status, disconnected, connecting) {
+	if !atomic.CompareAndSwapUint32(&this.status, initial, disconnected) {
 		this.rwMux.Unlock()
 		return
 	}
+	ctx, this.cancel = context.WithCancel(context.Background())
 	this.rwMux.Unlock()
+	defer this.setConnectStatus(initial)
 
 	for {
-		this.Debug("connecting server %+v", this.Server)
-		conn, err := openConnection(this.Server, this.TLSConfig, this.Config.ConnectTimeout0)
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		this.Debug("disconnected server %+v", this.server)
+		conn, err := openConnection(this.server, this.TLSConfig, this.Config.ConnectTimeout0)
 		if err != nil {
 			this.Error("connect failed, %v", err)
 			if !this.autoReconnect {
-				this.setConnectStatus(disconnected)
 				return
 			}
-			time.Sleep(this.ReconnectInterval)
+			time.Sleep(this.reconnectInterval)
 			continue
 		}
 		this.Debug("connect success")
 		this.conn = conn
 		if err = this.onConnect(this); err != nil {
-			time.Sleep(this.ReconnectInterval)
+			time.Sleep(this.reconnectInterval)
 			continue
 		}
-		this.run(context.Background())
+		this.run(ctx)
 		this.onConnectionLost(this)
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			// 随机500ms-1s的重试，避免快速重试造成服务器许多无效连接
+			time.Sleep(time.Millisecond * time.Duration(500+rand.Intn(5)))
+		}
 	}
 }
 
@@ -171,6 +192,19 @@ func (this *serverSpec) SetConnectionLostHandler(f ConnectionLostHandler) {
 	if f != nil {
 		this.onConnectionLost = f
 	}
+}
+
+func (this *serverSpec) IsClosed() bool {
+	return this.connectStatus() == initial
+}
+
+func (this *serverSpec) Close() error {
+	this.rwMux.Lock()
+	if this.cancel != nil {
+		this.cancel()
+	}
+	this.rwMux.Unlock()
+	return nil
 }
 
 func openConnection(uri *url.URL, tlsc *tls.Config, timeout time.Duration) (net.Conn, error) {

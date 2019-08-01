@@ -14,14 +14,16 @@ func main() {
 	srv, _ := cs104.NewServerSpecial(&cs104.Config{}, asdu.ParamsWide, &mysrv{})
 
 	srv.LogMode(true)
-	err := srv.AddRemoteServer("test.fjbjxdl.com:55555") //"183.134.216.94:15021"
+	err := srv.AddRemoteServer("192.168.199.214:2404") //"183.134.216.94:15021"
 	if err != nil {
 		log.Println(err)
 	}
 
-	srv.SetOnConnectHandler(func(c cs104.ServerSpecial) {
-		c.UnderlyingConn().Write([]byte{0x68, 0x0e, 0x00, 0x00, 0x00, 0x00, 0x46, 0x01, 0x04, 0x00, 0xa0, 0xaf, 0xbd, 0xd8, 0x0a, 0xf4})
+	srv.SetOnConnectHandler(func(c cs104.ServerSpecial) error {
+		_, err := c.UnderlyingConn().Write([]byte{0x68, 0x0e, 0x00, 0x00, 0x00, 0x00, 0x46, 0x01, 0x04, 0x00, 0xa0, 0xaf, 0xbd, 0xd8, 0x0a, 0xf4})
 		log.Println("connected")
+		return err
+
 	})
 	srv.SetConnectionLostHandler(func(cs104.ServerSpecial) {
 		log.Println("disconnected")
