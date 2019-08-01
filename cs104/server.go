@@ -24,6 +24,7 @@ type Server struct {
 	handler   ServerHandlerInterface
 	TLSConfig *tls.Config
 	mux       sync.Mutex
+	sessions  map[*SrvSession]struct{}
 	listen    net.Listener
 	*clog.Clog
 	wg sync.WaitGroup
@@ -42,10 +43,11 @@ func NewServer(conf *Config, params *asdu.Params, handler ServerHandlerInterface
 	}
 
 	return &Server{
-		conf:    conf,
-		params:  params,
-		handler: handler,
-		Clog:    clog.NewWithPrefix("cs104 server =>"),
+		conf:     conf,
+		params:   params,
+		handler:  handler,
+		sessions: make(map[*SrvSession]struct{}),
+		Clog:     clog.NewWithPrefix("cs104 server =>"),
 	}, nil
 }
 
@@ -88,7 +90,13 @@ func (this *Server) ListenAndServer(addr string) {
 
 				Clog: this.Clog,
 			}
+			this.mux.Lock()
+			this.sessions[sess] = struct{}{}
+			this.mux.Unlock()
 			sess.run(ctx)
+			this.mux.Lock()
+			delete(this.sessions, sess)
+			this.mux.Unlock()
 			this.wg.Done()
 		}()
 	}
@@ -107,3 +115,16 @@ func (this *Server) Close() error {
 	this.wg.Wait()
 	return err
 }
+
+func (this *Server) Send(a *asdu.ASDU) error {
+	this.mux.Lock()
+	for k := range this.sessions {
+		_ = k.Send(a.Clone())
+	}
+	this.mux.Unlock()
+	return nil
+}
+
+func (this *Server) Params() *asdu.Params { return this.params }
+
+func (this *Server) UnderlyingConn() net.Conn { return nil }

@@ -126,6 +126,12 @@ func NewASDU(p *Params, identifier Identifier) *ASDU {
 	return a
 }
 
+func (this *ASDU) Clone() *ASDU {
+	r := NewASDU(this.Params, this.Identifier)
+	r.infoObj = append(r.infoObj, this.infoObj...)
+	return r
+}
+
 // SetVariableNumber See companion standard 101, subclass 7.2.2.
 func (this *ASDU) SetVariableNumber(n int) error {
 	if n >= 128 {
