@@ -152,7 +152,7 @@ func (this *serverSpec) running() {
 		default:
 		}
 
-		this.Debug("disconnected server %+v", this.server)
+		this.Debug("connecting server %+v", this.server)
 		conn, err := openConnection(this.server, this.TLSConfig, this.Config.ConnectTimeout0)
 		if err != nil {
 			this.Error("connect failed, %v", err)
@@ -170,6 +170,7 @@ func (this *serverSpec) running() {
 		}
 		this.run(ctx)
 		this.onConnectionLost(this)
+		this.Debug("disconnected server %+v", this.server)
 		select {
 		case <-ctx.Done():
 			return
