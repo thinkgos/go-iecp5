@@ -63,10 +63,10 @@ const (
 	_ // reserve
 	_ // reserve
 
-	// QDSTimeInvalid flags that the elapsed time was incorrectly acquired.
+	// QDSElapsedTimeInvalid flags that the elapsed time was incorrectly acquired.
 	// This attribute is only valid for events of protection equipment.
 	// See companion standard 101, subclass 7.2.6.4.
-	QDSTimeInvalid
+	QDSElapsedTimeInvalid
 
 	// QDSBlocked flags that the value is blocked for transmission; the
 	// value remains in the state that was acquired before it was blocked.
@@ -82,8 +82,8 @@ const (
 	// QDSInvalid flags that the value was incorrectly acquired.
 	QDSInvalid
 
-	// QDSOK means no flags, no problems.
-	QDSOK = 0
+	// QDSGOOD means no flags, no problems.
+	QDSGOOD = 0
 )
 
 // StepPosition is a measured value with transient state indication.
@@ -128,11 +128,36 @@ func (this Normalize) Float64() float64 {
 	return float64(this) / 32768
 }
 
-// BinaryCounterReading
+// BinaryCounterReading is binary counter reading
+// See companion standard 101, subclass 7.2.6.9.
 type BinaryCounterReading struct {
 	CounterReading   int32
 	SequenceNotation byte
 }
+
+// Start event protection
+// See companion standard 101, subclass 7.2.6.11.
+const (
+	SEPGeneralStart = 1 << iota
+	SEPStartL1
+	SEPStartL2
+	SEPStartL3
+	SEPStartEarthCurrent
+	SEPStartReverseDirection
+	_
+	_
+)
+
+// output command information
+// See companion standard 101, subclass 7.2.6.12.
+const (
+	OCIGeneralCommand = 1 << iota
+	OCICommandL1
+	OCICommandL2
+	OCICommandL3
+
+	// other reserved
+)
 
 // See companion standard 101, subclass 7.2.6.14.
 const FBPTestWord uint16 = 0x55aa
@@ -159,7 +184,7 @@ const (
 )
 
 // See companion standard 101, subclass 7.2.6.21.
-// COICause COI cause
+// COICause Initialization reason
 type COICause byte
 
 // 0: 当地电源合上
@@ -168,9 +193,9 @@ type COICause byte
 // <3..31>: 本配讨标准备的标准定义保留
 // <32...127>: 为特定使用保留
 const (
-	COIlocalPowerOn COICause = iota
-	COIlocalHandReset
-	COIremoteReset
+	COILocalPowerOn COICause = iota
+	COILocalHandReset
+	COIRemoteReset
 )
 
 // CauseOfInitial cause of initial
@@ -201,23 +226,23 @@ type QualifierOfInterrogation byte
 
 const (
 	// <1..19>: 为标准定义保留
-	QOIInrogen QualifierOfInterrogation = 20 + iota // interrogated by station interrogation
-	QOIInro1                                        // interrogated by group 1 interrogation
-	QOIInro2                                        // interrogated by group 2 interrogation
-	QOIInro3                                        // interrogated by group 3 interrogation
-	QOIInro4                                        // interrogated by group 4 interrogation
-	QOIInro5                                        // interrogated by group 5 interrogation
-	QOIInro6                                        // interrogated by group 6 interrogation
-	QOIInro7                                        // interrogated by group 7 interrogation
-	QOIInro8                                        // interrogated by group 8 interrogation
-	QOIInro9                                        // interrogated by group 9 interrogation
-	QOIInro10                                       // interrogated by group 10 interrogation
-	QOIInro11                                       // interrogated by group 11 interrogation
-	QOIInro12                                       // interrogated by group 12 interrogation
-	QOIInro13                                       // interrogated by group 13 interrogation
-	QOIInro14                                       // interrogated by group 14 interrogation
-	QOIInro15                                       // interrogated by group 15 interrogation
-	QOIInro16                                       // interrogated by group 16 interrogation
+	QOIStation QualifierOfInterrogation = 20 + iota // interrogated by station interrogation
+	QOIGroup1                                       // interrogated by group 1 interrogation
+	QOIGroup2                                       // interrogated by group 2 interrogation
+	QOIGroup3                                       // interrogated by group 3 interrogation
+	QOIGroup4                                       // interrogated by group 4 interrogation
+	QOIGroup5                                       // interrogated by group 5 interrogation
+	QOIGroup6                                       // interrogated by group 6 interrogation
+	QOIGroup7                                       // interrogated by group 7 interrogation
+	QOIGroup8                                       // interrogated by group 8 interrogation
+	QOIGroup9                                       // interrogated by group 9 interrogation
+	QOIGroup10                                      // interrogated by group 10 interrogation
+	QOIGroup11                                      // interrogated by group 11 interrogation
+	QOIGroup12                                      // interrogated by group 12 interrogation
+	QOIGroup13                                      // interrogated by group 13 interrogation
+	QOIGroup14                                      // interrogated by group 14 interrogation
+	QOIGroup15                                      // interrogated by group 15 interrogation
+	QOIGroup16                                      // interrogated by group 16 interrogation
 
 	// <37..63>：为标准定义保留
 	// <64..255>: 为特定使用保留
@@ -238,10 +263,10 @@ const (
 	QCCTotal
 	// <6..31>: 为标准定义
 	// <32..63>： 为特定使用保留
-	QCCFzeRead       QCCFreeze = 0x00
-	QCCFzeFzeNoReset QCCFreeze = 0x40
-	QCCFzeFzeReset   QCCFreeze = 0x80
-	QCCFzeReset      QCCFreeze = 0xc0
+	QCCFrzRead          QCCFreeze = 0x00
+	QCCFrzFreezeNoReset QCCFreeze = 0x40
+	QCCFrzFreezeReset   QCCFreeze = 0x80
+	QCCFrzReset         QCCFreeze = 0xc0
 )
 
 type QualifierCountCall struct {
@@ -266,11 +291,11 @@ func (this QualifierCountCall) Value() byte {
 type QPMCategory byte
 
 const (
-	_             QPMCategory = iota // 0: not used
-	QPMThreashold                    // 1: threshold value
-	QPMSmoothing                     // 2: smoothing factor (filter time constant)
-	QPMLowLimit                      // 3: low limit for transmission of measured values
-	QPMHighLimit                     // 4: high limit for transmission of measured values
+	QPMUnused    QPMCategory = iota // 0: not used
+	QPMThreshold                    // 1: threshold value
+	QPMSmoothing                    // 2: smoothing factor (filter time constant)
+	QPMLowLimit                     // 3: low limit for transmission of measured values
+	QPMHighLimit                    // 4: high limit for transmission of measured values
 
 	// 5‥31: reserved for standard definitions of this companion standard (compatible range)
 	// 32‥63: reserved for special use (private range)
@@ -315,29 +340,33 @@ type QualifierOfParameterAct byte
 
 const (
 	QPAUnused QualifierOfParameterAct = iota
-
-	// TODO: do it
+	// 激活/仃止激活这之前装载的参数(信息对象地址=0)
+	QPADeActPrevLoadedParameter
+	// 激活/仃止激活所寻址信息对象的参数
+	QPADeActObjectParameter
+	// 激活/仃止激活所寻址的持续循环或周期传输的信息对象
+	QPADeActObjectTransmission
+	// 4‥127: reserved for standard definitions of this companion standard (compatible range)
+	// 128‥255: reserved for special use (private range)
 )
 
 // QOCQual is a qualifier of qual.
 // See companion standard 101, subclass 7.2.6.26.
 //  the qualifier of command.
-
 type QOCQual byte
 
 const (
 	//	0: no additional definition
+	QOCNoAdditionalDefinition QOCQual = iota
 	//	1: short pulse duration (circuit-breaker), duration determined by a system parameter in the outstation
+	QOCShortPulseDuration
 	//	2: long pulse duration, duration determined by a system parameter in the outstation
-	//	3: persistent output
-	QOCNoDefined QOCQual = iota
-	QOCShortPulse
-	QOCLongPulse
-	QOCPersistOut
+	QOCLongPulseDuration
+	//	3: persistant output
+	QOCPersistantOutput
 	//	4‥8: reserved for standard definitions of this companion standard
 	//	9‥15: reserved for the selection of other predefined functions
 	//	16‥31: reserved for special use (private range)
-
 )
 
 // QualifierOfCommand is a  qualifier of command.
@@ -370,8 +399,8 @@ type QualifierOfResetProcessCmd byte
 
 const (
 	QRPUnused QualifierOfResetProcessCmd = iota
-	QPRTotal
-	QPREventBufferWaitTimeInfo
+	QPRGeneralRest
+	QPRResetPendingInfoWithTimeTag
 	// <3..127>: 为标准保留
 	//<128..255>: 为特定使用保留
 )

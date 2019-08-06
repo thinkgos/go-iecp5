@@ -13,7 +13,7 @@ type ParameterNormalInfo struct {
 // 测量参数,规一化值
 func ParameterNormal(c Connect, coa CauseOfTransmission, ca CommonAddr,
 	p ParameterNormalInfo) error {
-	if coa.Cause != Act {
+	if coa.Cause != Activation {
 		return ErrCmdCause
 	}
 	if err := c.Params().Valid(); err != nil {
@@ -46,7 +46,7 @@ type ParameterScaledInfo struct {
 // 测量参数,标度化值
 func ParameterScaled(c Connect, coa CauseOfTransmission, ca CommonAddr,
 	p ParameterScaledInfo) error {
-	if coa.Cause != Act {
+	if coa.Cause != Activation {
 		return ErrCmdCause
 	}
 	if err := c.Params().Valid(); err != nil {
@@ -78,7 +78,7 @@ type ParameterFloatInfo struct {
 // 测量参数,短浮点数
 func ParameterFloat(c Connect, coa CauseOfTransmission, ca CommonAddr,
 	p ParameterFloatInfo) error {
-	if coa.Cause != Act {
+	if coa.Cause != Activation {
 		return ErrCmdCause
 	}
 	if err := c.Params().Valid(); err != nil {
@@ -109,7 +109,7 @@ type ParameterActivationInfo struct {
 // 参数激活
 func ParameterActivation(c Connect, coa CauseOfTransmission, ca CommonAddr,
 	p ParameterActivationInfo) error {
-	if !(coa.Cause == Act || coa.Cause == Deact) {
+	if !(coa.Cause == Activation || coa.Cause == Deactivation) {
 		return ErrCmdCause
 	}
 	if err := c.Params().Valid(); err != nil {

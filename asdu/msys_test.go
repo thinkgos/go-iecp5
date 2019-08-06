@@ -23,10 +23,10 @@ func TestEndOfInitialization(t *testing.T) {
 			args{
 				newConn([]byte{byte(M_EI_NA_1), 0x01, 0x04, 0x00, 0x34, 0x12,
 					0x90, 0x78, 0x56, 0x01}, t),
-				CauseOfTransmission{Cause: Init},
+				CauseOfTransmission{Cause: Initialized},
 				0x1234,
 				0x567890,
-				CauseOfInitial{COIlocalHandReset, false}},
+				CauseOfInitial{COILocalHandReset, false}},
 			false,
 		},
 	}
@@ -54,7 +54,7 @@ func TestASDU_GetEndOfInitialization(t *testing.T) {
 			"M_EI_NA_1",
 			fields{ParamsWide, []byte{0x90, 0x78, 0x56, 0x01}},
 			0x567890,
-			CauseOfInitial{COIlocalHandReset, false},
+			CauseOfInitial{COILocalHandReset, false},
 		},
 	}
 	for _, tt := range tests {

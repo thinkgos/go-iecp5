@@ -84,7 +84,7 @@ func TestSingle(t *testing.T) {
 				newConn([]byte{byte(M_SP_NA_1), 0x02, 0x02, 0x00, 0x34, 0x12,
 					0x01, 0x00, 0x00, 0x11, 0x02, 0x00, 0x00, 0x10}, t),
 				false,
-				CauseOfTransmission{Cause: Back},
+				CauseOfTransmission{Cause: Background},
 				0x1234,
 				[]SinglePointInfo{
 					{0x000001, true, QDSBlocked, time.Time{}},
@@ -98,7 +98,7 @@ func TestSingle(t *testing.T) {
 				newConn([]byte{byte(M_SP_NA_1), 0x82, 0x02, 0x00, 0x34, 0x12,
 					0x01, 0x00, 0x00, 0x11, 0x10}, t),
 				true,
-				CauseOfTransmission{Cause: Back},
+				CauseOfTransmission{Cause: Background},
 				0x1234,
 				[]SinglePointInfo{
 					{0x000001, true, QDSBlocked, time.Time{}},
@@ -143,7 +143,7 @@ func TestSingleCP24Time2a(t *testing.T) {
 				newConn(append(append([]byte{byte(M_SP_TA_1), 0x02, 0x03, 0x00, 0x34, 0x12},
 					append([]byte{0x01, 0x00, 0x00, 0x11}, tm0CP24Time2aBytes...)...),
 					append([]byte{0x02, 0x00, 0x00, 0x10}, tm0CP24Time2aBytes...)...), t),
-				CauseOfTransmission{Cause: Spont},
+				CauseOfTransmission{Cause: Spontaneous},
 				0x1234,
 				[]SinglePointInfo{
 					{0x000001, true, QDSBlocked, tm0},
@@ -188,7 +188,7 @@ func TestSingleCP56Time2a(t *testing.T) {
 				newConn(append(append([]byte{byte(M_SP_TB_1), 0x02, 0x03, 0x00, 0x34, 0x12},
 					append([]byte{0x01, 0x00, 0x00, 0x11}, tm0CP56Time2aBytes...)...),
 					append([]byte{0x02, 0x00, 0x00, 0x10}, tm0CP56Time2aBytes...)...), t),
-				CauseOfTransmission{Cause: Spont},
+				CauseOfTransmission{Cause: Spontaneous},
 				0x1234,
 				[]SinglePointInfo{
 					{0x000001, true, QDSBlocked, tm0},
@@ -260,7 +260,7 @@ func TestDouble(t *testing.T) {
 				newConn([]byte{byte(M_DP_NA_1), 0x02, 0x02, 0x00, 0x34, 0x12,
 					0x01, 0x00, 0x00, 0x12, 0x02, 0x00, 0x00, 0x11}, t),
 				false,
-				CauseOfTransmission{Cause: Back},
+				CauseOfTransmission{Cause: Background},
 				0x1234,
 				[]DoublePointInfo{
 					{0x000001, DPIDeterminedOn, QDSBlocked, time.Time{}},
@@ -274,7 +274,7 @@ func TestDouble(t *testing.T) {
 				newConn([]byte{byte(M_DP_NA_1), 0x82, 0x02, 0x00, 0x34, 0x12,
 					0x01, 0x00, 0x00, 0x12, 0x11}, t),
 				true,
-				CauseOfTransmission{Cause: Back},
+				CauseOfTransmission{Cause: Background},
 				0x1234,
 				[]DoublePointInfo{
 					{0x000001, DPIDeterminedOn, QDSBlocked, time.Time{}},
@@ -319,7 +319,7 @@ func TestDoubleCP24Time2a(t *testing.T) {
 				newConn(append(append([]byte{byte(M_DP_TA_1), 0x02, 0x03, 0x00, 0x34, 0x12},
 					append([]byte{0x01, 0x00, 0x00, 0x12}, tm0CP24Time2aBytes...)...),
 					append([]byte{0x02, 0x00, 0x00, 0x11}, tm0CP24Time2aBytes...)...), t),
-				CauseOfTransmission{Cause: Spont},
+				CauseOfTransmission{Cause: Spontaneous},
 				0x1234,
 				[]DoublePointInfo{
 					{0x000001, DPIDeterminedOn, QDSBlocked, tm0},
@@ -364,7 +364,7 @@ func TestDoubleCP56Time2a(t *testing.T) {
 				newConn(append(append([]byte{byte(M_DP_TB_1), 0x02, 0x03, 0x00, 0x34, 0x12},
 					append([]byte{0x01, 0x00, 0x00, 0x12}, tm0CP56Time2aBytes...)...),
 					append([]byte{0x02, 0x00, 0x00, 0x11}, tm0CP56Time2aBytes...)...), t),
-				CauseOfTransmission{Cause: Spont},
+				CauseOfTransmission{Cause: Spontaneous},
 				0x1234,
 				[]DoublePointInfo{
 					{0x000001, DPIDeterminedOn, QDSBlocked, tm0},
@@ -436,7 +436,7 @@ func TestStep(t *testing.T) {
 				newConn([]byte{byte(M_ST_NA_1), 0x02, 0x02, 0x00, 0x34, 0x12,
 					0x01, 0x00, 0x00, 0x01, 0x10, 0x02, 0x00, 0x00, 0x02, 0x10}, t),
 				false,
-				CauseOfTransmission{Cause: Back},
+				CauseOfTransmission{Cause: Background},
 				0x1234,
 				[]StepPositionInfo{
 					{0x000001, StepPosition{Val: 0x01}, QDSBlocked, time.Time{}},
@@ -450,7 +450,7 @@ func TestStep(t *testing.T) {
 				newConn([]byte{byte(M_ST_NA_1), 0x82, 0x02, 0x00, 0x34, 0x12,
 					0x01, 0x00, 0x00, 0x01, 0x10, 0x02, 0x10}, t),
 				true,
-				CauseOfTransmission{Cause: Back},
+				CauseOfTransmission{Cause: Background},
 				0x1234,
 				[]StepPositionInfo{
 					{0x000001, StepPosition{Val: 0x01}, QDSBlocked, time.Time{}},
@@ -495,7 +495,7 @@ func TestStepCP24Time2a(t *testing.T) {
 				newConn(append(append([]byte{byte(M_ST_TA_1), 0x02, 0x03, 0x00, 0x34, 0x12},
 					append([]byte{0x01, 0x00, 0x00, 0x01, 0x10}, tm0CP24Time2aBytes...)...),
 					append([]byte{0x02, 0x00, 0x00, 0x02, 0x10}, tm0CP24Time2aBytes...)...), t),
-				CauseOfTransmission{Cause: Spont},
+				CauseOfTransmission{Cause: Spontaneous},
 				0x1234,
 				[]StepPositionInfo{
 					{0x000001, StepPosition{Val: 0x01}, QDSBlocked, tm0},
@@ -540,7 +540,7 @@ func TestStepCP56Time2a(t *testing.T) {
 				newConn(append(append([]byte{byte(M_SP_TB_1), 0x02, 0x03, 0x00, 0x34, 0x12},
 					append([]byte{0x01, 0x00, 0x00, 0x01, 0x10}, tm0CP56Time2aBytes...)...),
 					append([]byte{0x02, 0x00, 0x00, 0x02, 0x10}, tm0CP56Time2aBytes...)...), t),
-				CauseOfTransmission{Cause: Spont},
+				CauseOfTransmission{Cause: Spontaneous},
 				0x1234,
 				[]StepPositionInfo{
 					{0x000001, StepPosition{Val: 0x01}, QDSBlocked, tm0},
@@ -612,7 +612,7 @@ func TestBitString32(t *testing.T) {
 				newConn([]byte{byte(M_BO_NA_1), 0x02, 0x02, 0x00, 0x34, 0x12,
 					0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x10, 0x02, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x10}, t),
 				false,
-				CauseOfTransmission{Cause: Back},
+				CauseOfTransmission{Cause: Background},
 				0x1234,
 				[]BitString32Info{
 					{0x000001, 1, QDSBlocked, time.Time{}},
@@ -626,7 +626,7 @@ func TestBitString32(t *testing.T) {
 				newConn([]byte{byte(M_BO_NA_1), 0x82, 0x02, 0x00, 0x34, 0x12,
 					0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x10, 0x02, 0x00, 0x00, 0x00, 0x10}, t),
 				true,
-				CauseOfTransmission{Cause: Back},
+				CauseOfTransmission{Cause: Background},
 				0x1234,
 				[]BitString32Info{
 					{0x000001, 1, QDSBlocked, time.Time{}},
@@ -671,7 +671,7 @@ func TestBitString32CP24Time2a(t *testing.T) {
 				newConn(append(append([]byte{byte(M_BO_TA_1), 0x02, 0x03, 0x00, 0x34, 0x12},
 					append([]byte{0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x10}, tm0CP24Time2aBytes...)...),
 					append([]byte{0x02, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x10}, tm0CP24Time2aBytes...)...), t),
-				CauseOfTransmission{Cause: Spont},
+				CauseOfTransmission{Cause: Spontaneous},
 				0x1234,
 				[]BitString32Info{
 					{0x000001, 1, QDSBlocked, tm0},
@@ -716,7 +716,7 @@ func TestBitString32CP56Time2a(t *testing.T) {
 				newConn(append(append([]byte{byte(M_BO_TB_1), 0x02, 0x03, 0x00, 0x34, 0x12},
 					append([]byte{0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x10}, tm0CP56Time2aBytes...)...),
 					append([]byte{0x02, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x10}, tm0CP56Time2aBytes...)...), t),
-				CauseOfTransmission{Cause: Spont},
+				CauseOfTransmission{Cause: Spontaneous},
 				0x1234,
 				[]BitString32Info{
 					{0x000001, 1, QDSBlocked, tm0},
@@ -788,7 +788,7 @@ func TestMeasuredValueNormal(t *testing.T) {
 				newConn([]byte{byte(M_ME_NA_1), 0x02, 0x02, 0x00, 0x34, 0x12,
 					0x01, 0x00, 0x00, 0x01, 0x00, 0x10, 0x02, 0x00, 0x00, 0x02, 0x00, 0x10}, t),
 				false,
-				CauseOfTransmission{Cause: Back},
+				CauseOfTransmission{Cause: Background},
 				0x1234,
 				[]MeasuredValueNormalInfo{
 					{0x000001, 1, QDSBlocked, time.Time{}},
@@ -802,7 +802,7 @@ func TestMeasuredValueNormal(t *testing.T) {
 				newConn([]byte{byte(M_ME_NA_1), 0x82, 0x02, 0x00, 0x34, 0x12,
 					0x01, 0x00, 0x00, 0x01, 0x00, 0x10, 0x02, 0x00, 0x10}, t),
 				true,
-				CauseOfTransmission{Cause: Back},
+				CauseOfTransmission{Cause: Background},
 				0x1234,
 				[]MeasuredValueNormalInfo{
 					{0x000001, 1, QDSBlocked, time.Time{}},
@@ -847,7 +847,7 @@ func TestMeasuredValueNormalCP24Time2a(t *testing.T) {
 				newConn(append(append([]byte{byte(M_ME_TA_1), 0x02, 0x03, 0x00, 0x34, 0x12},
 					append([]byte{0x01, 0x00, 0x00, 0x01, 0x00, 0x10}, tm0CP24Time2aBytes...)...),
 					append([]byte{0x02, 0x00, 0x00, 0x02, 0x00, 0x10}, tm0CP24Time2aBytes...)...), t),
-				CauseOfTransmission{Cause: Spont},
+				CauseOfTransmission{Cause: Spontaneous},
 				0x1234,
 				[]MeasuredValueNormalInfo{
 					{0x000001, 1, QDSBlocked, tm0},
@@ -892,7 +892,7 @@ func TestMeasuredValueNormalCP56Time2a(t *testing.T) {
 				newConn(append(append([]byte{byte(M_ME_TD_1), 0x02, 0x03, 0x00, 0x34, 0x12},
 					append([]byte{0x01, 0x00, 0x00, 0x01, 0x00, 0x10}, tm0CP56Time2aBytes...)...),
 					append([]byte{0x02, 0x00, 0x00, 0x02, 0x00, 0x10}, tm0CP56Time2aBytes...)...), t),
-				CauseOfTransmission{Cause: Spont},
+				CauseOfTransmission{Cause: Spontaneous},
 				0x1234,
 				[]MeasuredValueNormalInfo{
 					{0x000001, 1, QDSBlocked, tm0},
@@ -939,11 +939,11 @@ func TestMeasuredValueNormalNoQuality(t *testing.T) {
 				newConn([]byte{byte(M_ME_ND_1), 0x02, 0x02, 0x00, 0x34, 0x12,
 					0x01, 0x00, 0x00, 0x01, 0x00, 0x02, 0x00, 0x00, 0x02, 0x00}, t),
 				false,
-				CauseOfTransmission{Cause: Back},
+				CauseOfTransmission{Cause: Background},
 				0x1234,
 				[]MeasuredValueNormalInfo{
-					{0x000001, 1, QDSOK, time.Time{}},
-					{0x000002, 2, QDSOK, time.Time{}},
+					{0x000001, 1, QDSGOOD, time.Time{}},
+					{0x000002, 2, QDSGOOD, time.Time{}},
 				}},
 			false,
 		},
@@ -953,11 +953,11 @@ func TestMeasuredValueNormalNoQuality(t *testing.T) {
 				newConn([]byte{byte(M_ME_ND_1), 0x82, 0x02, 0x00, 0x34, 0x12,
 					0x01, 0x00, 0x00, 0x01, 0x00, 0x02, 0x00}, t),
 				true,
-				CauseOfTransmission{Cause: Back},
+				CauseOfTransmission{Cause: Background},
 				0x1234,
 				[]MeasuredValueNormalInfo{
-					{0x000001, 1, QDSOK, time.Time{}},
-					{0x000002, 2, QDSOK, time.Time{}},
+					{0x000001, 1, QDSGOOD, time.Time{}},
+					{0x000002, 2, QDSGOOD, time.Time{}},
 				}},
 			false,
 		},
@@ -1025,7 +1025,7 @@ func TestMeasuredValueScaled(t *testing.T) {
 				newConn([]byte{byte(M_ME_NB_1), 0x02, 0x02, 0x00, 0x34, 0x12,
 					0x01, 0x00, 0x00, 0x01, 0x00, 0x10, 0x02, 0x00, 0x00, 0x02, 0x00, 0x10}, t),
 				false,
-				CauseOfTransmission{Cause: Back},
+				CauseOfTransmission{Cause: Background},
 				0x1234,
 				[]MeasuredValueScaledInfo{
 					{0x000001, 1, QDSBlocked, time.Time{}},
@@ -1039,7 +1039,7 @@ func TestMeasuredValueScaled(t *testing.T) {
 				newConn([]byte{byte(M_ME_NB_1), 0x82, 0x02, 0x00, 0x34, 0x12,
 					0x01, 0x00, 0x00, 0x01, 0x00, 0x10, 0x02, 0x00, 0x10}, t),
 				true,
-				CauseOfTransmission{Cause: Back},
+				CauseOfTransmission{Cause: Background},
 				0x1234,
 				[]MeasuredValueScaledInfo{
 					{0x000001, 1, QDSBlocked, time.Time{}},
@@ -1084,7 +1084,7 @@ func TestMeasuredValueScaledCP24Time2a(t *testing.T) {
 				newConn(append(append([]byte{byte(M_ME_TB_1), 0x02, 0x03, 0x00, 0x34, 0x12},
 					append([]byte{0x01, 0x00, 0x00, 0x01, 0x00, 0x10}, tm0CP24Time2aBytes...)...),
 					append([]byte{0x02, 0x00, 0x00, 0x02, 0x00, 0x10}, tm0CP24Time2aBytes...)...), t),
-				CauseOfTransmission{Cause: Spont},
+				CauseOfTransmission{Cause: Spontaneous},
 				0x1234,
 				[]MeasuredValueScaledInfo{
 					{0x000001, 1, QDSBlocked, tm0},
@@ -1129,7 +1129,7 @@ func TestMeasuredValueScaledCP56Time2a(t *testing.T) {
 				newConn(append(append([]byte{byte(M_ME_TE_1), 0x02, 0x03, 0x00, 0x34, 0x12},
 					append([]byte{0x01, 0x00, 0x00, 0x01, 0x00, 0x10}, tm0CP56Time2aBytes...)...),
 					append([]byte{0x02, 0x00, 0x00, 0x02, 0x00, 0x10}, tm0CP56Time2aBytes...)...), t),
-				CauseOfTransmission{Cause: Spont},
+				CauseOfTransmission{Cause: Spontaneous},
 				0x1234,
 				[]MeasuredValueScaledInfo{
 					{0x000001, 1, QDSBlocked, tm0},
@@ -1205,7 +1205,7 @@ func TestMeasuredValueFloat(t *testing.T) {
 					0x01, 0x00, 0x00, byte(bits1), byte(bits1 >> 8), byte(bits1 >> 16), byte(bits1 >> 24), 0x10,
 					0x02, 0x00, 0x00, byte(bits2), byte(bits2 >> 8), byte(bits2 >> 16), byte(bits2 >> 24), 0x10}, t),
 				false,
-				CauseOfTransmission{Cause: Back},
+				CauseOfTransmission{Cause: Background},
 				0x1234,
 				[]MeasuredValueFloatInfo{
 					{0x000001, 100, QDSBlocked, time.Time{}},
@@ -1220,7 +1220,7 @@ func TestMeasuredValueFloat(t *testing.T) {
 					0x01, 0x00, 0x00, byte(bits1), byte(bits1 >> 8), byte(bits1 >> 16), byte(bits1 >> 24), 0x10,
 					byte(bits2), byte(bits2 >> 8), byte(bits2 >> 16), byte(bits2 >> 24), 0x10}, t),
 				true,
-				CauseOfTransmission{Cause: Back},
+				CauseOfTransmission{Cause: Background},
 				0x1234,
 				[]MeasuredValueFloatInfo{
 					{0x000001, 100, QDSBlocked, time.Time{}},
@@ -1268,7 +1268,7 @@ func TestMeasuredValueFloatCP24Time2a(t *testing.T) {
 				newConn(append(append([]byte{byte(M_ME_TC_1), 0x02, 0x03, 0x00, 0x34, 0x12},
 					append([]byte{0x01, 0x00, 0x00, byte(bits1), byte(bits1 >> 8), byte(bits1 >> 16), byte(bits1 >> 24), 0x10}, tm0CP24Time2aBytes...)...),
 					append([]byte{0x02, 0x00, 0x00, byte(bits2), byte(bits2 >> 8), byte(bits2 >> 16), byte(bits2 >> 24), 0x10}, tm0CP24Time2aBytes...)...), t),
-				CauseOfTransmission{Cause: Spont},
+				CauseOfTransmission{Cause: Spontaneous},
 				0x1234,
 				[]MeasuredValueFloatInfo{
 					{0x000001, 100, QDSBlocked, tm0},
@@ -1315,7 +1315,7 @@ func TestMeasuredValueFloatCP56Time2a(t *testing.T) {
 				newConn(append(append([]byte{byte(M_ME_TF_1), 0x02, 0x03, 0x00, 0x34, 0x12},
 					append([]byte{0x01, 0x00, 0x00, byte(bits1), byte(bits1 >> 8), byte(bits1 >> 16), byte(bits1 >> 24), 0x10}, tm0CP56Time2aBytes...)...),
 					append([]byte{0x02, 0x00, 0x00, byte(bits2), byte(bits2 >> 8), byte(bits2 >> 16), byte(bits2 >> 24), 0x10}, tm0CP56Time2aBytes...)...), t),
-				CauseOfTransmission{Cause: Spont},
+				CauseOfTransmission{Cause: Spontaneous},
 				0x1234,
 				[]MeasuredValueFloatInfo{
 					{0x000001, 100, QDSBlocked, tm0},
@@ -1877,8 +1877,8 @@ func TestASDU_GetMeasuredValueNormal(t *testing.T) {
 					Variable: VariableStruct{IsSequence: false, Number: 2}},
 				[]byte{0x01, 0x00, 0x00, 0x01, 0x00, 0x02, 0x00, 0x00, 0x02, 0x00}},
 			[]MeasuredValueNormalInfo{
-				{0x000001, 1, QDSOK, time.Time{}},
-				{0x000002, 2, QDSOK, time.Time{}}},
+				{0x000001, 1, QDSGOOD, time.Time{}},
+				{0x000002, 2, QDSGOOD, time.Time{}}},
 		},
 		{
 			"M_ME_ND_1 seq = true Number = 2",
@@ -1889,8 +1889,8 @@ func TestASDU_GetMeasuredValueNormal(t *testing.T) {
 					Variable: VariableStruct{IsSequence: true, Number: 2}},
 				[]byte{0x01, 0x00, 0x00, 0x01, 0x00, 0x02, 0x00}},
 			[]MeasuredValueNormalInfo{
-				{0x000001, 1, QDSOK, time.Time{}},
-				{0x000002, 2, QDSOK, time.Time{}}},
+				{0x000001, 1, QDSGOOD, time.Time{}},
+				{0x000002, 2, QDSGOOD, time.Time{}}},
 		},
 	}
 	for _, tt := range tests {

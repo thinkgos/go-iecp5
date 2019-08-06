@@ -14,28 +14,28 @@ import (
 //	{
 //		&ASDU{
 //			Params:     ParamsWide,
-//			Identifier: Identifier{M_SP_NA_1, Percyc, 7, 1001},
+//			Identifier: Identifier{M_SP_NA_1, Periodic, 7, 1001},
 //			infoObj:       []byte{1, 2, 3, 4},
 //		},
 //		"M_SP_NA_1 percyc 7@1001  197121:0x04",
 //	}, {
 //		&ASDU{
 //			Params:     ParamsNarrow,
-//			Identifier: Identifier{M_DP_NA_1, Back, 0, 42},
+//			Identifier: Identifier{M_DP_NA_1, Background, 0, 42},
 //			infoObj:       []byte{1, 2, 3, 4},
 //		},
 //		"M_DP_NA_1 back @42 1:0x02 3:0x04",
 //	}, {
 //		&ASDU{
 //			Params:     ParamsNarrow,
-//			Identifier: Identifier{M_ST_NA_1, Spont, 0, 250},
+//			Identifier: Identifier{M_ST_NA_1, Spontaneous, 0, 250},
 //			infoObj:       []byte{1, 2, 3, 4, 5},
 //		},
 //		"M_ST_NA_1 spont @250 1:0x0203 4:0x05 <EOF>",
 //	}, {
 //		&ASDU{
 //			Params:     ParamsNarrow,
-//			Identifier: Identifier{M_ME_NC_1, Init, 0, 12},
+//			Identifier: Identifier{M_ME_NC_1, Initialized, 0, 12},
 //			InfoSeq:    true,
 //			infoObj:       []byte{99, 0, 1, 2, 3, 4, 5},
 //		},
@@ -236,7 +236,7 @@ func TestASDU_MarshalBinary(t *testing.T) {
 				Identifier{
 					M_SP_NA_1,
 					VariableStruct{},
-					CauseOfTransmission{Cause: Act},
+					CauseOfTransmission{Cause: Activation},
 					0,
 					0x80},
 				nil},
@@ -250,7 +250,7 @@ func TestASDU_MarshalBinary(t *testing.T) {
 				Identifier{
 					M_SP_NA_1,
 					VariableStruct{},
-					CauseOfTransmission{Cause: Act},
+					CauseOfTransmission{Cause: Activation},
 					1,
 					0x80},
 				nil},
@@ -264,7 +264,7 @@ func TestASDU_MarshalBinary(t *testing.T) {
 				Identifier{
 					M_SP_NA_1,
 					VariableStruct{},
-					CauseOfTransmission{Cause: Act},
+					CauseOfTransmission{Cause: Activation},
 					0,
 					InvalidCommonAddr},
 				nil},
@@ -277,7 +277,7 @@ func TestASDU_MarshalBinary(t *testing.T) {
 				Identifier{
 					M_SP_NA_1,
 					VariableStruct{},
-					CauseOfTransmission{Cause: Act},
+					CauseOfTransmission{Cause: Activation},
 					0,
 					0x80},
 				nil},
@@ -291,7 +291,7 @@ func TestASDU_MarshalBinary(t *testing.T) {
 				Identifier{
 					M_SP_NA_1,
 					VariableStruct{},
-					CauseOfTransmission{Cause: Act},
+					CauseOfTransmission{Cause: Activation},
 					0,
 					255},
 				nil},
@@ -305,7 +305,7 @@ func TestASDU_MarshalBinary(t *testing.T) {
 				Identifier{
 					M_SP_NA_1,
 					VariableStruct{Number: 1},
-					CauseOfTransmission{Cause: Act},
+					CauseOfTransmission{Cause: Activation},
 					0,
 					0x80},
 				[]byte{0x00, 0x01, 0x02, 0x03}},
@@ -319,7 +319,7 @@ func TestASDU_MarshalBinary(t *testing.T) {
 				Identifier{
 					M_SP_NA_1,
 					VariableStruct{Number: 1},
-					CauseOfTransmission{Cause: Act},
+					CauseOfTransmission{Cause: Activation},
 					0,
 					GlobalCommonAddr},
 				[]byte{0x00, 0x01, 0x02, 0x03}},
@@ -333,7 +333,7 @@ func TestASDU_MarshalBinary(t *testing.T) {
 				Identifier{
 					M_SP_NA_1,
 					VariableStruct{Number: 1},
-					CauseOfTransmission{Cause: Act},
+					CauseOfTransmission{Cause: Activation},
 					0,
 					0x6080},
 				[]byte{0x00, 0x01, 0x02, 0x03}},

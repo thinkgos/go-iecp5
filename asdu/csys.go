@@ -8,13 +8,13 @@ import (
 // 在控制方向系统信息的应用服务数据单元
 
 // InterrogationCmd send a new interrogation command [C_IC_NA_1].
-// coa.Cause = Act or Deact
+// coa.Cause = Activation or Deactivation
 // subclass 7.3.4.1
 // Use group 1 to 16, or 0 for the default.
 // 总召唤命令
 func InterrogationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 	qoi QualifierOfInterrogation) error {
-	if !(coa.Cause == Act || coa.Cause == Deact) {
+	if !(coa.Cause == Activation || coa.Cause == Deactivation) {
 		return ErrCmdCause
 	}
 	if err := c.Params().Valid(); err != nil {
@@ -36,7 +36,7 @@ func InterrogationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 }
 
 // CounterInterrogationCmd send Counter Interrogation command [C_CI_NA_1]
-// coa.Cause always Act
+// coa.Cause always Activation
 // subclass 7.3.4.2
 // 计数量召唤命令
 func CounterInterrogationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
@@ -44,7 +44,7 @@ func CounterInterrogationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 	if err := c.Params().Valid(); err != nil {
 		return err
 	}
-	coa.Cause = Act
+	coa.Cause = Activation
 	u := NewASDU(c.Params(), Identifier{
 		C_CI_NA_1,
 		VariableStruct{IsSequence: false, Number: 1},
@@ -60,14 +60,14 @@ func CounterInterrogationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 }
 
 // ReadCmd  ,[C_RD_NA_1]
-// coa.Cause always Req
+// coa.Cause always Request
 // subclass 7.3.4.3
 // 计数量召唤命令
 func ReadCmd(c Connect, coa CauseOfTransmission, ca CommonAddr, ioa InfoObjAddr) error {
 	if err := c.Params().Valid(); err != nil {
 		return err
 	}
-	coa.Cause = Req
+	coa.Cause = Request
 	u := NewASDU(c.Params(), Identifier{
 		C_RD_NA_1,
 		VariableStruct{IsSequence: false, Number: 1},
@@ -82,7 +82,7 @@ func ReadCmd(c Connect, coa CauseOfTransmission, ca CommonAddr, ioa InfoObjAddr)
 }
 
 // ClockSynchronizationCmd [C_CS_NA_1]
-// coa.Cause always Act
+// coa.Cause always Activation
 // subclass 7.3.4.4
 // 时钟同步命令
 func ClockSynchronizationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
@@ -90,7 +90,7 @@ func ClockSynchronizationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 	if err := c.Params().Valid(); err != nil {
 		return err
 	}
-	coa.Cause = Act
+	coa.Cause = Activation
 	u := NewASDU(c.Params(), Identifier{
 		C_CS_NA_1,
 		VariableStruct{IsSequence: false, Number: 1},
@@ -106,14 +106,14 @@ func ClockSynchronizationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 }
 
 // TestCommand [C_TS_NA_1]
-// coa.Cause always Act(6)
+// coa.Cause always Activation(6)
 // subclass 7.3.4.5
 // 测试命令
 func TestCommand(c Connect, coa CauseOfTransmission, ca CommonAddr) error {
 	if err := c.Params().Valid(); err != nil {
 		return err
 	}
-	coa.Cause = Act
+	coa.Cause = Activation
 	u := NewASDU(c.Params(), Identifier{
 		C_TS_NA_1,
 		VariableStruct{IsSequence: false, Number: 1},
@@ -129,7 +129,7 @@ func TestCommand(c Connect, coa CauseOfTransmission, ca CommonAddr) error {
 }
 
 // ResetProcessCmd [C_RP_NA_1]
-// coa.Cause always Act(6)
+// coa.Cause always Activation(6)
 // subclass 7.3.4.6
 // 复位进程命令
 func ResetProcessCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
@@ -137,7 +137,7 @@ func ResetProcessCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 	if err := c.Params().Valid(); err != nil {
 		return err
 	}
-	coa.Cause = Act
+	coa.Cause = Activation
 	u := NewASDU(c.Params(), Identifier{
 		C_RP_NA_1,
 		VariableStruct{IsSequence: false, Number: 1},
@@ -153,12 +153,12 @@ func ResetProcessCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 }
 
 // DelayAcquireCommand [C_CD_NA_1]
-// coa.Cause = Act or Spont
+// coa.Cause = Activation or Spontaneous
 // subclass 7.3.4.7
 // 延时获得命令
 func DelayAcquireCommand(c Connect, coa CauseOfTransmission, ca CommonAddr,
 	msec uint16) error {
-	if !(coa.Cause == Spont || coa.Cause == Act) {
+	if !(coa.Cause == Spontaneous || coa.Cause == Activation) {
 		return ErrCmdCause
 	}
 	if err := c.Params().Valid(); err != nil {

@@ -411,97 +411,97 @@ func (this *SrvSession) serverHandler(asduPack *asdu.ASDU) error {
 
 	switch asduPack.Identifier.Type {
 	case asdu.C_IC_NA_1: // InterrogationCmd
-		if !(asduPack.Identifier.Coa.Cause == asdu.Act ||
-			asduPack.Identifier.Coa.Cause == asdu.Deact) {
-			return asduPack.SendReplyMirror(this, asdu.UnkCause)
+		if !(asduPack.Identifier.Coa.Cause == asdu.Activation ||
+			asduPack.Identifier.Coa.Cause == asdu.Deactivation) {
+			return asduPack.SendReplyMirror(this, asdu.UnknownCOT)
 		}
 		if asduPack.CommonAddr == asdu.InvalidCommonAddr {
-			return asduPack.SendReplyMirror(this, asdu.UnkAddr)
+			return asduPack.SendReplyMirror(this, asdu.UnknownCA)
 		}
 		ioa, qoi := asduPack.GetInterrogationCmd()
 		if ioa != asdu.InfoObjIrrelevantAddr {
-			return asduPack.SendReplyMirror(this, asdu.UnkInfo)
+			return asduPack.SendReplyMirror(this, asdu.UnknownIOA)
 		}
 		return this.handler.InterrogationHandler(this, asduPack, qoi)
 
 	case asdu.C_CI_NA_1: // CounterInterrogationCmd
-		if asduPack.Identifier.Coa.Cause != asdu.Act {
-			return asduPack.SendReplyMirror(this, asdu.UnkCause)
+		if asduPack.Identifier.Coa.Cause != asdu.Activation {
+			return asduPack.SendReplyMirror(this, asdu.UnknownCOT)
 		}
 		if asduPack.CommonAddr == asdu.InvalidCommonAddr {
-			return asduPack.SendReplyMirror(this, asdu.UnkAddr)
+			return asduPack.SendReplyMirror(this, asdu.UnknownCA)
 		}
 		ioa, qcc := asduPack.GetCounterInterrogationCmd()
 		if ioa != asdu.InfoObjIrrelevantAddr {
-			return asduPack.SendReplyMirror(this, asdu.UnkInfo)
+			return asduPack.SendReplyMirror(this, asdu.UnknownIOA)
 		}
 		return this.handler.CounterInterrogationHandler(this, asduPack, qcc)
 
 	case asdu.C_RD_NA_1: // ReadCmd
-		if asduPack.Identifier.Coa.Cause != asdu.Req {
-			return asduPack.SendReplyMirror(this, asdu.UnkCause)
+		if asduPack.Identifier.Coa.Cause != asdu.Request {
+			return asduPack.SendReplyMirror(this, asdu.UnknownCOT)
 		}
 		if asduPack.CommonAddr == asdu.InvalidCommonAddr {
-			return asduPack.SendReplyMirror(this, asdu.UnkAddr)
+			return asduPack.SendReplyMirror(this, asdu.UnknownCA)
 		}
 		return this.handler.ReadHandler(this, asduPack, asduPack.GetReadCmd())
 
 	case asdu.C_CS_NA_1: // ClockSynchronizationCmd
-		if asduPack.Identifier.Coa.Cause != asdu.Act {
-			return asduPack.SendReplyMirror(this, asdu.UnkCause)
+		if asduPack.Identifier.Coa.Cause != asdu.Activation {
+			return asduPack.SendReplyMirror(this, asdu.UnknownCOT)
 		}
 		if asduPack.CommonAddr == asdu.InvalidCommonAddr {
-			return asduPack.SendReplyMirror(this, asdu.UnkAddr)
+			return asduPack.SendReplyMirror(this, asdu.UnknownCA)
 		}
 
 		ioa, tm := asduPack.GetClockSynchronizationCmd()
 		if ioa != asdu.InfoObjIrrelevantAddr {
-			return asduPack.SendReplyMirror(this, asdu.UnkInfo)
+			return asduPack.SendReplyMirror(this, asdu.UnknownIOA)
 		}
 		return this.handler.ClockSyncHandler(this, asduPack, tm)
 
 	case asdu.C_TS_NA_1: // TestCommand
-		if asduPack.Identifier.Coa.Cause != asdu.Act {
-			return asduPack.SendReplyMirror(this, asdu.UnkCause)
+		if asduPack.Identifier.Coa.Cause != asdu.Activation {
+			return asduPack.SendReplyMirror(this, asdu.UnknownCOT)
 		}
 		if asduPack.CommonAddr == asdu.InvalidCommonAddr {
-			return asduPack.SendReplyMirror(this, asdu.UnkAddr)
+			return asduPack.SendReplyMirror(this, asdu.UnknownCA)
 		}
 		ioa, _ := asduPack.GetTestCommand()
 		if ioa != asdu.InfoObjIrrelevantAddr {
-			return asduPack.SendReplyMirror(this, asdu.UnkInfo)
+			return asduPack.SendReplyMirror(this, asdu.UnknownIOA)
 		}
-		return asduPack.SendReplyMirror(this, asdu.Actcon)
+		return asduPack.SendReplyMirror(this, asdu.ActivationCon)
 
 	case asdu.C_RP_NA_1: // ResetProcessCmd
-		if asduPack.Identifier.Coa.Cause != asdu.Act {
-			return asduPack.SendReplyMirror(this, asdu.UnkCause)
+		if asduPack.Identifier.Coa.Cause != asdu.Activation {
+			return asduPack.SendReplyMirror(this, asdu.UnknownCOT)
 		}
 		if asduPack.CommonAddr == asdu.InvalidCommonAddr {
-			return asduPack.SendReplyMirror(this, asdu.UnkAddr)
+			return asduPack.SendReplyMirror(this, asdu.UnknownCA)
 		}
 		ioa, qrp := asduPack.GetResetProcessCmd()
 		if ioa != asdu.InfoObjIrrelevantAddr {
-			return asduPack.SendReplyMirror(this, asdu.UnkInfo)
+			return asduPack.SendReplyMirror(this, asdu.UnknownIOA)
 		}
 		return this.handler.ResetProcessHandler(this, asduPack, qrp)
 	case asdu.C_CD_NA_1: // DelayAcquireCommand
-		if !(asduPack.Identifier.Coa.Cause == asdu.Act ||
-			asduPack.Identifier.Coa.Cause == asdu.Spont) {
-			return asduPack.SendReplyMirror(this, asdu.UnkCause)
+		if !(asduPack.Identifier.Coa.Cause == asdu.Activation ||
+			asduPack.Identifier.Coa.Cause == asdu.Spontaneous) {
+			return asduPack.SendReplyMirror(this, asdu.UnknownCOT)
 		}
 		if asduPack.CommonAddr == asdu.InvalidCommonAddr {
-			return asduPack.SendReplyMirror(this, asdu.UnkAddr)
+			return asduPack.SendReplyMirror(this, asdu.UnknownCA)
 		}
 		ioa, msec := asduPack.GetDelayAcquireCommand()
 		if ioa != asdu.InfoObjIrrelevantAddr {
-			return asduPack.SendReplyMirror(this, asdu.UnkInfo)
+			return asduPack.SendReplyMirror(this, asdu.UnknownIOA)
 		}
 		return this.handler.DelayAcquisitionHandler(this, asduPack, msec)
 	}
 
 	if err := this.handler.ASDUHandler(this, asduPack); err != nil {
-		return asduPack.SendReplyMirror(this, asdu.UnkType)
+		return asduPack.SendReplyMirror(this, asdu.UnknownTypeID)
 	}
 	return nil
 }

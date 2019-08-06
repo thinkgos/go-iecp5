@@ -125,10 +125,10 @@ func TestParseCauseOfTransmission(t *testing.T) {
 		args args
 		want CauseOfTransmission
 	}{
-		{"no test and neg", args{0x01}, CauseOfTransmission{Cause: Percyc}},
-		{"with test", args{0x81}, CauseOfTransmission{Cause: Percyc, IsTest: true}},
-		{"with neg", args{0x41}, CauseOfTransmission{Cause: Percyc, IsNegative: true}},
-		{"with test and neg", args{0xc1}, CauseOfTransmission{Cause: Percyc, IsTest: true, IsNegative: true}},
+		{"no test and neg", args{0x01}, CauseOfTransmission{Cause: Periodic}},
+		{"with test", args{0x81}, CauseOfTransmission{Cause: Periodic, IsTest: true}},
+		{"with neg", args{0x41}, CauseOfTransmission{Cause: Periodic, IsNegative: true}},
+		{"with test and neg", args{0xc1}, CauseOfTransmission{Cause: Periodic, IsTest: true, IsNegative: true}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -145,10 +145,10 @@ func TestCauseOfTransmission_Value(t *testing.T) {
 		this CauseOfTransmission
 		want byte
 	}{
-		{"no test and neg", CauseOfTransmission{Cause: Percyc}, 0x01},
-		{"with test", CauseOfTransmission{Cause: Percyc, IsTest: true}, 0x81},
-		{"with neg", CauseOfTransmission{Cause: Percyc, IsNegative: true}, 0x41},
-		{"with test and neg", CauseOfTransmission{Cause: Percyc, IsTest: true, IsNegative: true}, 0xc1},
+		{"no test and neg", CauseOfTransmission{Cause: Periodic}, 0x01},
+		{"with test", CauseOfTransmission{Cause: Periodic, IsTest: true}, 0x81},
+		{"with neg", CauseOfTransmission{Cause: Periodic, IsNegative: true}, 0x41},
+		{"with test and neg", CauseOfTransmission{Cause: Periodic, IsTest: true, IsNegative: true}, 0xc1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -165,10 +165,10 @@ func TestCauseOfTransmission_String(t *testing.T) {
 		this CauseOfTransmission
 		want string
 	}{
-		{"no test and neg", CauseOfTransmission{Cause: Percyc}, "COT<percyc>"},
-		{"with test", CauseOfTransmission{Cause: Percyc, IsTest: true}, "COT<percyc,test>"},
-		{"with neg", CauseOfTransmission{Cause: Percyc, IsNegative: true}, "COT<percyc,neg>"},
-		{"with test and neg", CauseOfTransmission{Cause: Percyc, IsTest: true, IsNegative: true}, "COT<percyc,neg,test>"},
+		{"no test and neg", CauseOfTransmission{Cause: Periodic}, "COT<percyc>"},
+		{"with test", CauseOfTransmission{Cause: Periodic, IsTest: true}, "COT<percyc,test>"},
+		{"with neg", CauseOfTransmission{Cause: Periodic, IsNegative: true}, "COT<percyc,neg>"},
+		{"with test and neg", CauseOfTransmission{Cause: Periodic, IsTest: true, IsNegative: true}, "COT<percyc,neg,test>"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

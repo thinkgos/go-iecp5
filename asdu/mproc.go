@@ -95,9 +95,9 @@ func single(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 
 func Single(c Connect, isSequence bool, coa CauseOfTransmission,
 	ca CommonAddr, infos ...SinglePointInfo) error {
-	if !(coa.Cause == Back || coa.Cause == Spont || coa.Cause == Req ||
-		coa.Cause == Retrem || coa.Cause == Retloc ||
-		(coa.Cause >= Inrogen && coa.Cause <= Inro16)) {
+	if !(coa.Cause == Background || coa.Cause == Spontaneous || coa.Cause == Request ||
+		coa.Cause == ReturnInfoRemote || coa.Cause == ReturnInfoLocal ||
+		(coa.Cause >= InterrogatedByStation && coa.Cause <= InterrogatedByGroup16)) {
 		return ErrCmdCause
 	}
 	return single(c, M_SP_NA_1, isSequence, coa, ca, infos...)
@@ -105,8 +105,8 @@ func Single(c Connect, isSequence bool, coa CauseOfTransmission,
 
 func SingleCP24Time2a(c Connect, coa CauseOfTransmission,
 	ca CommonAddr, infos ...SinglePointInfo) error {
-	if !(coa.Cause == Spont || coa.Cause == Req ||
-		coa.Cause == Retrem || coa.Cause == Retloc) {
+	if !(coa.Cause == Spontaneous || coa.Cause == Request ||
+		coa.Cause == ReturnInfoRemote || coa.Cause == ReturnInfoLocal) {
 		return ErrCmdCause
 	}
 	return single(c, M_SP_TA_1, false, coa, ca, infos...)
@@ -114,8 +114,8 @@ func SingleCP24Time2a(c Connect, coa CauseOfTransmission,
 
 func SingleCP56Time2a(c Connect, coa CauseOfTransmission,
 	ca CommonAddr, infos ...SinglePointInfo) error {
-	if !(coa.Cause == Spont || coa.Cause == Req ||
-		coa.Cause == Retrem || coa.Cause == Retloc) {
+	if !(coa.Cause == Spontaneous || coa.Cause == Request ||
+		coa.Cause == ReturnInfoRemote || coa.Cause == ReturnInfoLocal) {
 		return ErrCmdCause
 	}
 	return single(c, M_SP_TB_1, false, coa, ca, infos...)
@@ -178,9 +178,9 @@ func double(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 
 func Double(c Connect, isSequence bool, coa CauseOfTransmission,
 	ca CommonAddr, infos ...DoublePointInfo) error {
-	if !(coa.Cause == Back || coa.Cause == Spont || coa.Cause == Req ||
-		coa.Cause == Retrem || coa.Cause == Retloc ||
-		(coa.Cause >= Inrogen && coa.Cause <= Inro16)) {
+	if !(coa.Cause == Background || coa.Cause == Spontaneous || coa.Cause == Request ||
+		coa.Cause == ReturnInfoRemote || coa.Cause == ReturnInfoLocal ||
+		(coa.Cause >= InterrogatedByStation && coa.Cause <= InterrogatedByGroup16)) {
 		return ErrCmdCause
 	}
 	return double(c, M_DP_NA_1, isSequence, coa, ca, infos...)
@@ -188,8 +188,8 @@ func Double(c Connect, isSequence bool, coa CauseOfTransmission,
 
 func DoubleCP24Time2a(c Connect, coa CauseOfTransmission,
 	ca CommonAddr, infos ...DoublePointInfo) error {
-	if !(coa.Cause == Spont || coa.Cause == Req ||
-		coa.Cause == Retrem || coa.Cause == Retloc) {
+	if !(coa.Cause == Spontaneous || coa.Cause == Request ||
+		coa.Cause == ReturnInfoRemote || coa.Cause == ReturnInfoLocal) {
 		return ErrCmdCause
 	}
 	return double(c, M_DP_TA_1, false, coa, ca, infos...)
@@ -197,8 +197,8 @@ func DoubleCP24Time2a(c Connect, coa CauseOfTransmission,
 
 func DoubleCP56Time2a(c Connect, coa CauseOfTransmission,
 	ca CommonAddr, infos ...DoublePointInfo) error {
-	if !(coa.Cause == Spont || coa.Cause == Req ||
-		coa.Cause == Retrem || coa.Cause == Retloc) {
+	if !(coa.Cause == Spontaneous || coa.Cause == Request ||
+		coa.Cause == ReturnInfoRemote || coa.Cause == ReturnInfoLocal) {
 		return ErrCmdCause
 	}
 	return double(c, M_DP_TB_1, false, coa, ca, infos...)
@@ -261,9 +261,9 @@ func step(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 
 func Step(c Connect, isSequence bool, coa CauseOfTransmission,
 	ca CommonAddr, infos ...StepPositionInfo) error {
-	if !(coa.Cause == Back || coa.Cause == Spont || coa.Cause == Req ||
-		coa.Cause == Retrem || coa.Cause == Retloc ||
-		(coa.Cause >= Inrogen && coa.Cause <= Inro16)) {
+	if !(coa.Cause == Background || coa.Cause == Spontaneous || coa.Cause == Request ||
+		coa.Cause == ReturnInfoRemote || coa.Cause == ReturnInfoLocal ||
+		(coa.Cause >= InterrogatedByStation && coa.Cause <= InterrogatedByGroup16)) {
 		return ErrCmdCause
 	}
 	return step(c, M_ST_NA_1, isSequence, coa, ca, infos...)
@@ -271,8 +271,8 @@ func Step(c Connect, isSequence bool, coa CauseOfTransmission,
 
 func StepCP24Time2a(c Connect, coa CauseOfTransmission,
 	ca CommonAddr, infos ...StepPositionInfo) error {
-	if !(coa.Cause == Spont || coa.Cause == Req ||
-		coa.Cause == Retrem || coa.Cause == Retloc) {
+	if !(coa.Cause == Spontaneous || coa.Cause == Request ||
+		coa.Cause == ReturnInfoRemote || coa.Cause == ReturnInfoLocal) {
 		return ErrCmdCause
 	}
 	return step(c, M_ST_TA_1, false, coa, ca, infos...)
@@ -280,8 +280,8 @@ func StepCP24Time2a(c Connect, coa CauseOfTransmission,
 
 func StepCP56Time2a(c Connect, coa CauseOfTransmission,
 	ca CommonAddr, infos ...StepPositionInfo) error {
-	if !(coa.Cause == Spont || coa.Cause == Req ||
-		coa.Cause == Retrem || coa.Cause == Retloc) {
+	if !(coa.Cause == Spontaneous || coa.Cause == Request ||
+		coa.Cause == ReturnInfoRemote || coa.Cause == ReturnInfoLocal) {
 		return ErrCmdCause
 	}
 	return step(c, M_SP_TB_1, false, coa, ca, infos...)
@@ -344,8 +344,8 @@ func bitString32(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmiss
 
 func BitString32(c Connect, isSequence bool, coa CauseOfTransmission,
 	ca CommonAddr, infos ...BitString32Info) error {
-	if !(coa.Cause == Back || coa.Cause == Spont || coa.Cause == Req ||
-		(coa.Cause >= Inrogen && coa.Cause <= Inro16)) {
+	if !(coa.Cause == Background || coa.Cause == Spontaneous || coa.Cause == Request ||
+		(coa.Cause >= InterrogatedByStation && coa.Cause <= InterrogatedByGroup16)) {
 		return ErrCmdCause
 	}
 	return bitString32(c, M_BO_NA_1, isSequence, coa, ca, infos...)
@@ -353,7 +353,7 @@ func BitString32(c Connect, isSequence bool, coa CauseOfTransmission,
 
 func BitString32CP24Time2a(c Connect, coa CauseOfTransmission,
 	ca CommonAddr, infos ...BitString32Info) error {
-	if !(coa.Cause == Spont || coa.Cause == Req) {
+	if !(coa.Cause == Spontaneous || coa.Cause == Request) {
 		return ErrCmdCause
 	}
 	return bitString32(c, M_BO_TA_1, false, coa, ca, infos...)
@@ -361,7 +361,7 @@ func BitString32CP24Time2a(c Connect, coa CauseOfTransmission,
 
 func BitString32CP56Time2a(c Connect, coa CauseOfTransmission,
 	ca CommonAddr, infos ...BitString32Info) error {
-	if !(coa.Cause == Spont || coa.Cause == Req) {
+	if !(coa.Cause == Spontaneous || coa.Cause == Request) {
 		return ErrCmdCause
 	}
 	return bitString32(c, M_BO_TB_1, false, coa, ca, infos...)
@@ -426,9 +426,9 @@ func measuredValueNormal(c Connect, typeID TypeID, isSequence bool, coa CauseOfT
 
 func MeasuredValueNormal(c Connect, isSequence bool, coa CauseOfTransmission,
 	ca CommonAddr, infos ...MeasuredValueNormalInfo) error {
-	if !(coa.Cause == Percyc || coa.Cause == Back ||
-		coa.Cause == Spont || coa.Cause == Req ||
-		(coa.Cause >= Inrogen && coa.Cause <= Inro16)) {
+	if !(coa.Cause == Periodic || coa.Cause == Background ||
+		coa.Cause == Spontaneous || coa.Cause == Request ||
+		(coa.Cause >= InterrogatedByStation && coa.Cause <= InterrogatedByGroup16)) {
 		return ErrCmdCause
 	}
 	return measuredValueNormal(c, M_ME_NA_1, isSequence, coa, ca, infos...)
@@ -436,7 +436,7 @@ func MeasuredValueNormal(c Connect, isSequence bool, coa CauseOfTransmission,
 
 func MeasuredValueNormalCP24Time2a(c Connect, coa CauseOfTransmission,
 	ca CommonAddr, infos ...MeasuredValueNormalInfo) error {
-	if !(coa.Cause == Spont || coa.Cause == Req) {
+	if !(coa.Cause == Spontaneous || coa.Cause == Request) {
 		return ErrCmdCause
 	}
 	return measuredValueNormal(c, M_ME_TA_1, false, coa, ca, infos...)
@@ -444,16 +444,16 @@ func MeasuredValueNormalCP24Time2a(c Connect, coa CauseOfTransmission,
 
 func MeasuredValueNormalCP56Time2a(c Connect, coa CauseOfTransmission,
 	ca CommonAddr, infos ...MeasuredValueNormalInfo) error {
-	if !(coa.Cause == Spont || coa.Cause == Req) {
+	if !(coa.Cause == Spontaneous || coa.Cause == Request) {
 		return ErrCmdCause
 	}
 	return measuredValueNormal(c, M_ME_TD_1, false, coa, ca, infos...)
 }
 func MeasuredValueNormalNoQuality(c Connect, isSequence bool, coa CauseOfTransmission,
 	ca CommonAddr, infos ...MeasuredValueNormalInfo) error {
-	if !(coa.Cause == Percyc || coa.Cause == Back ||
-		coa.Cause == Spont || coa.Cause == Req ||
-		(coa.Cause >= Inrogen && coa.Cause <= Inro16)) {
+	if !(coa.Cause == Periodic || coa.Cause == Background ||
+		coa.Cause == Spontaneous || coa.Cause == Request ||
+		(coa.Cause >= InterrogatedByStation && coa.Cause <= InterrogatedByGroup16)) {
 		return ErrCmdCause
 	}
 	return measuredValueNormal(c, M_ME_ND_1, isSequence, coa, ca, infos...)
@@ -515,9 +515,9 @@ func measuredValueScaled(c Connect, typeID TypeID, isSequence bool, coa CauseOfT
 
 func MeasuredValueScaled(c Connect, isSequence bool, coa CauseOfTransmission,
 	ca CommonAddr, infos ...MeasuredValueScaledInfo) error {
-	if !(coa.Cause == Percyc || coa.Cause == Back ||
-		coa.Cause == Spont || coa.Cause == Req ||
-		(coa.Cause >= Inrogen && coa.Cause <= Inro16)) {
+	if !(coa.Cause == Periodic || coa.Cause == Background ||
+		coa.Cause == Spontaneous || coa.Cause == Request ||
+		(coa.Cause >= InterrogatedByStation && coa.Cause <= InterrogatedByGroup16)) {
 		return ErrCmdCause
 	}
 	return measuredValueScaled(c, M_ME_NB_1, isSequence, coa, ca, infos...)
@@ -525,7 +525,7 @@ func MeasuredValueScaled(c Connect, isSequence bool, coa CauseOfTransmission,
 
 func MeasuredValueScaledCP24Time2a(c Connect, coa CauseOfTransmission,
 	ca CommonAddr, infos ...MeasuredValueScaledInfo) error {
-	if !(coa.Cause == Spont || coa.Cause == Req) {
+	if !(coa.Cause == Spontaneous || coa.Cause == Request) {
 		return ErrCmdCause
 	}
 	return measuredValueScaled(c, M_ME_TB_1, false, coa, ca, infos...)
@@ -533,7 +533,7 @@ func MeasuredValueScaledCP24Time2a(c Connect, coa CauseOfTransmission,
 
 func MeasuredValueScaledCP56Time2a(c Connect, coa CauseOfTransmission,
 	ca CommonAddr, infos ...MeasuredValueScaledInfo) error {
-	if !(coa.Cause == Spont || coa.Cause == Req) {
+	if !(coa.Cause == Spontaneous || coa.Cause == Request) {
 		return ErrCmdCause
 	}
 	return measuredValueScaled(c, M_ME_TE_1, false, coa, ca, infos...)
@@ -596,9 +596,9 @@ func measuredValueFloat(c Connect, typeID TypeID, isSequence bool, coa CauseOfTr
 
 func MeasuredValueFloat(c Connect, isSequence bool, coa CauseOfTransmission,
 	ca CommonAddr, infos ...MeasuredValueFloatInfo) error {
-	if !(coa.Cause == Percyc || coa.Cause == Back ||
-		coa.Cause == Spont || coa.Cause == Req ||
-		(coa.Cause >= Inrogen && coa.Cause <= Inro16)) {
+	if !(coa.Cause == Periodic || coa.Cause == Background ||
+		coa.Cause == Spontaneous || coa.Cause == Request ||
+		(coa.Cause >= InterrogatedByStation && coa.Cause <= InterrogatedByGroup16)) {
 		return ErrCmdCause
 	}
 	return measuredValueFloat(c, M_ME_NC_1, isSequence, coa, ca, infos...)
@@ -606,7 +606,7 @@ func MeasuredValueFloat(c Connect, isSequence bool, coa CauseOfTransmission,
 
 func MeasuredValueFloatCP24Time2a(c Connect, coa CauseOfTransmission,
 	ca CommonAddr, infos ...MeasuredValueFloatInfo) error {
-	if !(coa.Cause == Spont || coa.Cause == Req) {
+	if !(coa.Cause == Spontaneous || coa.Cause == Request) {
 		return ErrCmdCause
 	}
 	return measuredValueFloat(c, M_ME_TC_1, false, coa, ca, infos...)
@@ -614,7 +614,7 @@ func MeasuredValueFloatCP24Time2a(c Connect, coa CauseOfTransmission,
 
 func MeasuredValueFloatCP56Time2a(c Connect, coa CauseOfTransmission,
 	ca CommonAddr, infos ...MeasuredValueFloatInfo) error {
-	if !(coa.Cause == Spont || coa.Cause == Req) {
+	if !(coa.Cause == Spontaneous || coa.Cause == Request) {
 		return ErrCmdCause
 	}
 	return measuredValueFloat(c, M_ME_TF_1, false, coa, ca, infos...)
@@ -674,7 +674,7 @@ func integratedTotals(c Connect, typeID TypeID, isSequence bool, coa CauseOfTran
 
 func IntegratedTotals(c Connect, isSequence bool, coa CauseOfTransmission,
 	ca CommonAddr, infos ...BinaryCounterReadingInfo) error {
-	if !(coa.Cause == Spont || (coa.Cause >= Reqcogen && coa.Cause <= Reqco4)) {
+	if !(coa.Cause == Spontaneous || (coa.Cause >= RequestByGeneralCounter && coa.Cause <= RequestByGroup4Counter)) {
 		return ErrCmdCause
 	}
 	return integratedTotals(c, M_IT_NA_1, isSequence, coa, ca, infos...)
@@ -682,7 +682,7 @@ func IntegratedTotals(c Connect, isSequence bool, coa CauseOfTransmission,
 
 func IntegratedTotalsCP24Time2a(c Connect, coa CauseOfTransmission,
 	ca CommonAddr, infos ...BinaryCounterReadingInfo) error {
-	if !(coa.Cause == Spont || (coa.Cause >= Reqcogen && coa.Cause <= Reqco4)) {
+	if !(coa.Cause == Spontaneous || (coa.Cause >= RequestByGeneralCounter && coa.Cause <= RequestByGroup4Counter)) {
 		return ErrCmdCause
 	}
 	return integratedTotals(c, M_IT_TA_1, false, coa, ca, infos...)
@@ -690,7 +690,7 @@ func IntegratedTotalsCP24Time2a(c Connect, coa CauseOfTransmission,
 
 func IntegratedTotalsCP56Time2a(c Connect, coa CauseOfTransmission,
 	ca CommonAddr, infos ...BinaryCounterReadingInfo) error {
-	if !(coa.Cause == Spont || (coa.Cause >= Reqcogen && coa.Cause <= Reqco4)) {
+	if !(coa.Cause == Spontaneous || (coa.Cause >= RequestByGeneralCounter && coa.Cause <= RequestByGroup4Counter)) {
 		return ErrCmdCause
 	}
 	return integratedTotals(c, M_IT_TB_1, false, coa, ca, infos...)

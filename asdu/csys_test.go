@@ -19,12 +19,12 @@ func TestInterrogationCmd(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			"cause not Act and Deact",
+			"cause not Activation and Deactivation",
 			args{
 				newConn(nil, t),
 				CauseOfTransmission{Cause: Unused},
 				0x1234,
-				QOIInro1},
+				QOIGroup1},
 			true,
 		},
 		{
@@ -32,9 +32,9 @@ func TestInterrogationCmd(t *testing.T) {
 			args{
 				newConn([]byte{byte(C_IC_NA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
 					0x00, 0x00, 0x00, 21}, t),
-				CauseOfTransmission{Cause: Act},
+				CauseOfTransmission{Cause: Activation},
 				0x1234,
-				QOIInro1},
+				QOIGroup1},
 			false,
 		},
 	}
@@ -64,9 +64,9 @@ func TestCounterInterrogationCmd(t *testing.T) {
 			args{
 				newConn([]byte{byte(C_CI_NA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
 					0x00, 0x00, 0x00, 0x01}, t),
-				CauseOfTransmission{Cause: Act},
+				CauseOfTransmission{Cause: Activation},
 				0x1234,
-				QualifierCountCall{QCCGroup1, QCCFzeRead}},
+				QualifierCountCall{QCCGroup1, QCCFrzRead}},
 			false,
 		},
 	}
@@ -96,7 +96,7 @@ func TestReadCmd(t *testing.T) {
 			args{
 				newConn([]byte{byte(C_RD_NA_1), 0x01, 0x05, 0x00, 0x34, 0x12,
 					0x90, 0x78, 0x56}, t),
-				CauseOfTransmission{Cause: Req},
+				CauseOfTransmission{Cause: Request},
 				0x1234,
 				0x567890},
 			false,
@@ -128,7 +128,7 @@ func TestClockSynchronizationCmd(t *testing.T) {
 			args{
 				newConn(append([]byte{byte(C_CS_NA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
 					0x00, 0x00, 0x00}, tm0CP56Time2aBytes...), t),
-				CauseOfTransmission{Cause: Act},
+				CauseOfTransmission{Cause: Activation},
 				0x1234,
 				tm0},
 			false,
@@ -159,7 +159,7 @@ func TestTestCommand(t *testing.T) {
 			args{
 				newConn([]byte{byte(C_TS_NA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
 					0x00, 0x00, 0x00, 0xaa, 0x55}, t),
-				CauseOfTransmission{Cause: Act},
+				CauseOfTransmission{Cause: Activation},
 				0x1234},
 			false,
 		},
@@ -190,9 +190,9 @@ func TestResetProcessCmd(t *testing.T) {
 			args{
 				newConn([]byte{byte(C_RP_NA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
 					0x00, 0x00, 0x00, 0x01}, t),
-				CauseOfTransmission{Cause: Act},
+				CauseOfTransmission{Cause: Activation},
 				0x1234,
-				QPRTotal},
+				QPRGeneralRest},
 			false,
 		},
 	}
@@ -231,7 +231,7 @@ func TestDelayAcquireCommand(t *testing.T) {
 			args{
 				newConn([]byte{byte(C_CD_NA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
 					0x00, 0x00, 0x00, 0x10, 0x27}, t),
-				CauseOfTransmission{Cause: Act},
+				CauseOfTransmission{Cause: Activation},
 				0x1234,
 				10000},
 			false,
@@ -261,7 +261,7 @@ func TestASDU_GetInterrogationCmd(t *testing.T) {
 			"C_IC_NA_1",
 			fields{ParamsWide, []byte{0x00, 0x00, 0x00, 21}},
 			0,
-			QOIInro1,
+			QOIGroup1,
 		},
 	}
 	for _, tt := range tests {
@@ -297,7 +297,7 @@ func TestASDU_GetCounterInterrogationCmd(t *testing.T) {
 			"C_CI_NA_1",
 			fields{ParamsWide, []byte{0x00, 0x00, 0x00, 0x01}},
 			0,
-			QualifierCountCall{QCCGroup1, QCCFzeRead},
+			QualifierCountCall{QCCGroup1, QCCFrzRead},
 		},
 	}
 	for _, tt := range tests {
@@ -432,7 +432,7 @@ func TestASDU_GetResetProcessCmd(t *testing.T) {
 			"C_RP_NA_1",
 			fields{ParamsWide, []byte{0x00, 0x00, 0x00, 0x01}},
 			0,
-			QPRTotal,
+			QPRGeneralRest,
 		},
 	}
 	for _, tt := range tests {

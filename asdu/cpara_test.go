@@ -35,13 +35,13 @@ func TestParameterNormal(t *testing.T) {
 			args{
 				newConn([]byte{byte(P_ME_NA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
 					0x90, 0x78, 0x56, 0x44, 0x33, 0x01}, t),
-				CauseOfTransmission{Cause: Act},
+				CauseOfTransmission{Cause: Activation},
 				0x1234,
 				ParameterNormalInfo{
 					0x567890,
 					0x3344,
 					QualifierOfParameterMV{
-						QPMThreashold,
+						QPMThreshold,
 						false,
 						false}}},
 			false,
@@ -85,13 +85,13 @@ func TestParameterScaled(t *testing.T) {
 			args{
 				newConn([]byte{byte(P_ME_NB_1), 0x01, 0x06, 0x00, 0x34, 0x12,
 					0x90, 0x78, 0x56, 0x44, 0x33, 0x01}, t),
-				CauseOfTransmission{Cause: Act},
+				CauseOfTransmission{Cause: Activation},
 				0x1234,
 				ParameterScaledInfo{
 					0x567890,
 					0x3344,
 					QualifierOfParameterMV{
-						QPMThreashold,
+						QPMThreshold,
 						false,
 						false}}},
 			false,
@@ -137,13 +137,13 @@ func TestParameterFloat(t *testing.T) {
 			args{
 				newConn([]byte{byte(P_ME_NC_1), 0x01, 0x06, 0x00, 0x34, 0x12,
 					0x90, 0x78, 0x56, byte(bits), byte(bits >> 8), byte(bits >> 16), byte(bits >> 24), 0x01}, t),
-				CauseOfTransmission{Cause: Act},
+				CauseOfTransmission{Cause: Activation},
 				0x1234,
 				ParameterFloatInfo{
 					0x567890,
 					100,
 					QualifierOfParameterMV{
-						QPMThreashold,
+						QPMThreshold,
 						false,
 						false}}},
 			false,
@@ -186,7 +186,7 @@ func TestParameterActivation(t *testing.T) {
 			args{
 				newConn([]byte{byte(P_AC_NA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
 					0x90, 0x78, 0x56, 0x00}, t),
-				CauseOfTransmission{Cause: Act},
+				CauseOfTransmission{Cause: Activation},
 				0x1234,
 				ParameterActivationInfo{
 					0x567890,
@@ -222,7 +222,7 @@ func TestASDU_GetParameterNormal(t *testing.T) {
 				0x567890,
 				0x3344,
 				QualifierOfParameterMV{
-					QPMThreashold,
+					QPMThreshold,
 					false,
 					false}},
 		},
@@ -259,7 +259,7 @@ func TestASDU_GetParameterScaled(t *testing.T) {
 				0x567890,
 				0x3344,
 				QualifierOfParameterMV{
-					QPMThreashold,
+					QPMThreshold,
 					false,
 					false}},
 		},
@@ -298,7 +298,7 @@ func TestASDU_GetParameterFloat(t *testing.T) {
 				0x567890,
 				100,
 				QualifierOfParameterMV{
-					QPMThreashold,
+					QPMThreshold,
 					false,
 					false}},
 		},

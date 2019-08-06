@@ -51,12 +51,12 @@ func TestSingleCmd(t *testing.T) {
 			args{
 				newConn(nil, t),
 				0,
-				CauseOfTransmission{Cause: Act},
+				CauseOfTransmission{Cause: Activation},
 				0x1234,
 				SingleCommandObject{}},
 			true},
 		{
-			"cause not Act and Deact",
+			"cause not Activation and Deactivation",
 			args{
 				newConn(nil, t),
 				C_SC_NA_1,
@@ -70,12 +70,12 @@ func TestSingleCmd(t *testing.T) {
 				newConn([]byte{byte(C_SC_NA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
 					0x90, 0x78, 0x56, 0x05}, t),
 				C_SC_NA_1,
-				CauseOfTransmission{Cause: Act},
+				CauseOfTransmission{Cause: Activation},
 				0x1234,
 				SingleCommandObject{
 					0x567890,
 					true,
-					QualifierOfCommand{QOCShortPulse, false},
+					QualifierOfCommand{QOCShortPulseDuration, false},
 					time.Time{}}},
 			false},
 		{
@@ -84,11 +84,11 @@ func TestSingleCmd(t *testing.T) {
 				newConn(append([]byte{byte(C_SC_TA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
 					0x90, 0x78, 0x56, 0x04}, tm0CP56Time2aBytes...), t),
 				C_SC_TA_1,
-				CauseOfTransmission{Cause: Act},
+				CauseOfTransmission{Cause: Activation},
 				0x1234,
 				SingleCommandObject{
 					0x567890, false,
-					QualifierOfCommand{QOCShortPulse, false},
+					QualifierOfCommand{QOCShortPulseDuration, false},
 					tm0}},
 			false},
 	}
@@ -119,12 +119,12 @@ func TestDoubleCmd(t *testing.T) {
 			args{
 				newConn(nil, t),
 				0,
-				CauseOfTransmission{Cause: Act},
+				CauseOfTransmission{Cause: Activation},
 				0x1234,
 				DoubleCommandObject{}},
 			true},
 		{
-			"cause not Act and Deact",
+			"cause not Activation and Deactivation",
 			args{
 				newConn(nil, t),
 				C_DC_NA_1,
@@ -138,12 +138,12 @@ func TestDoubleCmd(t *testing.T) {
 				newConn([]byte{byte(C_DC_NA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
 					0x90, 0x78, 0x56, 0x05}, t),
 				C_DC_NA_1,
-				CauseOfTransmission{Cause: Act},
+				CauseOfTransmission{Cause: Activation},
 				0x1234,
 				DoubleCommandObject{
 					0x567890,
 					DCOOn,
-					QualifierOfCommand{QOCShortPulse, false},
+					QualifierOfCommand{QOCShortPulseDuration, false},
 					time.Time{}}},
 			false},
 		{
@@ -152,12 +152,12 @@ func TestDoubleCmd(t *testing.T) {
 				newConn(append([]byte{byte(C_DC_TA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
 					0x90, 0x78, 0x56, 0x06}, tm0CP56Time2aBytes...), t),
 				C_DC_TA_1,
-				CauseOfTransmission{Cause: Act},
+				CauseOfTransmission{Cause: Activation},
 				0x1234,
 				DoubleCommandObject{
 					0x567890,
 					DCOOff,
-					QualifierOfCommand{QOCShortPulse, false},
+					QualifierOfCommand{QOCShortPulseDuration, false},
 					tm0}},
 			false},
 	}
@@ -188,12 +188,12 @@ func TestStepCmd(t *testing.T) {
 			args{
 				newConn(nil, t),
 				0,
-				CauseOfTransmission{Cause: Act},
+				CauseOfTransmission{Cause: Activation},
 				0x1234,
 				StepCommandObject{}},
 			true},
 		{
-			"cause not Act and Deact", args{
+			"cause not Activation and Deactivation", args{
 				newConn(nil, t),
 				C_RC_NA_1,
 				CauseOfTransmission{Cause: Unused},
@@ -206,12 +206,12 @@ func TestStepCmd(t *testing.T) {
 				newConn([]byte{byte(C_RC_NA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
 					0x90, 0x78, 0x56, 0x05}, t),
 				C_RC_NA_1,
-				CauseOfTransmission{Cause: Act},
+				CauseOfTransmission{Cause: Activation},
 				0x1234,
 				StepCommandObject{
 					0x567890,
 					SCOStepDown,
-					QualifierOfCommand{QOCShortPulse, false},
+					QualifierOfCommand{QOCShortPulseDuration, false},
 					time.Time{}}},
 			false},
 		{
@@ -220,12 +220,12 @@ func TestStepCmd(t *testing.T) {
 				newConn(append([]byte{byte(C_RC_TA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
 					0x90, 0x78, 0x56, 0x06}, tm0CP56Time2aBytes...), t),
 				C_RC_TA_1,
-				CauseOfTransmission{Cause: Act},
+				CauseOfTransmission{Cause: Activation},
 				0x1234,
 				StepCommandObject{
 					0x567890,
 					SCOStepUP,
-					QualifierOfCommand{QOCShortPulse, false},
+					QualifierOfCommand{QOCShortPulseDuration, false},
 					tm0}},
 			false},
 	}
@@ -256,12 +256,12 @@ func TestSetpointCmdNormal(t *testing.T) {
 			args{
 				newConn(nil, t),
 				0,
-				CauseOfTransmission{Cause: Act},
+				CauseOfTransmission{Cause: Activation},
 				0x1234,
 				SetpointCommandNormalObject{}},
 			true},
 		{
-			"cause not Act and Deact",
+			"cause not Activation and Deactivation",
 			args{
 				newConn(nil, t),
 				C_SE_NA_1,
@@ -275,7 +275,7 @@ func TestSetpointCmdNormal(t *testing.T) {
 				newConn([]byte{byte(C_SE_NA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
 					0x90, 0x78, 0x56, 0x64, 0x00, 0x01}, t),
 				C_SE_NA_1,
-				CauseOfTransmission{Cause: Act},
+				CauseOfTransmission{Cause: Activation},
 				0x1234,
 				SetpointCommandNormalObject{
 					0x567890,
@@ -289,7 +289,7 @@ func TestSetpointCmdNormal(t *testing.T) {
 				newConn(append([]byte{byte(C_SE_TA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
 					0x90, 0x78, 0x56, 0x64, 0x00, 0x01}, tm0CP56Time2aBytes...), t),
 				C_SE_TA_1,
-				CauseOfTransmission{Cause: Act},
+				CauseOfTransmission{Cause: Activation},
 				0x1234,
 				SetpointCommandNormalObject{
 					0x567890, 100,
@@ -324,12 +324,12 @@ func TestSetpointCmdScaled(t *testing.T) {
 			args{
 				newConn(nil, t),
 				0,
-				CauseOfTransmission{Cause: Act},
+				CauseOfTransmission{Cause: Activation},
 				0x1234,
 				SetpointCommandScaledObject{}},
 			true},
 		{
-			"cause not Act and Deact",
+			"cause not Activation and Deactivation",
 			args{
 				newConn(nil, t),
 				C_SE_NB_1,
@@ -343,7 +343,7 @@ func TestSetpointCmdScaled(t *testing.T) {
 				newConn([]byte{byte(C_SE_NB_1), 0x01, 0x06, 0x00, 0x34, 0x12,
 					0x90, 0x78, 0x56, 0x64, 0x00, 0x01}, t),
 				C_SE_NB_1,
-				CauseOfTransmission{Cause: Act},
+				CauseOfTransmission{Cause: Activation},
 				0x1234,
 				SetpointCommandScaledObject{
 					0x567890,
@@ -357,7 +357,7 @@ func TestSetpointCmdScaled(t *testing.T) {
 				newConn(append([]byte{byte(C_SE_TB_1), 0x01, 0x06, 0x00, 0x34, 0x12,
 					0x90, 0x78, 0x56, 0x64, 0x00, 0x01}, tm0CP56Time2aBytes...), t),
 				C_SE_TB_1,
-				CauseOfTransmission{Cause: Act},
+				CauseOfTransmission{Cause: Activation},
 				0x1234,
 				SetpointCommandScaledObject{
 					0x567890, 100,
@@ -394,12 +394,12 @@ func TestSetpointCmdFloat(t *testing.T) {
 			args{
 				newConn(nil, t),
 				0,
-				CauseOfTransmission{Cause: Act},
+				CauseOfTransmission{Cause: Activation},
 				0x1234,
 				SetpointCommandFloatObject{}},
 			true},
 		{
-			"cause not Act and Deact",
+			"cause not Activation and Deactivation",
 			args{
 				newConn(nil, t),
 				C_SE_NC_1,
@@ -413,7 +413,7 @@ func TestSetpointCmdFloat(t *testing.T) {
 				newConn([]byte{byte(C_SE_NC_1), 0x01, 0x06, 0x00, 0x34, 0x12,
 					0x90, 0x78, 0x56, byte(bits), byte(bits >> 8), byte(bits >> 16), byte(bits >> 24), 0x01}, t),
 				C_SE_NC_1,
-				CauseOfTransmission{Cause: Act},
+				CauseOfTransmission{Cause: Activation},
 				0x1234,
 				SetpointCommandFloatObject{
 					0x567890,
@@ -428,7 +428,7 @@ func TestSetpointCmdFloat(t *testing.T) {
 					append([]byte{byte(C_SE_TC_1), 0x01, 0x06, 0x00, 0x34, 0x12,
 						0x90, 0x78, 0x56, byte(bits), byte(bits >> 8), byte(bits >> 16), byte(bits >> 24), 0x01}, tm0CP56Time2aBytes...), t),
 				C_SE_TC_1,
-				CauseOfTransmission{Cause: Act},
+				CauseOfTransmission{Cause: Activation},
 				0x1234,
 				SetpointCommandFloatObject{
 					0x567890, 100,
@@ -463,12 +463,12 @@ func TestBitsString32Cmd(t *testing.T) {
 			args{
 				newConn(nil, t),
 				0,
-				CauseOfTransmission{Cause: Act},
+				CauseOfTransmission{Cause: Activation},
 				0x1234,
 				BitsString32CommandObject{}},
 			true},
 		{
-			"cause not Act and Deact",
+			"cause not Activation and Deactivation",
 			args{
 				newConn(nil, t),
 				C_BO_NA_1,
@@ -482,7 +482,7 @@ func TestBitsString32Cmd(t *testing.T) {
 				newConn([]byte{byte(C_BO_NA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
 					0x90, 0x78, 0x56, 0x64, 0x00, 0x00, 0x00}, t),
 				C_BO_NA_1,
-				CauseOfTransmission{Cause: Act},
+				CauseOfTransmission{Cause: Activation},
 				0x1234,
 				BitsString32CommandObject{
 					0x567890,
@@ -495,7 +495,7 @@ func TestBitsString32Cmd(t *testing.T) {
 				newConn(append([]byte{byte(C_BO_TA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
 					0x90, 0x78, 0x56, 0x64, 0x00, 0x00, 0x00}, tm0CP56Time2aBytes...), t),
 				C_BO_TA_1,
-				CauseOfTransmission{Cause: Act},
+				CauseOfTransmission{Cause: Activation},
 				0x1234,
 				BitsString32CommandObject{
 					0x567890, 100,
@@ -531,7 +531,7 @@ func TestASDU_GetSingleCmd(t *testing.T) {
 			SingleCommandObject{
 				0x567890,
 				true,
-				QualifierOfCommand{QOCShortPulse, false},
+				QualifierOfCommand{QOCShortPulseDuration, false},
 				time.Time{}},
 		},
 		{
@@ -543,7 +543,7 @@ func TestASDU_GetSingleCmd(t *testing.T) {
 			SingleCommandObject{
 				0x567890,
 				false,
-				QualifierOfCommand{QOCShortPulse, false},
+				QualifierOfCommand{QOCShortPulseDuration, false},
 				tm0},
 		},
 	}
@@ -582,7 +582,7 @@ func TestASDU_GetDoubleCmd(t *testing.T) {
 			DoubleCommandObject{
 				0x567890,
 				DCOOn,
-				QualifierOfCommand{QOCShortPulse, false},
+				QualifierOfCommand{QOCShortPulseDuration, false},
 				time.Time{},
 			},
 		},
@@ -595,7 +595,7 @@ func TestASDU_GetDoubleCmd(t *testing.T) {
 			DoubleCommandObject{
 				0x567890,
 				DCOOff,
-				QualifierOfCommand{QOCShortPulse, false},
+				QualifierOfCommand{QOCShortPulseDuration, false},
 				tm0},
 		},
 	}
@@ -634,7 +634,7 @@ func TestASDU_GetStepCmd(t *testing.T) {
 			StepCommandObject{
 				0x567890,
 				SCOStepDown,
-				QualifierOfCommand{QOCShortPulse, false},
+				QualifierOfCommand{QOCShortPulseDuration, false},
 				time.Time{}},
 		},
 		{
@@ -646,7 +646,7 @@ func TestASDU_GetStepCmd(t *testing.T) {
 			StepCommandObject{
 				0x567890,
 				SCOStepUP,
-				QualifierOfCommand{QOCShortPulse, false},
+				QualifierOfCommand{QOCShortPulseDuration, false},
 				tm0},
 		},
 	}

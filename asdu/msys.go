@@ -8,7 +8,7 @@ func EndOfInitialization(c Connect, coa CauseOfTransmission, ca CommonAddr,
 		return err
 	}
 
-	coa.Cause = Init
+	coa.Cause = Initialized
 	u := NewASDU(c.Params(), Identifier{
 		M_EI_NA_1,
 		VariableStruct{IsSequence: false, Number: 1},

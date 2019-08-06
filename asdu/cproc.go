@@ -17,7 +17,7 @@ type SingleCommandObject struct {
 // 单命令
 func SingleCmd(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
 	cmd SingleCommandObject) error {
-	if !(coa.Cause == Act || coa.Cause == Deact) {
+	if !(coa.Cause == Activation || coa.Cause == Deactivation) {
 		return ErrCmdCause
 	}
 	if err := c.Params().Valid(); err != nil {
@@ -61,7 +61,7 @@ type DoubleCommandObject struct {
 // 双命令
 func DoubleCmd(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
 	cmd DoubleCommandObject) error {
-	if !(coa.Cause == Act || coa.Cause == Deact) {
+	if !(coa.Cause == Activation || coa.Cause == Deactivation) {
 		return ErrCmdCause
 	}
 	if err := c.Params().Valid(); err != nil {
@@ -101,7 +101,7 @@ type StepCommandObject struct {
 // 步调节命令
 func StepCmd(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
 	cmd StepCommandObject) error {
-	if !(coa.Cause == Act || coa.Cause == Deact) {
+	if !(coa.Cause == Activation || coa.Cause == Deactivation) {
 		return ErrCmdCause
 	}
 	if err := c.Params().Valid(); err != nil {
@@ -141,7 +141,7 @@ type SetpointCommandNormalObject struct {
 // 设定命令，规一化值
 func SetpointCmdNormal(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
 	cmd SetpointCommandNormalObject) error {
-	if !(coa.Cause == Act || coa.Cause == Deact) {
+	if !(coa.Cause == Activation || coa.Cause == Deactivation) {
 		return ErrCmdCause
 	}
 	if err := c.Params().Valid(); err != nil {
@@ -180,7 +180,7 @@ type SetpointCommandScaledObject struct {
 // 设定命令,标度化值
 func SetpointCmdScaled(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
 	cmd SetpointCommandScaledObject) error {
-	if !(coa.Cause == Act || coa.Cause == Deact) {
+	if !(coa.Cause == Activation || coa.Cause == Deactivation) {
 		return ErrCmdCause
 	}
 	if err := c.Params().Valid(); err != nil {
@@ -219,7 +219,7 @@ type SetpointCommandFloatObject struct {
 // 设定命令,短浮点数
 func SetpointCmdFloat(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
 	cmd SetpointCommandFloatObject) error {
-	if !(coa.Cause == Act || coa.Cause == Deact) {
+	if !(coa.Cause == Activation || coa.Cause == Deactivation) {
 		return ErrCmdCause
 	}
 	if err := c.Params().Valid(); err != nil {
@@ -259,7 +259,7 @@ type BitsString32CommandObject struct {
 // 比特串
 func BitsString32Cmd(c Connect, typeID TypeID, coa CauseOfTransmission, commonAddr CommonAddr,
 	cmd BitsString32CommandObject) error {
-	if !(coa.Cause == Act || coa.Cause == Deact) {
+	if !(coa.Cause == Activation || coa.Cause == Deactivation) {
 		return ErrCmdCause
 	}
 	if err := c.Params().Valid(); err != nil {

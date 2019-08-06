@@ -342,122 +342,122 @@ type OriginAddr byte
 // <48..63> 专用范围
 // NOTE: 信息对象带或不带时标由标识符类型的不同序列来区别
 const (
-	Unused   Cause = iota // unused
-	Percyc                // periodic, cyclic
-	Back                  // background scan
-	Spont                 // spontaneous 突发
-	Init                  // initialized
-	Req                   // request or requested
-	Act                   // activation  激活
-	Actcon                // activation confirmation 激活确认
-	Deact                 // deactivation 停止激活
-	Deactcon              // deactivation confirmation 停止激活确认
-	Actterm               // activation termination 激活停止
-	Retrem                // return information caused by a remote command
-	Retloc                // return information caused by a local command
-	File                  // file transfer
-	Auth                  // authentication
-	Seskey                // maintenance of authentication session key
-	Usrkey                // maintenance of user role and update key
-	_                     // reserved for further compatible definitions
-	_                     // reserved for further compatible definitions
-	_                     // reserved for further compatible definitions
-	Inrogen               // interrogated by station interrogation
-	Inro1                 // interrogated by group 1 interrogation
-	Inro2                 // interrogated by group 2 interrogation
-	Inro3                 // interrogated by group 3 interrogation
-	Inro4                 // interrogated by group 4 interrogation
-	Inro5                 // interrogated by group 5 interrogation
-	Inro6                 // interrogated by group 6 interrogation
-	Inro7                 // interrogated by group 7 interrogation
-	Inro8                 // interrogated by group 8 interrogation
-	Inro9                 // interrogated by group 9 interrogation
-	Inro10                // interrogated by group 10 interrogation
-	Inro11                // interrogated by group 11 interrogation
-	Inro12                // interrogated by group 12 interrogation
-	Inro13                // interrogated by group 13 interrogation
-	Inro14                // interrogated by group 14 interrogation
-	Inro15                // interrogated by group 15 interrogation
-	Inro16                // interrogated by group 16 interrogation
-	Reqcogen              // requested by general counter request
-	Reqco1                // requested by group 1 counter request
-	Reqco2                // requested by group 2 counter request
-	Reqco3                // requested by group 3 counter request
-	Reqco4                // requested by group 4 counter request
-	_                     // reserved for further compatible definitions
-	_                     // reserved for further compatible definitions
-	UnkType               // unknown type identification
-	UnkCause              // unknown cause of transmission
-	UnkAddr               // unknown common address of ASDU
-	UnkInfo               // unknown information object address
+	Unused                  Cause = iota // unused
+	Periodic                             // periodic, cyclic
+	Background                           // background scan
+	Spontaneous                          // spontaneous 突发
+	Initialized                          // initialized
+	Request                              // request or requested
+	Activation                           // activation  激活
+	ActivationCon                        // activation confirmation 激活确认
+	Deactivation                         // deactivation 停止激活
+	DeactivationCon                      // deactivation confirmation 停止激活确认
+	ActivationTerm                       // activation termination 激活停止
+	ReturnInfoRemote                     // return information caused by a remote command
+	ReturnInfoLocal                      // return information caused by a local command
+	FileTransfer                         // file transfer
+	Authentication                       // authentication
+	SessionKey                           // maintenance of authentication session key
+	UserRoleAndUpdateKey                 // maintenance of user role and update key
+	_                                    // reserved for further compatible definitions
+	_                                    // reserved for further compatible definitions
+	_                                    // reserved for further compatible definitions
+	InterrogatedByStation                // interrogated by station interrogation
+	InterrogatedByGroup1                 // interrogated by group 1 interrogation
+	InterrogatedByGroup2                 // interrogated by group 2 interrogation
+	InterrogatedByGroup3                 // interrogated by group 3 interrogation
+	InterrogatedByGroup4                 // interrogated by group 4 interrogation
+	InterrogatedByGroup5                 // interrogated by group 5 interrogation
+	InterrogatedByGroup6                 // interrogated by group 6 interrogation
+	InterrogatedByGroup7                 // interrogated by group 7 interrogation
+	InterrogatedByGroup8                 // interrogated by group 8 interrogation
+	InterrogatedByGroup9                 // interrogated by group 9 interrogation
+	InterrogatedByGroup10                // interrogated by group 10 interrogation
+	InterrogatedByGroup11                // interrogated by group 11 interrogation
+	InterrogatedByGroup12                // interrogated by group 12 interrogation
+	InterrogatedByGroup13                // interrogated by group 13 interrogation
+	InterrogatedByGroup14                // interrogated by group 14 interrogation
+	InterrogatedByGroup15                // interrogated by group 15 interrogation
+	InterrogatedByGroup16                // interrogated by group 16 interrogation
+	RequestByGeneralCounter              // requested by general counter request
+	RequestByGroup1Counter               // requested by group 1 counter request
+	RequestByGroup2Counter               // requested by group 2 counter request
+	RequestByGroup3Counter               // requested by group 3 counter request
+	RequestByGroup4Counter               // requested by group 4 counter request
+	_                                    // reserved for further compatible definitions
+	_                                    // reserved for further compatible definitions
+	UnknownTypeID                        // unknown type identification
+	UnknownCOT                           // unknown cause of transmission
+	UnknownCA                            // unknown common address of ASDU
+	UnknownIOA                           // unknown information object address
 )
 
 // Causal semantics description
 var causeSemantics = []string{
-	"unused0",
-	"percyc",
-	"back",
-	"spont",
-	"init",
-	"req",
-	"act",
-	"actcon",
-	"deact",
-	"deactcon",
-	"actterm",
-	"retrem",
-	"retloc",
-	"file",
-	"auth",
-	"seskey",
-	"usrkey",
-	"reserved17",
-	"reserved18",
-	"reserved19",
-	"inrogen",
-	"inro1",
-	"inro2",
-	"inro3",
-	"inro4",
-	"inro5",
-	"inro6",
-	"inro7",
-	"inro8",
-	"inro9",
-	"inro10",
-	"inro11",
-	"inro12",
-	"inro13",
-	"inro14",
-	"inro15",
-	"inro16",
-	"reqcogen",
-	"reqco1",
-	"reqco2",
-	"reqco3",
-	"reqco4",
-	"reserved42",
-	"reserved43",
-	"unktype",
-	"unkcause",
-	"unkaddr",
-	"unkinfo",
-	"special48",
-	"special49",
-	"special50",
-	"special51",
-	"special52",
-	"special53",
-	"special54",
-	"special55",
-	"special56",
-	"special57",
-	"special58",
-	"special59",
-	"special60",
-	"special61",
-	"special62",
-	"special63",
+	"Unused0",
+	"Periodic",
+	"Background",
+	"Spontaneous",
+	"Initialized",
+	"Request",
+	"Activation",
+	"ActivationCon",
+	"Deactivation",
+	"DeactivationCon",
+	"ActivationTerm",
+	"ReturnInfoRemote",
+	"ReturnInfoLocal",
+	"FileTransfer",
+	"Authentication",
+	"SessionKey",
+	"UserRoleAndUpdateKey",
+	"Reserved17",
+	"Reserved18",
+	"Reserved19",
+	"InterrogatedByStation",
+	"InterrogatedByGroup1",
+	"InterrogatedByGroup2",
+	"InterrogatedByGroup3",
+	"InterrogatedByGroup4",
+	"InterrogatedByGroup5",
+	"InterrogatedByGroup6",
+	"InterrogatedByGroup7",
+	"InterrogatedByGroup8",
+	"InterrogatedByGroup9",
+	"InterrogatedByGroup10",
+	"InterrogatedByGroup11",
+	"InterrogatedByGroup12",
+	"InterrogatedByGroup13",
+	"InterrogatedByGroup14",
+	"InterrogatedByGroup15",
+	"InterrogatedByGroup16",
+	"RequestByGeneralCounter",
+	"RequestByGroup1Counter",
+	"RequestByGroup2Counter",
+	"RequestByGroup3Counter",
+	"RequestByGroup4Counter",
+	"Reserved42",
+	"Reserved43",
+	"UnknownTypeID",
+	"UnknownCOT",
+	"UnknownCA",
+	"UnknownIOA",
+	"Special48",
+	"Special49",
+	"Special50",
+	"Special51",
+	"Special52",
+	"Special53",
+	"Special54",
+	"Special55",
+	"Special56",
+	"Special57",
+	"Special58",
+	"Special59",
+	"Special60",
+	"Special61",
+	"Special62",
+	"Special63",
 }
 
 // CauseOfTransmission is the cause of transmission.
