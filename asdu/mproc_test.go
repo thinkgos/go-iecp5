@@ -942,8 +942,8 @@ func TestMeasuredValueNormalNoQuality(t *testing.T) {
 				CauseOfTransmission{Cause: Background},
 				0x1234,
 				[]MeasuredValueNormalInfo{
-					{0x000001, 1, QDSGOOD, time.Time{}},
-					{0x000002, 2, QDSGOOD, time.Time{}},
+					{0x000001, 1, QDSGood, time.Time{}},
+					{0x000002, 2, QDSGood, time.Time{}},
 				}},
 			false,
 		},
@@ -956,8 +956,8 @@ func TestMeasuredValueNormalNoQuality(t *testing.T) {
 				CauseOfTransmission{Cause: Background},
 				0x1234,
 				[]MeasuredValueNormalInfo{
-					{0x000001, 1, QDSGOOD, time.Time{}},
-					{0x000002, 2, QDSGOOD, time.Time{}},
+					{0x000001, 1, QDSGood, time.Time{}},
+					{0x000002, 2, QDSGood, time.Time{}},
 				}},
 			false,
 		},
@@ -1877,8 +1877,8 @@ func TestASDU_GetMeasuredValueNormal(t *testing.T) {
 					Variable: VariableStruct{IsSequence: false, Number: 2}},
 				[]byte{0x01, 0x00, 0x00, 0x01, 0x00, 0x02, 0x00, 0x00, 0x02, 0x00}},
 			[]MeasuredValueNormalInfo{
-				{0x000001, 1, QDSGOOD, time.Time{}},
-				{0x000002, 2, QDSGOOD, time.Time{}}},
+				{0x000001, 1, QDSGood, time.Time{}},
+				{0x000002, 2, QDSGood, time.Time{}}},
 		},
 		{
 			"M_ME_ND_1 seq = true Number = 2",
@@ -1889,8 +1889,8 @@ func TestASDU_GetMeasuredValueNormal(t *testing.T) {
 					Variable: VariableStruct{IsSequence: true, Number: 2}},
 				[]byte{0x01, 0x00, 0x00, 0x01, 0x00, 0x02, 0x00}},
 			[]MeasuredValueNormalInfo{
-				{0x000001, 1, QDSGOOD, time.Time{}},
-				{0x000002, 2, QDSGOOD, time.Time{}}},
+				{0x000001, 1, QDSGood, time.Time{}},
+				{0x000002, 2, QDSGood, time.Time{}}},
 		},
 	}
 	for _, tt := range tests {

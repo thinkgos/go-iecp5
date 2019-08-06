@@ -28,7 +28,7 @@ func InterrogationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 		0,
 		ca,
 	})
-	if err := u.AppendInfoObjAddr(InfoObjIrrelevantAddr); err != nil {
+	if err := u.AppendInfoObjAddr(InfoObjAddrIrrelevant); err != nil {
 		return err
 	}
 	u.AppendBytes(byte(qoi))
@@ -52,7 +52,7 @@ func CounterInterrogationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 		0,
 		ca,
 	})
-	if err := u.AppendInfoObjAddr(InfoObjIrrelevantAddr); err != nil {
+	if err := u.AppendInfoObjAddr(InfoObjAddrIrrelevant); err != nil {
 		return err
 	}
 	u.AppendBytes(qcc.Value())
@@ -98,7 +98,7 @@ func ClockSynchronizationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 		0,
 		ca,
 	})
-	if err := u.AppendInfoObjAddr(InfoObjIrrelevantAddr); err != nil {
+	if err := u.AppendInfoObjAddr(InfoObjAddrIrrelevant); err != nil {
 		return err
 	}
 	u.AppendBytes(CP56Time2a(t, u.InfoObjTimeZone)...)
@@ -121,7 +121,7 @@ func TestCommand(c Connect, coa CauseOfTransmission, ca CommonAddr) error {
 		0,
 		ca,
 	})
-	if err := u.AppendInfoObjAddr(InfoObjIrrelevantAddr); err != nil {
+	if err := u.AppendInfoObjAddr(InfoObjAddrIrrelevant); err != nil {
 		return err
 	}
 	u.AppendBytes(byte(FBPTestWord&0xff), byte(FBPTestWord>>8))
@@ -145,7 +145,7 @@ func ResetProcessCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 		0,
 		ca,
 	})
-	if err := u.AppendInfoObjAddr(InfoObjIrrelevantAddr); err != nil {
+	if err := u.AppendInfoObjAddr(InfoObjAddrIrrelevant); err != nil {
 		return err
 	}
 	u.AppendBytes(byte(qrp))
@@ -172,7 +172,7 @@ func DelayAcquireCommand(c Connect, coa CauseOfTransmission, ca CommonAddr,
 		0,
 		ca,
 	})
-	if err := u.AppendInfoObjAddr(InfoObjIrrelevantAddr); err != nil {
+	if err := u.AppendInfoObjAddr(InfoObjAddrIrrelevant); err != nil {
 		return err
 	}
 	u.AppendBytes(CP16Time2a(msec)...)

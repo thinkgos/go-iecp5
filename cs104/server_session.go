@@ -419,7 +419,7 @@ func (this *SrvSession) serverHandler(asduPack *asdu.ASDU) error {
 			return asduPack.SendReplyMirror(this, asdu.UnknownCA)
 		}
 		ioa, qoi := asduPack.GetInterrogationCmd()
-		if ioa != asdu.InfoObjIrrelevantAddr {
+		if ioa != asdu.InfoObjAddrIrrelevant {
 			return asduPack.SendReplyMirror(this, asdu.UnknownIOA)
 		}
 		return this.handler.InterrogationHandler(this, asduPack, qoi)
@@ -432,7 +432,7 @@ func (this *SrvSession) serverHandler(asduPack *asdu.ASDU) error {
 			return asduPack.SendReplyMirror(this, asdu.UnknownCA)
 		}
 		ioa, qcc := asduPack.GetCounterInterrogationCmd()
-		if ioa != asdu.InfoObjIrrelevantAddr {
+		if ioa != asdu.InfoObjAddrIrrelevant {
 			return asduPack.SendReplyMirror(this, asdu.UnknownIOA)
 		}
 		return this.handler.CounterInterrogationHandler(this, asduPack, qcc)
@@ -455,7 +455,7 @@ func (this *SrvSession) serverHandler(asduPack *asdu.ASDU) error {
 		}
 
 		ioa, tm := asduPack.GetClockSynchronizationCmd()
-		if ioa != asdu.InfoObjIrrelevantAddr {
+		if ioa != asdu.InfoObjAddrIrrelevant {
 			return asduPack.SendReplyMirror(this, asdu.UnknownIOA)
 		}
 		return this.handler.ClockSyncHandler(this, asduPack, tm)
@@ -468,7 +468,7 @@ func (this *SrvSession) serverHandler(asduPack *asdu.ASDU) error {
 			return asduPack.SendReplyMirror(this, asdu.UnknownCA)
 		}
 		ioa, _ := asduPack.GetTestCommand()
-		if ioa != asdu.InfoObjIrrelevantAddr {
+		if ioa != asdu.InfoObjAddrIrrelevant {
 			return asduPack.SendReplyMirror(this, asdu.UnknownIOA)
 		}
 		return asduPack.SendReplyMirror(this, asdu.ActivationCon)
@@ -481,7 +481,7 @@ func (this *SrvSession) serverHandler(asduPack *asdu.ASDU) error {
 			return asduPack.SendReplyMirror(this, asdu.UnknownCA)
 		}
 		ioa, qrp := asduPack.GetResetProcessCmd()
-		if ioa != asdu.InfoObjIrrelevantAddr {
+		if ioa != asdu.InfoObjAddrIrrelevant {
 			return asduPack.SendReplyMirror(this, asdu.UnknownIOA)
 		}
 		return this.handler.ResetProcessHandler(this, asduPack, qrp)
@@ -494,7 +494,7 @@ func (this *SrvSession) serverHandler(asduPack *asdu.ASDU) error {
 			return asduPack.SendReplyMirror(this, asdu.UnknownCA)
 		}
 		ioa, msec := asduPack.GetDelayAcquireCommand()
-		if ioa != asdu.InfoObjIrrelevantAddr {
+		if ioa != asdu.InfoObjAddrIrrelevant {
 			return asduPack.SendReplyMirror(this, asdu.UnknownIOA)
 		}
 		return this.handler.DelayAcquisitionHandler(this, asduPack, msec)

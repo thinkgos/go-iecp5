@@ -2,22 +2,17 @@ package asdu
 
 // about information object 应用服务数据单元 - 信息对象
 
-// Ioa is the information object address.
-// The width is controlled by Params.InfoObjAddrSize.
+// IOA is the information object address.
 // See companion standard 101, subclass 7.2.5.
-// - width 1
+// The width is controlled by Params.InfoObjAddrSize.
 // <0>: 无关的信息对象地址
-// <1..255>: 信息对象地址
-// - width 2
-// <0>: 无关的信息对象地址
-// <1..65535>: 信息对象地址
-// - width 3
-// <0>: 无关的信息对象地址
-// <1..16777215>: 信息对象地址
+// - width 1: <1..255>
+// - width 2: <1..65535>
+// - width 3: <1..16777215>
 type InfoObjAddr uint
 
-// InfoObjIrrelevantAddr Zero means that the information object address is irrelevant.
-const InfoObjIrrelevantAddr InfoObjAddr = 0
+// InfoObjAddrIrrelevant Zero means that the information object address is irrelevant.
+const InfoObjAddrIrrelevant InfoObjAddr = 0
 
 // SinglePoint is a measured value of a switch.
 // See companion standard 101, subclass 7.2.6.1.
@@ -52,38 +47,32 @@ func (this DoublePoint) Value() byte {
 }
 
 // Quality descriptor flags attribute measured values.
+// See companion standard 101, subclass 7.2.6.3.
 type QualityDescriptor byte
 
 // Quality descriptor flags attribute measured values.
-// See companion standard 101, subclass 7.2.6.3.
 const (
 	// QDSOverflow marks whether the value is beyond a predefined range.
 	QDSOverflow QualityDescriptor = 1 << iota
-
-	_ // reserve
-	_ // reserve
-
+	_                             // reserve
+	_                             // reserve
 	// QDSElapsedTimeInvalid flags that the elapsed time was incorrectly acquired.
 	// This attribute is only valid for events of protection equipment.
 	// See companion standard 101, subclass 7.2.6.4.
 	QDSElapsedTimeInvalid
-
 	// QDSBlocked flags that the value is blocked for transmission; the
 	// value remains in the state that was acquired before it was blocked.
 	QDSBlocked
-
 	// QDSSubstituted flags that the value was provided by the input of
 	// an operator (dispatcher) instead of an automatic source.
 	QDSSubstituted
-
 	// QDSNotTopical flags that the most recent update was unsuccessful.
 	QDSNotTopical
-
 	// QDSInvalid flags that the value was incorrectly acquired.
 	QDSInvalid
 
-	// QDSGOOD means no flags, no problems.
-	QDSGOOD = 0
+	// QDSGood means no flags, no problems.
+	QDSGood = 0
 )
 
 // StepPosition is a measured value with transient state indication.
@@ -155,7 +144,6 @@ const (
 	OCICommandL1
 	OCICommandL2
 	OCICommandL3
-
 	// other reserved
 )
 
