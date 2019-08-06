@@ -111,6 +111,19 @@ func (this *ASDU) DecodeBitsString32() uint32 {
 	return v
 }
 
+func (this *ASDU) AppendBinaryCounterReading(v BinaryCounterReading) *ASDU {
+	this.infoObj = append(this.infoObj, byte(v.CounterReading), byte(v.CounterReading>>8),
+		byte(v.CounterReading>>16), byte(v.CounterReading>>24), v.SequenceNotation)
+	return this
+}
+
+func (this *ASDU) DecodeBinaryCounterReading() BinaryCounterReading {
+	v := int32(binary.LittleEndian.Uint32(this.infoObj))
+	b := this.infoObj[4]
+	this.infoObj = this.infoObj[5:]
+	return BinaryCounterReading{v, b}
+}
+
 // AppendNormalize append a CP56Time2a value to info object
 func (this *ASDU) DecodeCP56Time2a() time.Time {
 	t := ParseCP56Time2a(this.infoObj, this.Params.InfoObjTimeZone)

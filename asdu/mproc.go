@@ -6,6 +6,7 @@ import (
 
 // 在监视方向过程信息的应用服务数据单元
 
+// checkValid check common parameter of request is valid
 func checkValid(c Connect, typeID TypeID, isSequence bool, infosLen int) error {
 	if infosLen == 0 {
 		return ErrNotAnyObjInfo
@@ -619,6 +620,82 @@ func MeasuredValueFloatCP56Time2a(c Connect, coa CauseOfTransmission,
 	return measuredValueFloat(c, M_ME_TF_1, false, coa, ca, infos...)
 }
 
+// BinaryCounterReadingInfo are the counter reading attributes.
+type BinaryCounterReadingInfo struct {
+	Ioa InfoObjAddr
+
+	Value BinaryCounterReading
+
+	// The timestamp is nil when the data is invalid or
+	// when the type does not include timing at all.
+	Time time.Time
+}
+
+// integratedTotals sends a type identification M_IT_NA_1, M_IT_TA_1 or M_IT_TB_1.
+// subclass 7.3.1.15 - 7.3.1.16 - 7.3.1.29
+// 累计量
+func integratedTotals(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
+	ca CommonAddr, infos ...BinaryCounterReadingInfo) error {
+	if err := checkValid(c, typeID, isSequence, len(infos)); err != nil {
+		return err
+	}
+
+	u := NewASDU(c.Params(), Identifier{
+		typeID,
+		VariableStruct{IsSequence: isSequence},
+		coa,
+		0,
+		ca,
+	})
+	if err := u.SetVariableNumber(len(infos)); err != nil {
+		return err
+	}
+	once := false
+	for _, v := range infos {
+		if !isSequence || !once {
+			once = true
+			if err := u.AppendInfoObjAddr(v.Ioa); err != nil {
+				return err
+			}
+		}
+		u.AppendBinaryCounterReading(v.Value)
+		switch typeID {
+		case M_IT_NA_1:
+		case M_IT_TA_1:
+			u.AppendBytes(CP24Time2a(v.Time, u.InfoObjTimeZone)...)
+		case M_IT_TB_1:
+			u.AppendBytes(CP56Time2a(v.Time, u.InfoObjTimeZone)...)
+		default:
+			return ErrTypeIDNotMatch
+		}
+	}
+	return c.Send(u)
+}
+
+func IntegratedTotals(c Connect, isSequence bool, coa CauseOfTransmission,
+	ca CommonAddr, infos ...BinaryCounterReadingInfo) error {
+	if !(coa.Cause == Spont || (coa.Cause >= Reqcogen && coa.Cause <= Reqco4)) {
+		return ErrCmdCause
+	}
+	return integratedTotals(c, M_IT_NA_1, isSequence, coa, ca, infos...)
+}
+
+func IntegratedTotalsCP24Time2a(c Connect, coa CauseOfTransmission,
+	ca CommonAddr, infos ...BinaryCounterReadingInfo) error {
+	if !(coa.Cause == Spont || (coa.Cause >= Reqcogen && coa.Cause <= Reqco4)) {
+		return ErrCmdCause
+	}
+	return integratedTotals(c, M_IT_TA_1, false, coa, ca, infos...)
+}
+
+func IntegratedTotalsCP56Time2a(c Connect, coa CauseOfTransmission,
+	ca CommonAddr, infos ...BinaryCounterReadingInfo) error {
+	if !(coa.Cause == Spont || (coa.Cause >= Reqcogen && coa.Cause <= Reqco4)) {
+		return ErrCmdCause
+	}
+	return integratedTotals(c, M_IT_TB_1, false, coa, ca, infos...)
+}
+
 func (this *ASDU) GetSinglePoint() []SinglePointInfo {
 	info := make([]SinglePointInfo, 0, this.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
@@ -850,6 +927,37 @@ func (this *ASDU) GetMeasuredValueFloat() []MeasuredValueFloatInfo {
 			Ioa:   infoObjAddr,
 			Value: value,
 			Qds:   QualityDescriptor(qua),
+			Time:  t})
+	}
+	return info
+}
+
+func (this *ASDU) GetIntegratedTotals() []BinaryCounterReadingInfo {
+	info := make([]BinaryCounterReadingInfo, 0, this.Variable.Number)
+	infoObjAddr := InfoObjAddr(0)
+	for i, once := 0, false; i < int(this.Variable.Number); i++ {
+		if !this.Variable.IsSequence || !once {
+			once = true
+			infoObjAddr = this.DecodeInfoObjAddr()
+		} else {
+			infoObjAddr++
+		}
+
+		value := this.DecodeBinaryCounterReading()
+
+		var t time.Time
+		switch this.Type {
+		case M_IT_NA_1:
+		case M_IT_TA_1:
+			t = this.DecodeCP24Time2a()
+		case M_IT_TB_1:
+			t = this.DecodeCP56Time2a()
+		default:
+			panic(ErrTypeIDNotMatch)
+		}
+		info = append(info, BinaryCounterReadingInfo{
+			Ioa:   infoObjAddr,
+			Value: value,
 			Time:  t})
 	}
 	return info

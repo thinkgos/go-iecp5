@@ -128,6 +128,12 @@ func (this Normalize) Float64() float64 {
 	return float64(this) / 32768
 }
 
+// BinaryCounterReading
+type BinaryCounterReading struct {
+	CounterReading   int32
+	SequenceNotation byte
+}
+
 // See companion standard 101, subclass 7.2.6.14.
 const FBPTestWord uint16 = 0x55aa
 
