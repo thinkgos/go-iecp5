@@ -696,6 +696,15 @@ func IntegratedTotalsCP56Time2a(c Connect, coa CauseOfTransmission,
 	return integratedTotals(c, M_IT_TB_1, false, coa, ca, infos...)
 }
 
+// TODO: follow
+// EventOfProtectionEquipment
+// EventOfProtectionEquipmentCP56Time2a
+// PackedStartEventsOfProtectionEquipment
+// PackedStartEventsOfProtectionEquipmentCP56Time2a
+// PackedOutputCircuitInfo
+// PackedOutputCircuitInfoCP56Time2a
+// PackedSinglePointWithSCD
+
 func (this *ASDU) GetSinglePoint() []SinglePointInfo {
 	info := make([]SinglePointInfo, 0, this.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
