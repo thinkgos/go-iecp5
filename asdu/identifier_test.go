@@ -165,10 +165,10 @@ func TestCauseOfTransmission_String(t *testing.T) {
 		this CauseOfTransmission
 		want string
 	}{
-		{"no test and neg", CauseOfTransmission{Cause: Periodic}, "COT<percyc>"},
-		{"with test", CauseOfTransmission{Cause: Periodic, IsTest: true}, "COT<percyc,test>"},
-		{"with neg", CauseOfTransmission{Cause: Periodic, IsNegative: true}, "COT<percyc,neg>"},
-		{"with test and neg", CauseOfTransmission{Cause: Periodic, IsTest: true, IsNegative: true}, "COT<percyc,neg,test>"},
+		{"no test and neg", CauseOfTransmission{Cause: Periodic}, "COT<Periodic>"},
+		{"with test", CauseOfTransmission{Cause: Periodic, IsTest: true}, "COT<Periodic,test>"},
+		{"with neg", CauseOfTransmission{Cause: Periodic, IsNegative: true}, "COT<Periodic,neg>"},
+		{"with test and neg", CauseOfTransmission{Cause: Periodic, IsTest: true, IsNegative: true}, "COT<Periodic,neg,test>"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
