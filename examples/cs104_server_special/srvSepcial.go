@@ -14,7 +14,7 @@ func main() {
 	srv, _ := cs104.NewServerSpecial(&cs104.Config{}, asdu.ParamsWide, &mysrv{})
 
 	srv.LogMode(true)
-	err := srv.AddRemoteServer("192.168.199.214:2404") //"183.134.216.94:15021"
+	err := srv.AddRemoteServer("192.168.199.214:2404")
 	if err != nil {
 		log.Println(err)
 	}
