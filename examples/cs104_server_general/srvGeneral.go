@@ -28,7 +28,7 @@ type mysrv struct{}
 func (this *mysrv) InterrogationHandler(c asdu.Connect, asduPack *asdu.ASDU, qoi asdu.QualifierOfInterrogation) error {
 	log.Println("qoi", qoi)
 	asduPack.SendReplyMirror(c, asdu.ActivationCon)
-	err := asdu.Single(c, false, asdu.CauseOfTransmission{Cause: asdu.Inrogen}, asdu.GlobalCommonAddr,
+	err := asdu.Single(c, false, asdu.CauseOfTransmission{Cause: asdu.InterrogatedByStation}, asdu.GlobalCommonAddr,
 		asdu.SinglePointInfo{})
 	if err != nil {
 		// log.Println("falied")
