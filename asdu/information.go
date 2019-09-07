@@ -2,7 +2,7 @@ package asdu
 
 // about information object 应用服务数据单元 - 信息对象
 
-// IOA is the information object address.
+// InfoObjAddr is the information object address.
 // See companion standard 101, subclass 7.2.5.
 // The width is controlled by Params.InfoObjAddrSize.
 // <0>: 无关的信息对象地址

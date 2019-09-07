@@ -12,15 +12,15 @@ const (
 	ASDUSizeMax = 249 // ASDU max size
 )
 
-// ASDU form
-// | data unit identification | information object <1..n> |
+// ASDU format
+//       | data unit identification | information object <1..n> |
 //
-//      | <------------  data unit identification --------->|
-//      | typeID | variable struct | cause | common address |
-// bytes|    1   |      1          | [1,2] |     [1,2]      |
-//      | <------------  information object -------------->|
-//      | object address | element set | object time scale |
-// bytes|     [1,2,3]    |             |                   |
+//       | <------------  data unit identification ------------>|
+//       | typeID | variable struct | cause  |  common address  |
+// bytes |    1   |      1          | [1,2]  |      [1,2]       |
+//       | <------------  information object ------------------>|
+//       | object address | element set  |  object time scale   |
+// bytes |     [1,2,3]    |              |                      |
 
 var (
 	// ParamsNarrow is the smallest configuration.
@@ -64,7 +64,7 @@ func (this Params) Valid() error {
 	return nil
 }
 
-// ValidCommonAddr returns the validation result of a station address.
+// ValidCommonAddr returns the validation result of a station common address.
 func (this Params) ValidCommonAddr(addr CommonAddr) error {
 	if addr == InvalidCommonAddr {
 		return ErrCommonAddrZero
@@ -75,12 +75,12 @@ func (this Params) ValidCommonAddr(addr CommonAddr) error {
 	return nil
 }
 
-// IdentifierSize the application data unit identifies size
+// IdentifierSize return the application service data unit identifies size
 func (this Params) IdentifierSize() int {
 	return 2 + int(this.CauseSize) + int(this.CommonAddrSize)
 }
 
-// Identifier the application data unit identifies.
+// Identifier the application service data unit identifies.
 type Identifier struct {
 	// type identification, information content
 	Type TypeID
@@ -97,7 +97,7 @@ type Identifier struct {
 	CommonAddr CommonAddr // station address 公共地址是站地址
 }
 
-// String 返回数据单元标识符的信息like "TypeID Cause OrigAddr@CommonAddr"
+// String 返回数据单元标识符的信息,例： "TypeID Cause OrigAddr@CommonAddr"
 func (id Identifier) String() string {
 	if id.OrigAddr == 0 {
 		return fmt.Sprintf("%s %s @%d", id.Type, id.Coa, id.CommonAddr)
@@ -113,6 +113,7 @@ type ASDU struct {
 	bootstrap [ASDUSizeMax]byte // prevents Info malloc
 }
 
+// NewEmptyASDU new empty asdu with special params
 func NewEmptyASDU(p *Params) *ASDU {
 	a := &ASDU{Params: p}
 	lenDUI := a.IdentifierSize()
@@ -120,12 +121,14 @@ func NewEmptyASDU(p *Params) *ASDU {
 	return a
 }
 
+// NewASDU new asdu with special params and identifier
 func NewASDU(p *Params, identifier Identifier) *ASDU {
 	a := NewEmptyASDU(p)
 	a.Identifier = identifier
 	return a
 }
 
+// Clone deep clone asdu
 func (this *ASDU) Clone() *ASDU {
 	r := NewASDU(this.Params, this.Identifier)
 	r.infoObj = append(r.infoObj, this.infoObj...)
@@ -151,7 +154,7 @@ func (this *ASDU) SetVariableNumber(n int) error {
 //	})
 //}
 
-// Reply returns a new "responding" ASDU which addresses "initiating" u with a copy of Info.
+// Reply returns a new "responding" ASDU which addresses "initiating" addr with a copy of Info.
 func (this *ASDU) Reply(c Cause, addr CommonAddr) *ASDU {
 	this.CommonAddr = addr
 	r := NewASDU(this.Params, this.Identifier)
@@ -294,6 +297,7 @@ func (this *ASDU) UnmarshalBinary(rawAsdu []byte) error {
 	return this.fixInfoObjSize()
 }
 
+// fixInfoObjSize fix information object size
 func (this *ASDU) fixInfoObjSize() error {
 	// fixed element size
 	objSize, err := GetInfoObjSize(this.Type)

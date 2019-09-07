@@ -19,7 +19,7 @@ func (this *ASDU) DecodeByte() byte {
 	return v
 }
 
-// AppendInfoObjAddr append info object address to info object
+// AppendInfoObjAddr append information object address to information object
 func (this *ASDU) AppendInfoObjAddr(addr InfoObjAddr) error {
 	switch this.InfoObjAddrSize {
 	case 1:
