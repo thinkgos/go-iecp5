@@ -39,7 +39,7 @@ func TestSingleCmd(t *testing.T) {
 		typeID TypeID
 		coa    CauseOfTransmission
 		ca     CommonAddr
-		cmd    SingleCommandObject
+		cmd    SingleCommandInfo
 	}
 	tests := []struct {
 		name    string
@@ -53,7 +53,7 @@ func TestSingleCmd(t *testing.T) {
 				0,
 				CauseOfTransmission{Cause: Activation},
 				0x1234,
-				SingleCommandObject{}},
+				SingleCommandInfo{}},
 			true},
 		{
 			"cause not Activation and Deactivation",
@@ -62,7 +62,7 @@ func TestSingleCmd(t *testing.T) {
 				C_SC_NA_1,
 				CauseOfTransmission{Cause: Unused},
 				0x1234,
-				SingleCommandObject{}},
+				SingleCommandInfo{}},
 			true},
 		{
 			"C_SC_NA_1",
@@ -72,7 +72,7 @@ func TestSingleCmd(t *testing.T) {
 				C_SC_NA_1,
 				CauseOfTransmission{Cause: Activation},
 				0x1234,
-				SingleCommandObject{
+				SingleCommandInfo{
 					0x567890,
 					true,
 					QualifierOfCommand{QOCShortPulseDuration, false},
@@ -86,7 +86,7 @@ func TestSingleCmd(t *testing.T) {
 				C_SC_TA_1,
 				CauseOfTransmission{Cause: Activation},
 				0x1234,
-				SingleCommandObject{
+				SingleCommandInfo{
 					0x567890, false,
 					QualifierOfCommand{QOCShortPulseDuration, false},
 					tm0}},
@@ -107,7 +107,7 @@ func TestDoubleCmd(t *testing.T) {
 		typeID TypeID
 		coa    CauseOfTransmission
 		ca     CommonAddr
-		cmd    DoubleCommandObject
+		cmd    DoubleCommandInfo
 	}
 	tests := []struct {
 		name    string
@@ -121,7 +121,7 @@ func TestDoubleCmd(t *testing.T) {
 				0,
 				CauseOfTransmission{Cause: Activation},
 				0x1234,
-				DoubleCommandObject{}},
+				DoubleCommandInfo{}},
 			true},
 		{
 			"cause not Activation and Deactivation",
@@ -130,7 +130,7 @@ func TestDoubleCmd(t *testing.T) {
 				C_DC_NA_1,
 				CauseOfTransmission{Cause: Unused},
 				0x1234,
-				DoubleCommandObject{}},
+				DoubleCommandInfo{}},
 			true},
 		{
 			"C_DC_NA_1",
@@ -140,7 +140,7 @@ func TestDoubleCmd(t *testing.T) {
 				C_DC_NA_1,
 				CauseOfTransmission{Cause: Activation},
 				0x1234,
-				DoubleCommandObject{
+				DoubleCommandInfo{
 					0x567890,
 					DCOOn,
 					QualifierOfCommand{QOCShortPulseDuration, false},
@@ -154,7 +154,7 @@ func TestDoubleCmd(t *testing.T) {
 				C_DC_TA_1,
 				CauseOfTransmission{Cause: Activation},
 				0x1234,
-				DoubleCommandObject{
+				DoubleCommandInfo{
 					0x567890,
 					DCOOff,
 					QualifierOfCommand{QOCShortPulseDuration, false},
@@ -176,7 +176,7 @@ func TestStepCmd(t *testing.T) {
 		typeID TypeID
 		coa    CauseOfTransmission
 		ca     CommonAddr
-		cmd    StepCommandObject
+		cmd    StepCommandInfo
 	}
 	tests := []struct {
 		name    string
@@ -190,7 +190,7 @@ func TestStepCmd(t *testing.T) {
 				0,
 				CauseOfTransmission{Cause: Activation},
 				0x1234,
-				StepCommandObject{}},
+				StepCommandInfo{}},
 			true},
 		{
 			"cause not Activation and Deactivation", args{
@@ -198,7 +198,7 @@ func TestStepCmd(t *testing.T) {
 				C_RC_NA_1,
 				CauseOfTransmission{Cause: Unused},
 				0x1234,
-				StepCommandObject{}},
+				StepCommandInfo{}},
 			true},
 		{
 			"C_RC_NA_1",
@@ -208,7 +208,7 @@ func TestStepCmd(t *testing.T) {
 				C_RC_NA_1,
 				CauseOfTransmission{Cause: Activation},
 				0x1234,
-				StepCommandObject{
+				StepCommandInfo{
 					0x567890,
 					SCOStepDown,
 					QualifierOfCommand{QOCShortPulseDuration, false},
@@ -222,7 +222,7 @@ func TestStepCmd(t *testing.T) {
 				C_RC_TA_1,
 				CauseOfTransmission{Cause: Activation},
 				0x1234,
-				StepCommandObject{
+				StepCommandInfo{
 					0x567890,
 					SCOStepUP,
 					QualifierOfCommand{QOCShortPulseDuration, false},
@@ -244,7 +244,7 @@ func TestSetpointCmdNormal(t *testing.T) {
 		typeID TypeID
 		coa    CauseOfTransmission
 		ca     CommonAddr
-		cmd    SetpointCommandNormalObject
+		cmd    SetpointCommandNormalInfo
 	}
 	tests := []struct {
 		name    string
@@ -258,7 +258,7 @@ func TestSetpointCmdNormal(t *testing.T) {
 				0,
 				CauseOfTransmission{Cause: Activation},
 				0x1234,
-				SetpointCommandNormalObject{}},
+				SetpointCommandNormalInfo{}},
 			true},
 		{
 			"cause not Activation and Deactivation",
@@ -267,7 +267,7 @@ func TestSetpointCmdNormal(t *testing.T) {
 				C_SE_NA_1,
 				CauseOfTransmission{Cause: Unused},
 				0x1234,
-				SetpointCommandNormalObject{}},
+				SetpointCommandNormalInfo{}},
 			true},
 		{
 			"C_SE_NA_1",
@@ -277,7 +277,7 @@ func TestSetpointCmdNormal(t *testing.T) {
 				C_SE_NA_1,
 				CauseOfTransmission{Cause: Activation},
 				0x1234,
-				SetpointCommandNormalObject{
+				SetpointCommandNormalInfo{
 					0x567890,
 					100,
 					QualifierOfSetpointCmd{1, false},
@@ -291,7 +291,7 @@ func TestSetpointCmdNormal(t *testing.T) {
 				C_SE_TA_1,
 				CauseOfTransmission{Cause: Activation},
 				0x1234,
-				SetpointCommandNormalObject{
+				SetpointCommandNormalInfo{
 					0x567890, 100,
 					QualifierOfSetpointCmd{1, false},
 					tm0}},
@@ -312,7 +312,7 @@ func TestSetpointCmdScaled(t *testing.T) {
 		typeID TypeID
 		coa    CauseOfTransmission
 		ca     CommonAddr
-		cmd    SetpointCommandScaledObject
+		cmd    SetpointCommandScaledInfo
 	}
 	tests := []struct {
 		name    string
@@ -326,7 +326,7 @@ func TestSetpointCmdScaled(t *testing.T) {
 				0,
 				CauseOfTransmission{Cause: Activation},
 				0x1234,
-				SetpointCommandScaledObject{}},
+				SetpointCommandScaledInfo{}},
 			true},
 		{
 			"cause not Activation and Deactivation",
@@ -335,7 +335,7 @@ func TestSetpointCmdScaled(t *testing.T) {
 				C_SE_NB_1,
 				CauseOfTransmission{Cause: Unused},
 				0x1234,
-				SetpointCommandScaledObject{}},
+				SetpointCommandScaledInfo{}},
 			true},
 		{
 			"C_SE_NB_1",
@@ -345,7 +345,7 @@ func TestSetpointCmdScaled(t *testing.T) {
 				C_SE_NB_1,
 				CauseOfTransmission{Cause: Activation},
 				0x1234,
-				SetpointCommandScaledObject{
+				SetpointCommandScaledInfo{
 					0x567890,
 					100,
 					QualifierOfSetpointCmd{1, false},
@@ -359,7 +359,7 @@ func TestSetpointCmdScaled(t *testing.T) {
 				C_SE_TB_1,
 				CauseOfTransmission{Cause: Activation},
 				0x1234,
-				SetpointCommandScaledObject{
+				SetpointCommandScaledInfo{
 					0x567890, 100,
 					QualifierOfSetpointCmd{1, false},
 					tm0}},
@@ -382,7 +382,7 @@ func TestSetpointCmdFloat(t *testing.T) {
 		typeID TypeID
 		coa    CauseOfTransmission
 		ca     CommonAddr
-		cmd    SetpointCommandFloatObject
+		cmd    SetpointCommandFloatInfo
 	}
 	tests := []struct {
 		name    string
@@ -396,7 +396,7 @@ func TestSetpointCmdFloat(t *testing.T) {
 				0,
 				CauseOfTransmission{Cause: Activation},
 				0x1234,
-				SetpointCommandFloatObject{}},
+				SetpointCommandFloatInfo{}},
 			true},
 		{
 			"cause not Activation and Deactivation",
@@ -405,7 +405,7 @@ func TestSetpointCmdFloat(t *testing.T) {
 				C_SE_NC_1,
 				CauseOfTransmission{Cause: Unused},
 				0x1234,
-				SetpointCommandFloatObject{}},
+				SetpointCommandFloatInfo{}},
 			true},
 		{
 			"C_SE_NC_1",
@@ -415,7 +415,7 @@ func TestSetpointCmdFloat(t *testing.T) {
 				C_SE_NC_1,
 				CauseOfTransmission{Cause: Activation},
 				0x1234,
-				SetpointCommandFloatObject{
+				SetpointCommandFloatInfo{
 					0x567890,
 					100,
 					QualifierOfSetpointCmd{1, false},
@@ -430,7 +430,7 @@ func TestSetpointCmdFloat(t *testing.T) {
 				C_SE_TC_1,
 				CauseOfTransmission{Cause: Activation},
 				0x1234,
-				SetpointCommandFloatObject{
+				SetpointCommandFloatInfo{
 					0x567890, 100,
 					QualifierOfSetpointCmd{1, false},
 					tm0}},
@@ -451,7 +451,7 @@ func TestBitsString32Cmd(t *testing.T) {
 		typeID     TypeID
 		coa        CauseOfTransmission
 		commonAddr CommonAddr
-		cmd        BitsString32CommandObject
+		cmd        BitsString32CommandInfo
 	}
 	tests := []struct {
 		name    string
@@ -465,7 +465,7 @@ func TestBitsString32Cmd(t *testing.T) {
 				0,
 				CauseOfTransmission{Cause: Activation},
 				0x1234,
-				BitsString32CommandObject{}},
+				BitsString32CommandInfo{}},
 			true},
 		{
 			"cause not Activation and Deactivation",
@@ -474,7 +474,7 @@ func TestBitsString32Cmd(t *testing.T) {
 				C_BO_NA_1,
 				CauseOfTransmission{Cause: Unused},
 				0x1234,
-				BitsString32CommandObject{}},
+				BitsString32CommandInfo{}},
 			true},
 		{
 			"C_BO_NA_1",
@@ -484,7 +484,7 @@ func TestBitsString32Cmd(t *testing.T) {
 				C_BO_NA_1,
 				CauseOfTransmission{Cause: Activation},
 				0x1234,
-				BitsString32CommandObject{
+				BitsString32CommandInfo{
 					0x567890,
 					100,
 					time.Time{}}},
@@ -497,7 +497,7 @@ func TestBitsString32Cmd(t *testing.T) {
 				C_BO_TA_1,
 				CauseOfTransmission{Cause: Activation},
 				0x1234,
-				BitsString32CommandObject{
+				BitsString32CommandInfo{
 					0x567890, 100,
 					tm0}},
 			false},
@@ -520,7 +520,7 @@ func TestASDU_GetSingleCmd(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   SingleCommandObject
+		want   SingleCommandInfo
 	}{
 		{
 			"C_SC_NA_1",
@@ -528,7 +528,7 @@ func TestASDU_GetSingleCmd(t *testing.T) {
 				ParamsWide,
 				Identifier{Type: C_SC_NA_1},
 				[]byte{0x90, 0x78, 0x56, 0x05}},
-			SingleCommandObject{
+			SingleCommandInfo{
 				0x567890,
 				true,
 				QualifierOfCommand{QOCShortPulseDuration, false},
@@ -540,7 +540,7 @@ func TestASDU_GetSingleCmd(t *testing.T) {
 				ParamsWide,
 				Identifier{Type: C_SC_TA_1},
 				append([]byte{0x90, 0x78, 0x56, 0x04}, tm0CP56Time2aBytes...)},
-			SingleCommandObject{
+			SingleCommandInfo{
 				0x567890,
 				false,
 				QualifierOfCommand{QOCShortPulseDuration, false},
@@ -571,7 +571,7 @@ func TestASDU_GetDoubleCmd(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   DoubleCommandObject
+		want   DoubleCommandInfo
 	}{
 		{
 			"C_DC_NA_1",
@@ -579,7 +579,7 @@ func TestASDU_GetDoubleCmd(t *testing.T) {
 				ParamsWide,
 				Identifier{Type: C_DC_NA_1},
 				[]byte{0x90, 0x78, 0x56, 0x05}},
-			DoubleCommandObject{
+			DoubleCommandInfo{
 				0x567890,
 				DCOOn,
 				QualifierOfCommand{QOCShortPulseDuration, false},
@@ -592,7 +592,7 @@ func TestASDU_GetDoubleCmd(t *testing.T) {
 				ParamsWide,
 				Identifier{Type: C_DC_TA_1},
 				append([]byte{0x90, 0x78, 0x56, 0x06}, tm0CP56Time2aBytes...)},
-			DoubleCommandObject{
+			DoubleCommandInfo{
 				0x567890,
 				DCOOff,
 				QualifierOfCommand{QOCShortPulseDuration, false},
@@ -623,7 +623,7 @@ func TestASDU_GetStepCmd(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   StepCommandObject
+		want   StepCommandInfo
 	}{
 		{
 			"C_RC_NA_1",
@@ -631,7 +631,7 @@ func TestASDU_GetStepCmd(t *testing.T) {
 				ParamsWide,
 				Identifier{Type: C_RC_NA_1},
 				[]byte{0x90, 0x78, 0x56, 0x05}},
-			StepCommandObject{
+			StepCommandInfo{
 				0x567890,
 				SCOStepDown,
 				QualifierOfCommand{QOCShortPulseDuration, false},
@@ -643,7 +643,7 @@ func TestASDU_GetStepCmd(t *testing.T) {
 				ParamsWide,
 				Identifier{Type: C_RC_TA_1},
 				append([]byte{0x90, 0x78, 0x56, 0x06}, tm0CP56Time2aBytes...)},
-			StepCommandObject{
+			StepCommandInfo{
 				0x567890,
 				SCOStepUP,
 				QualifierOfCommand{QOCShortPulseDuration, false},
@@ -674,7 +674,7 @@ func TestASDU_GetSetpointNormalCmd(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   SetpointCommandNormalObject
+		want   SetpointCommandNormalInfo
 	}{
 		{
 			"C_SE_NA_1",
@@ -682,7 +682,7 @@ func TestASDU_GetSetpointNormalCmd(t *testing.T) {
 				ParamsWide,
 				Identifier{Type: C_SE_NA_1},
 				[]byte{0x90, 0x78, 0x56, 0x64, 0x00, 0x01}},
-			SetpointCommandNormalObject{
+			SetpointCommandNormalInfo{
 				0x567890,
 				100,
 				QualifierOfSetpointCmd{1, false},
@@ -694,7 +694,7 @@ func TestASDU_GetSetpointNormalCmd(t *testing.T) {
 				ParamsWide,
 				Identifier{Type: C_SE_TA_1},
 				append([]byte{0x90, 0x78, 0x56, 0x64, 0x00, 0x01}, tm0CP56Time2aBytes...)},
-			SetpointCommandNormalObject{
+			SetpointCommandNormalInfo{
 				0x567890,
 				100,
 				QualifierOfSetpointCmd{1, false},
@@ -725,7 +725,7 @@ func TestASDU_GetSetpointCmdScaled(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   SetpointCommandScaledObject
+		want   SetpointCommandScaledInfo
 	}{
 		{
 			"C_SE_NB_1",
@@ -733,7 +733,7 @@ func TestASDU_GetSetpointCmdScaled(t *testing.T) {
 				ParamsWide,
 				Identifier{Type: C_SE_NB_1},
 				[]byte{0x90, 0x78, 0x56, 0x64, 0x00, 0x01}},
-			SetpointCommandScaledObject{
+			SetpointCommandScaledInfo{
 				0x567890,
 				100,
 				QualifierOfSetpointCmd{1, false},
@@ -745,7 +745,7 @@ func TestASDU_GetSetpointCmdScaled(t *testing.T) {
 				ParamsWide,
 				Identifier{Type: C_SE_TB_1},
 				append([]byte{0x90, 0x78, 0x56, 0x64, 0x00, 0x01}, tm0CP56Time2aBytes...)},
-			SetpointCommandScaledObject{
+			SetpointCommandScaledInfo{
 				0x567890,
 				100,
 				QualifierOfSetpointCmd{1, false},
@@ -778,7 +778,7 @@ func TestASDU_GetSetpointFloatCmd(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   SetpointCommandFloatObject
+		want   SetpointCommandFloatInfo
 	}{
 		{
 			"C_SE_NC_1",
@@ -786,7 +786,7 @@ func TestASDU_GetSetpointFloatCmd(t *testing.T) {
 				ParamsWide,
 				Identifier{Type: C_SE_NC_1},
 				[]byte{0x90, 0x78, 0x56, byte(bits), byte(bits >> 8), byte(bits >> 16), byte(bits >> 24), 0x01}},
-			SetpointCommandFloatObject{
+			SetpointCommandFloatInfo{
 				0x567890,
 				100,
 				QualifierOfSetpointCmd{1, false},
@@ -798,7 +798,7 @@ func TestASDU_GetSetpointFloatCmd(t *testing.T) {
 				ParamsWide,
 				Identifier{Type: C_SE_TC_1},
 				append([]byte{0x90, 0x78, 0x56, byte(bits), byte(bits >> 8), byte(bits >> 16), byte(bits >> 24), 0x01}, tm0CP56Time2aBytes...)},
-			SetpointCommandFloatObject{
+			SetpointCommandFloatInfo{
 				0x567890,
 				100,
 				QualifierOfSetpointCmd{1, false},
@@ -829,7 +829,7 @@ func TestASDU_GetBitsString32Cmd(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   BitsString32CommandObject
+		want   BitsString32CommandInfo
 	}{
 		{
 			"C_BO_NA_1",
@@ -837,7 +837,7 @@ func TestASDU_GetBitsString32Cmd(t *testing.T) {
 				ParamsWide,
 				Identifier{Type: C_BO_NA_1},
 				[]byte{0x90, 0x78, 0x56, 0x64, 0x00, 0x00, 0x00}},
-			BitsString32CommandObject{
+			BitsString32CommandInfo{
 				0x567890,
 				100,
 				time.Time{}},
@@ -848,7 +848,7 @@ func TestASDU_GetBitsString32Cmd(t *testing.T) {
 				ParamsWide,
 				Identifier{Type: C_BO_TA_1},
 				append([]byte{0x90, 0x78, 0x56, 0x64, 0x00, 0x00, 0x00}, tm0CP56Time2aBytes...)},
-			BitsString32CommandObject{
+			BitsString32CommandInfo{
 				0x567890,
 				100,
 				tm0},
