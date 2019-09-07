@@ -7,13 +7,21 @@ import (
 
 // 在控制方向系统信息的应用服务数据单元
 
-// InterrogationCmd send a new interrogation command [C_IC_NA_1].
-// coa.Cause = Activation or Deactivation
-// subclass 7.3.4.1
-// Use group 1 to 16, or 0 for the default.
-// 总召唤命令
-func InterrogationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
-	qoi QualifierOfInterrogation) error {
+// InterrogationCmd send a new interrogation command [C_IC_NA_1]. 总召唤命令, 只有单个信息对象(SQ = 0)
+// [C_IC_NA_1] See companion standard 101, subclass 7.3.4.1
+// 传送原因(coa)用于
+// 控制方向：
+// <6> := 激活
+// <8> := 停止激活
+// 监视方向：
+// <7> := 激活确认
+// <9> := 停止激活确认
+// <10> := 激活终止
+// <44> := 未知的类型标识
+// <45> := 未知的传送原因
+// <46> := 未知的应用服务数据单元公共地址
+// <47> := 未知的信息对象地址
+func InterrogationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr, qoi QualifierOfInterrogation) error {
 	if !(coa.Cause == Activation || coa.Cause == Deactivation) {
 		return ErrCmdCause
 	}
@@ -35,12 +43,19 @@ func InterrogationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 	return c.Send(u)
 }
 
-// CounterInterrogationCmd send Counter Interrogation command [C_CI_NA_1]
-// coa.Cause always Activation
-// subclass 7.3.4.2
-// 计数量召唤命令
-func CounterInterrogationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
-	qcc QualifierCountCall) error {
+// CounterInterrogationCmd send Counter Interrogation command [C_CI_NA_1]，计数量召唤命令，只有单个信息对象(SQ = 0)
+// [C_CI_NA_1] See companion standard 101, subclass 7.3.4.2
+// 传送原因(coa)用于
+// 控制方向：
+// <6> := 激活
+// 监视方向：
+// <7> := 激活确认
+// <10> := 激活终止
+// <44> := 未知的类型标识
+// <45> := 未知的传送原因
+// <46> := 未知的应用服务数据单元公共地址
+// <47> := 未知的信息对象地址
+func CounterInterrogationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr, qcc QualifierCountCall) error {
 	if err := c.Params().Valid(); err != nil {
 		return err
 	}
@@ -59,10 +74,16 @@ func CounterInterrogationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 	return c.Send(u)
 }
 
-// ReadCmd  ,[C_RD_NA_1]
-// coa.Cause always Request
-// subclass 7.3.4.3
-// 计数量召唤命令
+// ReadCmd send read command [C_RD_NA_1], 读命令, 只有单个信息对象(SQ = 0)
+// [C_RD_NA_1] See companion standard 101, subclass 7.3.4.3
+// 传送原因(coa)用于
+// 控制方向：
+// <5> := 请求
+// 监视方向：
+// <44> := 未知的类型标识
+// <45> := 未知的传送原因
+// <46> := 未知的应用服务数据单元公共地址
+// <47> := 未知的信息对象地址
 func ReadCmd(c Connect, coa CauseOfTransmission, ca CommonAddr, ioa InfoObjAddr) error {
 	if err := c.Params().Valid(); err != nil {
 		return err
@@ -81,12 +102,19 @@ func ReadCmd(c Connect, coa CauseOfTransmission, ca CommonAddr, ioa InfoObjAddr)
 	return c.Send(u)
 }
 
-// ClockSynchronizationCmd [C_CS_NA_1]
-// coa.Cause always Activation
-// subclass 7.3.4.4
-// 时钟同步命令
-func ClockSynchronizationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
-	t time.Time) error {
+// ClockSynchronizationCmd send clock sync command [C_CS_NA_1],时钟同步命令, 只有单个信息对象(SQ = 0)
+// [C_CS_NA_1] See companion standard 101, subclass 7.3.4.4
+// 传送原因(coa)用于
+// 控制方向：
+// <6> := 激活
+// 监视方向：
+// <7> := 激活确认
+// <10> := 激活终止
+// <44> := 未知的类型标识
+// <45> := 未知的传送原因
+// <46> := 未知的应用服务数据单元公共地址
+// <47> := 未知的信息对象地址
+func ClockSynchronizationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr, t time.Time) error {
 	if err := c.Params().Valid(); err != nil {
 		return err
 	}
@@ -105,10 +133,17 @@ func ClockSynchronizationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 	return c.Send(u)
 }
 
-// TestCommand [C_TS_NA_1]
-// coa.Cause always Activation(6)
-// subclass 7.3.4.5
-// 测试命令
+// TestCommand send test command [C_TS_NA_1]，测试命令, 只有单个信息对象(SQ = 0)
+// [C_TS_NA_1] See companion standard 101, subclass 7.3.4.5
+// 传送原因(coa)用于
+// 控制方向：
+// <6> := 激活
+// 监视方向：
+// <7> := 激活确认
+// <44> := 未知的类型标识
+// <45> := 未知的传送原因
+// <46> := 未知的应用服务数据单元公共地址
+// <47> := 未知的信息对象地址
 func TestCommand(c Connect, coa CauseOfTransmission, ca CommonAddr) error {
 	if err := c.Params().Valid(); err != nil {
 		return err
@@ -128,12 +163,18 @@ func TestCommand(c Connect, coa CauseOfTransmission, ca CommonAddr) error {
 	return c.Send(u)
 }
 
-// ResetProcessCmd [C_RP_NA_1]
-// coa.Cause always Activation(6)
-// subclass 7.3.4.6
-// 复位进程命令
-func ResetProcessCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
-	qrp QualifierOfResetProcessCmd) error {
+// ResetProcessCmd send reset process command [C_RP_NA_1],复位进程命令, 只有单个信息对象(SQ = 0)
+// [C_RP_NA_1] See companion standard 101, subclass 7.3.4.6
+// 传送原因(coa)用于
+// 控制方向：
+// <6> := 激活
+// 监视方向：
+// <7> := 激活确认
+// <44> := 未知的类型标识
+// <45> := 未知的传送原因
+// <46> := 未知的应用服务数据单元公共地址
+// <47> := 未知的信息对象地址
+func ResetProcessCmd(c Connect, coa CauseOfTransmission, ca CommonAddr, qrp QualifierOfResetProcessCmd) error {
 	if err := c.Params().Valid(); err != nil {
 		return err
 	}
@@ -152,12 +193,19 @@ func ResetProcessCmd(c Connect, coa CauseOfTransmission, ca CommonAddr,
 	return c.Send(u)
 }
 
-// DelayAcquireCommand [C_CD_NA_1]
-// coa.Cause = Activation or Spontaneous
-// subclass 7.3.4.7
-// 延时获得命令
-func DelayAcquireCommand(c Connect, coa CauseOfTransmission, ca CommonAddr,
-	msec uint16) error {
+// DelayAcquireCommand send delay acquire command [C_CD_NA_1],延时获得命令, 只有单个信息对象(SQ = 0)
+// [C_CD_NA_1] See companion standard 101, subclass 7.3.4.7
+// 传送原因(coa)用于
+// 控制方向：
+// <3> := 突发
+// <6> := 激活
+// 监视方向：
+// <7> := 激活确认
+// <44> := 未知的类型标识
+// <45> := 未知的传送原因
+// <46> := 未知的应用服务数据单元公共地址
+// <47> := 未知的信息对象地址
+func DelayAcquireCommand(c Connect, coa CauseOfTransmission, ca CommonAddr, msec uint16) error {
 	if !(coa.Cause == Spontaneous || coa.Cause == Activation) {
 		return ErrCmdCause
 	}
@@ -179,31 +227,37 @@ func DelayAcquireCommand(c Connect, coa CauseOfTransmission, ca CommonAddr,
 	return c.Send(u)
 }
 
+// GetInterrogationCmd [C_IC_NA_1] 获取总召唤信息体(信息对象地址，召唤限定词)
 func (this *ASDU) GetInterrogationCmd() (InfoObjAddr, QualifierOfInterrogation) {
 	return this.DecodeInfoObjAddr(), QualifierOfInterrogation(this.infoObj[0])
 }
 
+// GetCounterInterrogationCmd [C_CI_NA_1] 获得计量召唤信息体(信息对象地址，计量召唤限定词)
 func (this *ASDU) GetCounterInterrogationCmd() (InfoObjAddr, QualifierCountCall) {
 	return this.DecodeInfoObjAddr(), ParseQualifierCountCall(this.infoObj[0])
 }
 
+// GetReadCmd [C_RD_NA_1] 获得读命令信息地址
 func (this *ASDU) GetReadCmd() InfoObjAddr {
 	return this.DecodeInfoObjAddr()
 }
 
+// GetClockSynchronizationCmd [C_CS_NA_1] 获得时钟同步命令信息体(信息对象地址,时间)
 func (this *ASDU) GetClockSynchronizationCmd() (InfoObjAddr, time.Time) {
 	return this.DecodeInfoObjAddr(), ParseCP56Time2a(this.infoObj, this.InfoObjTimeZone)
 }
 
+// GetTestCommand [C_TS_NA_1]，获得测试命令信息体(信息对象地址,是否是测试字)
 func (this *ASDU) GetTestCommand() (InfoObjAddr, bool) {
 	return this.DecodeInfoObjAddr(), binary.LittleEndian.Uint16(this.infoObj) == FBPTestWord
 }
 
+// GetResetProcessCmd [C_RP_NA_1] 获得复位进程命令信息体(信息对象地址,复位进程命令限定词)
 func (this *ASDU) GetResetProcessCmd() (InfoObjAddr, QualifierOfResetProcessCmd) {
-
 	return this.DecodeInfoObjAddr(), QualifierOfResetProcessCmd(this.infoObj[0])
 }
 
+// GetDelayAcquireCommand [C_CD_NA_1] 获取延时获取命令信息体(信息对象地址,延时毫秒数)
 func (this *ASDU) GetDelayAcquireCommand() (InfoObjAddr, uint16) {
 	return this.DecodeInfoObjAddr(), binary.LittleEndian.Uint16(this.infoObj)
 }
