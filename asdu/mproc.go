@@ -33,23 +33,21 @@ func checkValid(c Connect, typeID TypeID, isSequence bool, infosLen int) error {
 	return nil
 }
 
-// SinglePointInfo are the measured value attributes.
+// SinglePointInfo the measured value attributes.
 type SinglePointInfo struct {
 	Ioa InfoObjAddr
 	// value of single point
 	Value bool
-
 	// Quality descriptor asdu.OK means no remarks.
 	Qds QualityDescriptor
-
-	// The timestamp is nil when the data is invalid or
-	// when the type does not include timing at all.
+	// the type does not include timing will ignore
 	Time time.Time
 }
 
-// single sends a type identification M_SP_NA_1, M_SP_TA_1 or M_SP_TB_1.
-// subclass 7.3.1.1 - 7.3.1.2
-// 单点信息
+// single sends a type identification [M_SP_NA_1], [M_SP_TA_1] or [M_SP_TB_1].单点信息
+// [M_SP_NA_1] See companion standard 101,subclass 7.3.1.1
+// [M_SP_TA_1] See companion standard 101,subclass 7.3.1.2
+// [M_SP_TB_1] See companion standard 101,subclass 7.3.1.22
 func single(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 	ca CommonAddr, infos ...SinglePointInfo) error {
 	if err := checkValid(c, typeID, isSequence, len(infos)); err != nil {
@@ -93,8 +91,20 @@ func single(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 	return c.Send(u)
 }
 
-func Single(c Connect, isSequence bool, coa CauseOfTransmission,
-	ca CommonAddr, infos ...SinglePointInfo) error {
+// Single sends a type identification [M_SP_NA_1].不带时标单点信息
+// [M_SP_NA_1] See companion standard 101,subclass 7.3.1.1
+// 传送原因(coa)用于
+// 监视方向：
+// <2> := 背景扫描
+// <3> := 突发(自发)
+// <5> := 被请求
+// <11> := 远方命令引起的返送信息
+// <12> := 当地命令引起的返送信息
+// <20> := 响应站召唤
+// <21> := 响应第1组召唤
+// 至
+// <36> := 响应第16组召唤
+func Single(c Connect, isSequence bool, coa CauseOfTransmission, ca CommonAddr, infos ...SinglePointInfo) error {
 	if !(coa.Cause == Background || coa.Cause == Spontaneous || coa.Cause == Request ||
 		coa.Cause == ReturnInfoRemote || coa.Cause == ReturnInfoLocal ||
 		(coa.Cause >= InterrogatedByStation && coa.Cause <= InterrogatedByGroup16)) {
@@ -103,8 +113,15 @@ func Single(c Connect, isSequence bool, coa CauseOfTransmission,
 	return single(c, M_SP_NA_1, isSequence, coa, ca, infos...)
 }
 
-func SingleCP24Time2a(c Connect, coa CauseOfTransmission,
-	ca CommonAddr, infos ...SinglePointInfo) error {
+// SingleCP24Time2a sends a type identification [M_SP_TA_1],带时标CP24Time2a的单点信息，只有(SQ = 0)单个信息元素集合
+// [M_SP_TA_1] See companion standard 101,subclass 7.3.1.2
+// 传送原因(coa)用于
+// 监视方向：
+// <3> := 突发(自发)
+// <5> := 被请求
+// <11> := 远方命令引起的返送信息
+// <12> := 当地命令引起的返送信息
+func SingleCP24Time2a(c Connect, coa CauseOfTransmission, ca CommonAddr, infos ...SinglePointInfo) error {
 	if !(coa.Cause == Spontaneous || coa.Cause == Request ||
 		coa.Cause == ReturnInfoRemote || coa.Cause == ReturnInfoLocal) {
 		return ErrCmdCause
@@ -112,8 +129,15 @@ func SingleCP24Time2a(c Connect, coa CauseOfTransmission,
 	return single(c, M_SP_TA_1, false, coa, ca, infos...)
 }
 
-func SingleCP56Time2a(c Connect, coa CauseOfTransmission,
-	ca CommonAddr, infos ...SinglePointInfo) error {
+// SingleCP56Time2a sends a type identification [M_SP_TB_1].带时标CP56Time2a的单点信息,只有(SQ = 0)单个信息元素集合
+// [M_SP_TB_1] See companion standard 101,subclass 7.3.1.22
+// 传送原因(coa)用于
+// 监视方向：
+// <3> := 突发(自发)
+// <5> := 被请求
+// <11> := 远方命令引起的返送信息
+// <12> := 当地命令引起的返送信息
+func SingleCP56Time2a(c Connect, coa CauseOfTransmission, ca CommonAddr, infos ...SinglePointInfo) error {
 	if !(coa.Cause == Spontaneous || coa.Cause == Request ||
 		coa.Cause == ReturnInfoRemote || coa.Cause == ReturnInfoLocal) {
 		return ErrCmdCause
@@ -121,22 +145,20 @@ func SingleCP56Time2a(c Connect, coa CauseOfTransmission,
 	return single(c, M_SP_TB_1, false, coa, ca, infos...)
 }
 
-// DoublePointInfo are the measured value attributes.
+// DoublePointInfo the measured value attributes.
 type DoublePointInfo struct {
-	Ioa InfoObjAddr
-
+	Ioa   InfoObjAddr
 	Value DoublePoint
-	// Quality descriptor asdu.OK means no remarks.
+	// Quality descriptor asdu.QDSGood means no remarks.
 	Qds QualityDescriptor
-
-	// The timestamp is nil when the data is invalid or
-	// when the type does not include timing at all.
+	// the type does not include timing will ignore
 	Time time.Time
 }
 
-// double sends a type identification M_DP_NA_1, M_DP_TA_1 or M_DP_TB_1.
-// subclass 7.3.1.3 - 7.3.1.4
-// 双点信息
+// double sends a type identification [M_DP_NA_1], [M_DP_TA_1] or [M_DP_TB_1].双点信息
+// [M_DP_NA_1] See companion standard 101,subclass 7.3.1.3
+// [M_DP_TA_1] See companion standard 101,subclass 7.3.1.4
+// [M_DP_TB_1] See companion standard 101,subclass 7.3.1.23
 func double(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 	ca CommonAddr, infos ...DoublePointInfo) error {
 	if err := checkValid(c, typeID, isSequence, len(infos)); err != nil {
@@ -176,8 +198,20 @@ func double(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 	return c.Send(u)
 }
 
-func Double(c Connect, isSequence bool, coa CauseOfTransmission,
-	ca CommonAddr, infos ...DoublePointInfo) error {
+// Double sends a type identification [M_DP_NA_1].双点信息
+// [M_DP_NA_1] See companion standard 101,subclass 7.3.1.3
+// 传送原因(coa)用于
+// 监视方向：
+// <2> := 背景扫描
+// <3> := 突发(自发)
+// <5> := 被请求
+// <11> := 远方命令引起的返送信息
+// <12> := 当地命令引起的返送信息
+// <20> := 响应站召唤
+// <21> := 响应第1组召唤
+// 至
+// <36> := 响应第16组召唤
+func Double(c Connect, isSequence bool, coa CauseOfTransmission, ca CommonAddr, infos ...DoublePointInfo) error {
 	if !(coa.Cause == Background || coa.Cause == Spontaneous || coa.Cause == Request ||
 		coa.Cause == ReturnInfoRemote || coa.Cause == ReturnInfoLocal ||
 		(coa.Cause >= InterrogatedByStation && coa.Cause <= InterrogatedByGroup16)) {
@@ -186,8 +220,15 @@ func Double(c Connect, isSequence bool, coa CauseOfTransmission,
 	return double(c, M_DP_NA_1, isSequence, coa, ca, infos...)
 }
 
-func DoubleCP24Time2a(c Connect, coa CauseOfTransmission,
-	ca CommonAddr, infos ...DoublePointInfo) error {
+// DoubleCP24Time2a sends a type identification [M_DP_TA_1] .带CP24Time2a双点信息,只有(SQ = 0)单个信息元素集合
+// [M_DP_TA_1] See companion standard 101,subclass 7.3.1.4
+// 传送原因(coa)用于
+// 监视方向：
+// <3> := 突发(自发)
+// <5> := 被请求
+// <11> := 远方命令引起的返送信息
+// <12> := 当地命令引起的返送信息
+func DoubleCP24Time2a(c Connect, coa CauseOfTransmission, ca CommonAddr, infos ...DoublePointInfo) error {
 	if !(coa.Cause == Spontaneous || coa.Cause == Request ||
 		coa.Cause == ReturnInfoRemote || coa.Cause == ReturnInfoLocal) {
 		return ErrCmdCause
@@ -195,6 +236,14 @@ func DoubleCP24Time2a(c Connect, coa CauseOfTransmission,
 	return double(c, M_DP_TA_1, false, coa, ca, infos...)
 }
 
+// DoubleCP56Time2a sends a type identification [M_DP_TB_1].带CP56Time2a的双点信息,只有(SQ = 0)单个信息元素集合
+// [M_DP_TB_1] See companion standard 101,subclass 7.3.1.23
+// 传送原因(coa)用于
+// 监视方向：
+// <3> := 突发(自发)
+// <5> := 被请求
+// <11> := 远方命令引起的返送信息
+// <12> := 当地命令引起的返送信息
 func DoubleCP56Time2a(c Connect, coa CauseOfTransmission,
 	ca CommonAddr, infos ...DoublePointInfo) error {
 	if !(coa.Cause == Spontaneous || coa.Cause == Request ||
@@ -204,22 +253,20 @@ func DoubleCP56Time2a(c Connect, coa CauseOfTransmission,
 	return double(c, M_DP_TB_1, false, coa, ca, infos...)
 }
 
-// StepPositionInfo are the measured value attributes.
+// StepPositionInfo the measured value attributes.
 type StepPositionInfo struct {
-	Ioa InfoObjAddr
-
+	Ioa   InfoObjAddr
 	Value StepPosition
-	// Quality descriptor asdu.OK means no remarks.
+	// Quality descriptor asdu.GOOD means no remarks.
 	Qds QualityDescriptor
-
-	// The timestamp is nil when the data is invalid or
-	// when the type does not include timing at all.
+	// the type does not include timing will ignore
 	Time time.Time
 }
 
-// step sends a type identification M_ST_NA_1, M_ST_TA_1 or M_ST_TB_1.
-// subclass 7.3.1.5 - 7.3.1.6
-// 步位置信息
+// step sends a type identification [M_ST_NA_1], [M_ST_TA_1] or [M_ST_TB_1].步位置信息
+// [M_ST_NA_1] subclass 7.3.1.5
+// [M_ST_TA_1] subclass 7.3.1.6
+// [M_ST_TB_1] subclass 7.3.1.24
 func step(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 	ca CommonAddr, infos ...StepPositionInfo) error {
 	if err := checkValid(c, typeID, isSequence, len(infos)); err != nil {
@@ -259,6 +306,19 @@ func step(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 	return c.Send(u)
 }
 
+// Step sends a type identification [M_ST_NA_1].双点信息
+// [M_ST_NA_1] subclass 7.3.1.5
+// 传送原因(coa)用于
+// 监视方向：
+// <2> := 背景扫描
+// <3> := 突发(自发)
+// <5> := 被请求
+// <11> := 远方命令引起的返送信息
+// <12> := 当地命令引起的返送信息
+// <20> := 响应站召唤
+// <21> := 响应第1组召唤
+// 至
+// <36> := 响应第16组召唤
 func Step(c Connect, isSequence bool, coa CauseOfTransmission,
 	ca CommonAddr, infos ...StepPositionInfo) error {
 	if !(coa.Cause == Background || coa.Cause == Spontaneous || coa.Cause == Request ||
@@ -269,6 +329,14 @@ func Step(c Connect, isSequence bool, coa CauseOfTransmission,
 	return step(c, M_ST_NA_1, isSequence, coa, ca, infos...)
 }
 
+// StepCP24Time2a sends a type identification [M_ST_TA_1].带时标CP24Time2a的双点信息,只有(SQ = 0)单个信息元素集合
+// [M_ST_TA_1] subclass 7.3.1.5
+// 传送原因(coa)用于
+// 监视方向：
+// <3> := 突发(自发)
+// <5> := 被请求
+// <11> := 远方命令引起的返送信息
+// <12> := 当地命令引起的返送信息
 func StepCP24Time2a(c Connect, coa CauseOfTransmission,
 	ca CommonAddr, infos ...StepPositionInfo) error {
 	if !(coa.Cause == Spontaneous || coa.Cause == Request ||
@@ -278,8 +346,15 @@ func StepCP24Time2a(c Connect, coa CauseOfTransmission,
 	return step(c, M_ST_TA_1, false, coa, ca, infos...)
 }
 
-func StepCP56Time2a(c Connect, coa CauseOfTransmission,
-	ca CommonAddr, infos ...StepPositionInfo) error {
+// StepCP56Time2a sends a type identification [M_ST_TB_1].带时标CP56Time2a的双点信息,只有(SQ = 0)单个信息元素集合
+// [M_ST_TB_1] subclass 7.3.1.24
+// 传送原因(coa)用于
+// 监视方向：
+// <3> := 突发(自发)
+// <5> := 被请求
+// <11> := 远方命令引起的返送信息
+// <12> := 当地命令引起的返送信息
+func StepCP56Time2a(c Connect, coa CauseOfTransmission, ca CommonAddr, infos ...StepPositionInfo) error {
 	if !(coa.Cause == Spontaneous || coa.Cause == Request ||
 		coa.Cause == ReturnInfoRemote || coa.Cause == ReturnInfoLocal) {
 		return ErrCmdCause
@@ -287,22 +362,20 @@ func StepCP56Time2a(c Connect, coa CauseOfTransmission,
 	return step(c, M_SP_TB_1, false, coa, ca, infos...)
 }
 
-// BitString32Info are the measured value attributes.
+// BitString32Info the measured value attributes.
 type BitString32Info struct {
-	Ioa InfoObjAddr
-
+	Ioa   InfoObjAddr
 	Value uint32
-	// Quality descriptor asdu.OK means no remarks.
+	// Quality descriptor asdu.GOOD means no remarks.
 	Qds QualityDescriptor
-
-	// The timestamp is nil when the data is invalid or
-	// when the type does not include timing at all.
+	// the type does not include timing will ignore
 	Time time.Time
 }
 
-// Bits sends a type identificationM_BO_NA_1, M_BO_TA_1 or M_BO_TB_1.
-// subclass 7.3.1.7 - 7.3.1.8
-// 比特位串
+// bitString32 sends a type identification [M_BO_NA_1], [M_BO_TA_1] or [M_BO_TB_1].比特位串
+// [M_ST_NA_1] subclass 7.3.1.7
+// [M_ST_TA_1] subclass 7.3.1.8
+// [M_ST_TB_1] subclass 7.3.1.25
 func bitString32(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
 	ca CommonAddr, infos ...BitString32Info) error {
 	if err := checkValid(c, typeID, isSequence, len(infos)); err != nil {
@@ -342,6 +415,17 @@ func bitString32(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmiss
 	return c.Send(u)
 }
 
+// BitString32 sends a type identification [M_BO_NA_1].比特位串
+// [M_ST_NA_1] subclass 7.3.1.7
+// 传送原因(coa)用于
+// 监视方向：
+// <2> := 背景扫描
+// <3> := 突发(自发)
+// <5> := 被请求
+// <20> := 响应站召唤
+// <21> := 响应第1组召唤
+// 至
+// <36> := 响应第16组召唤
 func BitString32(c Connect, isSequence bool, coa CauseOfTransmission,
 	ca CommonAddr, infos ...BitString32Info) error {
 	if !(coa.Cause == Background || coa.Cause == Spontaneous || coa.Cause == Request ||
@@ -351,6 +435,12 @@ func BitString32(c Connect, isSequence bool, coa CauseOfTransmission,
 	return bitString32(c, M_BO_NA_1, isSequence, coa, ca, infos...)
 }
 
+// BitString32CP24Time2a sends a type identification [M_BO_TA_1].带时标CP24Time2a比特位串，只有(SQ = 0)单个信息元素集合
+// [M_ST_TA_1] subclass 7.3.1.8
+// 传送原因(coa)用于
+// 监视方向：
+// <3> := 突发(自发)
+// <5> := 被请求
 func BitString32CP24Time2a(c Connect, coa CauseOfTransmission,
 	ca CommonAddr, infos ...BitString32Info) error {
 	if !(coa.Cause == Spontaneous || coa.Cause == Request) {
@@ -359,6 +449,12 @@ func BitString32CP24Time2a(c Connect, coa CauseOfTransmission,
 	return bitString32(c, M_BO_TA_1, false, coa, ca, infos...)
 }
 
+// BitString32CP56Time2a sends a type identification [M_BO_TB_1].带时标CP56Time2a比特位串，只有(SQ = 0)单个信息元素集合
+// [M_ST_TB_1] subclass 7.3.1.25
+// 传送原因(coa)用于
+// 监视方向：
+// <3> := 突发(自发)
+// <5> := 被请求
 func BitString32CP56Time2a(c Connect, coa CauseOfTransmission,
 	ca CommonAddr, infos ...BitString32Info) error {
 	if !(coa.Cause == Spontaneous || coa.Cause == Request) {
@@ -367,16 +463,13 @@ func BitString32CP56Time2a(c Connect, coa CauseOfTransmission,
 	return bitString32(c, M_BO_TB_1, false, coa, ca, infos...)
 }
 
-// MeasuredValueNormalInfo are the measured value attributes.
+// MeasuredValueNormalInfo the measured value attributes.
 type MeasuredValueNormalInfo struct {
-	Ioa InfoObjAddr
-
+	Ioa   InfoObjAddr
 	Value Normalize
-	// Quality descriptor asdu.OK means no remarks.
+	// Quality descriptor asdu.GOOD means no remarks.
 	Qds QualityDescriptor
-
-	// The timestamp is nil when the data is invalid or
-	// when the type does not include timing at all.
+	// the type does not include timing will ignore
 	Time time.Time
 }
 
@@ -461,14 +554,11 @@ func MeasuredValueNormalNoQuality(c Connect, isSequence bool, coa CauseOfTransmi
 
 // MeasuredValueScaledInfo are the measured value attributes.
 type MeasuredValueScaledInfo struct {
-	Ioa InfoObjAddr
-
+	Ioa   InfoObjAddr
 	Value int16
 	// Quality descriptor asdu.OK means no remarks.
 	Qds QualityDescriptor
-
-	// The timestamp is nil when the data is invalid or
-	// when the type does not include timing at all.
+	// the type does not include timing will ignore
 	Time time.Time
 }
 
@@ -541,14 +631,11 @@ func MeasuredValueScaledCP56Time2a(c Connect, coa CauseOfTransmission,
 
 // MeasuredValueFloatInfo are the measured value attributes.
 type MeasuredValueFloatInfo struct {
-	Ioa InfoObjAddr
-
+	Ioa   InfoObjAddr
 	Value float32
 	// Quality descriptor asdu.OK means no remarks.
 	Qds QualityDescriptor
-
-	// The timestamp is nil when the data is invalid or
-	// when the type does not include timing at all.
+	// the type does not include timing will ignore
 	Time time.Time
 }
 
@@ -622,12 +709,9 @@ func MeasuredValueFloatCP56Time2a(c Connect, coa CauseOfTransmission,
 
 // BinaryCounterReadingInfo are the counter reading attributes.
 type BinaryCounterReadingInfo struct {
-	Ioa InfoObjAddr
-
+	Ioa   InfoObjAddr
 	Value BinaryCounterReading
-
-	// The timestamp is nil when the data is invalid or
-	// when the type does not include timing at all.
+	// the type does not include timing will ignore
 	Time time.Time
 }
 
