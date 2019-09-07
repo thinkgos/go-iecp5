@@ -100,7 +100,7 @@ type ParameterFloatInfo struct {
 	Qpm   QualifierOfParameterMV
 }
 
-// ParameterFloat 测量值参数,短浮点数
+// ParameterFloat 测量值参数,短浮点数, 只有单个信息对象(SQ = 0)
 // [P_ME_NC_1], See companion standard 101, subclass 7.3.5.3
 // 传送原因(coa)用于
 // 控制方向：
@@ -144,12 +144,12 @@ type ParameterActivationInfo struct {
 	Qpa QualifierOfParameterAct
 }
 
-// ParameterActivation 参数激活
+// ParameterActivation 参数激活, 只有单个信息对象(SQ = 0)
 // [P_AC_NA_1], See companion standard 101, subclass 7.3.5.4
 // 传送原因(coa)用于
 // 控制方向：
 // <6> := 激活
-// <7> := 停止激活
+// <8> := 停止激活
 // 监视方向：
 // <7> := 激活确认
 // <9> := 停止激活确认
