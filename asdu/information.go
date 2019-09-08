@@ -56,10 +56,7 @@ const (
 	QDSOverflow QualityDescriptor = 1 << iota
 	_                             // reserve
 	_                             // reserve
-	// QDSElapsedTimeInvalid flags that the elapsed time was incorrectly acquired.
-	// This attribute is only valid for events of protection equipment.
-	// See companion standard 101, subclass 7.2.6.4.
-	QDSElapsedTimeInvalid
+	_                             // reserve
 	// QDSBlocked flags that the value is blocked for transmission; the
 	// value remains in the state that was acquired before it was blocked.
 	QDSBlocked
@@ -73,6 +70,32 @@ const (
 
 	// QDSGood means no flags, no problems.
 	QDSGood = 0
+)
+
+// Quality descriptor Protection Equipment flags attribute.
+// See companion standard 101, subclass 7.2.6.3.
+type QualityDescriptorProtection byte
+
+// Quality descriptor flags attribute Protection Equipment.
+const (
+	_ QualityDescriptorProtection = 1 << iota // reserve
+	_                                         // reserve
+	_                                         // reserve
+	// QDPElapsedTimeInvalid flags that the elapsed time was incorrectly acquired.
+	QDPElapsedTimeInvalid
+	// QDPBlocked flags that the value is blocked for transmission; the
+	// value remains in the state that was acquired before it was blocked.
+	QDPBlocked
+	// QDPSubstituted flags that the value was provided by the input of
+	// an operator (dispatcher) instead of an automatic source.
+	QDPSubstituted
+	// QDPNotTopical flags that the most recent update was unsuccessful.
+	QDPNotTopical
+	// QDPInvalid flags that the value was incorrectly acquired.
+	QDPInvalid
+
+	// QDPGood means no flags, no problems.
+	QDPGood = 0
 )
 
 // StepPosition is a measured value with transient state indication.
@@ -124,10 +147,17 @@ type BinaryCounterReading struct {
 	SequenceNotation byte
 }
 
+// SingleEvent is single event
+// See companion standard 101, subclass 7.2.6.10.
+type SingleEvent byte
+
+// StartEvent Start event protection
+type StartEvent byte
+
 // Start event protection
 // See companion standard 101, subclass 7.2.6.11.
 const (
-	SEPGeneralStart = 1 << iota
+	SEPGeneralStart StartEvent = 1 << iota
 	SEPStartL1
 	SEPStartL2
 	SEPStartL3
@@ -137,8 +167,11 @@ const (
 	_
 )
 
-// output command information
+// OutputCircuitInfo output command information
 // See companion standard 101, subclass 7.2.6.12.
+type OutputCircuitInfo byte
+
+// output command information
 const (
 	OCIGeneralCommand = 1 << iota
 	OCICommandL1
@@ -400,7 +433,7 @@ const (
 //	64‥127: reserved for special use (private range)
 type QOSQual uint
 
-// QualifierOfCommand is a  qualifier of command.
+// QualifierOfSetpointCmd is a qualifier of command.
 type QualifierOfSetpointCmd struct {
 	Qual QOSQual
 	// See section 5, subclass 6.8.
@@ -421,4 +454,12 @@ func (this QualifierOfSetpointCmd) Value() byte {
 		v |= 0x80
 	}
 	return v
+}
+
+// StatusAndStatusChangeDetection
+// See companion standard 101, subclass 7.2.6.40.
+type StatusAndStatusChangeDetection uint32
+
+func (this StatusAndStatusChangeDetection) Value() []byte {
+	return []byte{}
 }

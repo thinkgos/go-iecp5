@@ -875,14 +875,243 @@ func IntegratedTotalsCP56Time2a(c Connect, coa CauseOfTransmission, ca CommonAdd
 	return integratedTotals(c, M_IT_TB_1, false, coa, ca, infos...)
 }
 
-// TODO: follow
-// EventOfProtectionEquipment
-// EventOfProtectionEquipmentCP56Time2a
-// PackedStartEventsOfProtectionEquipment
-// PackedStartEventsOfProtectionEquipmentCP56Time2a
-// PackedOutputCircuitInfo
-// PackedOutputCircuitInfoCP56Time2a
-// PackedSinglePointWithSCD
+// ProtectionEquipmentInfo the counter reading attributes. 二进制计数量读数
+type EventOfProtectionEquipmentInfo struct {
+	Ioa   InfoObjAddr
+	Event SingleEvent
+	msec  uint16
+	// the type does not include timing will ignore
+	Time time.Time
+}
+
+// eventOfProtectionEquipment sends a type identification [M_EP_TA_1], [M_EP_TD_1]. 继电器保护设备事件
+// [M_EP_TA_1] See companion standard 101, subclass 7.3.1.17
+// [M_EP_TD_1] See companion standard 101, subclass 7.3.1.30
+func eventOfProtectionEquipment(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr, infos ...EventOfProtectionEquipmentInfo) error {
+	if coa.Cause != Spontaneous {
+		return ErrCmdCause
+	}
+	if err := checkValid(c, typeID, false, len(infos)); err != nil {
+		return err
+	}
+
+	u := NewASDU(c.Params(), Identifier{
+		typeID,
+		VariableStruct{IsSequence: false},
+		coa,
+		0,
+		ca,
+	})
+	if err := u.SetVariableNumber(len(infos)); err != nil {
+		return err
+	}
+	for _, v := range infos {
+		if err := u.AppendInfoObjAddr(v.Ioa); err != nil {
+			return err
+		}
+		u.AppendBytes(byte(v.Event))
+		u.AppendCP16Time2a(v.msec)
+		switch typeID {
+		case M_EP_TA_1:
+			u.AppendCP24Time2a(v.Time, u.InfoObjTimeZone)
+		case M_EP_TD_1:
+			u.AppendCP56Time2a(v.Time, u.InfoObjTimeZone)
+		default:
+			return ErrTypeIDNotMatch
+		}
+	}
+	return c.Send(u)
+}
+
+// eventOfProtectionEquipment sends a type identification [M_EP_TA_1]. 带时标CP24Time2a继电器保护设备事件
+// [M_EP_TA_1] See companion standard 101, subclass 7.3.1.17
+// 传送原因(coa)用于
+// 监视方向：
+// <3> := 突发(自发)
+func EventOfProtectionEquipmentCP24Time2a(c Connect, coa CauseOfTransmission, ca CommonAddr, infos ...EventOfProtectionEquipmentInfo) error {
+	return eventOfProtectionEquipment(c, M_EP_TA_1, coa, ca, infos...)
+}
+
+// eventOfProtectionEquipment sends a type identification [M_EP_TD_1]. 带时标CP24Time2a继电器保护设备事件
+// [M_EP_TD_1] See companion standard 101, subclass 7.3.1.30
+// 传送原因(coa)用于
+// 监视方向：
+// <3> := 突发(自发)
+func EventOfProtectionEquipmentCP56Time2a(c Connect, coa CauseOfTransmission, ca CommonAddr, infos ...EventOfProtectionEquipmentInfo) error {
+	return eventOfProtectionEquipment(c, M_EP_TD_1, coa, ca, infos...)
+}
+
+// PackedStartEventsOfProtectionEquipmentInfo 继电器保护设备成组启动事件
+type PackedStartEventsOfProtectionEquipmentInfo struct {
+	Ioa   InfoObjAddr
+	Event StartEvent
+	Qdp   QualityDescriptorProtection
+	msec  uint16
+	// the type does not include timing will ignore
+	Time time.Time
+}
+
+// eventOfProtectionEquipment sends a type identification [M_EP_TB_1], [M_EP_TE_1]. 继电器保护设备事件
+// [M_EP_TB_1] See companion standard 101, subclass 7.3.1.18
+// [M_EP_TE_1] See companion standard 101, subclass 7.3.1.31
+func packedStartEventsOfProtectionEquipment(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr, info PackedStartEventsOfProtectionEquipmentInfo) error {
+	if coa.Cause != Spontaneous {
+		return ErrCmdCause
+	}
+	if err := checkValid(c, typeID, false, 1); err != nil {
+		return err
+	}
+
+	u := NewASDU(c.Params(), Identifier{
+		typeID,
+		VariableStruct{IsSequence: false, Number: 1},
+		coa,
+		0,
+		ca,
+	})
+
+	if err := u.AppendInfoObjAddr(info.Ioa); err != nil {
+		return err
+	}
+	u.AppendBytes(byte(info.Event), byte(info.Qdp))
+	u.AppendCP16Time2a(info.msec)
+	switch typeID {
+	case M_EP_TB_1:
+		u.AppendCP24Time2a(info.Time, u.InfoObjTimeZone)
+	case M_EP_TE_1:
+		u.AppendCP56Time2a(info.Time, u.InfoObjTimeZone)
+	default:
+		return ErrTypeIDNotMatch
+	}
+
+	return c.Send(u)
+}
+
+// PackedStartEventsOfProtectionEquipmentCP24Time2a sends a type identification [M_EP_TB_1]. 继电器保护设备事件
+// [M_EP_TB_1] See companion standard 101, subclass 7.3.1.18
+// 传送原因(coa)用于
+// 监视方向：
+// <3> := 突发(自发)
+func PackedStartEventsOfProtectionEquipmentCP24Time2a(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr, info PackedStartEventsOfProtectionEquipmentInfo) error {
+	return packedStartEventsOfProtectionEquipment(c, M_EP_TB_1, coa, ca, info)
+}
+
+// PackedStartEventsOfProtectionEquipmentCP56Time2a sends a type identification [M_EP_TB_1]. 继电器保护设备事件
+// [M_EP_TE_1] See companion standard 101, subclass 7.3.1.31
+// 传送原因(coa)用于
+// 监视方向：
+// <3> := 突发(自发)
+func PackedStartEventsOfProtectionEquipmentCP56Time2a(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr, info PackedStartEventsOfProtectionEquipmentInfo) error {
+	return packedStartEventsOfProtectionEquipment(c, M_EP_TE_1, coa, ca, info)
+}
+
+// PackedOutputCircuitInfoInfo 继电器保护设备成组输出电路信息
+type PackedOutputCircuitInfoInfo struct {
+	Ioa  InfoObjAddr
+	Oci  OutputCircuitInfo
+	Qdp  QualityDescriptorProtection
+	msec uint16
+	// the type does not include timing will ignore
+	Time time.Time
+}
+
+// packedOutputCircuitInfo sends a type identification [M_EP_TC_1], [M_EP_TF_1]. 继电器保护设备成组输出电路信息
+// [M_EP_TC_1] See companion standard 101, subclass 7.3.1.19
+// [M_EP_TF_1] See companion standard 101, subclass 7.3.1.32
+func packedOutputCircuitInfo(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr, info PackedOutputCircuitInfoInfo) error {
+	if coa.Cause != Spontaneous {
+		return ErrCmdCause
+	}
+	if err := checkValid(c, typeID, false, 1); err != nil {
+		return err
+	}
+
+	u := NewASDU(c.Params(), Identifier{
+		typeID,
+		VariableStruct{IsSequence: false, Number: 1},
+		coa,
+		0,
+		ca,
+	})
+
+	if err := u.AppendInfoObjAddr(info.Ioa); err != nil {
+		return err
+	}
+	u.AppendBytes(byte(info.Oci), byte(info.Qdp))
+	u.AppendCP16Time2a(info.msec)
+	switch typeID {
+	case M_EP_TB_1:
+		u.AppendCP24Time2a(info.Time, u.InfoObjTimeZone)
+	case M_EP_TE_1:
+		u.AppendCP56Time2a(info.Time, u.InfoObjTimeZone)
+	default:
+		return ErrTypeIDNotMatch
+	}
+
+	return c.Send(u)
+}
+
+// packedOutputCircuitInfo sends a type identification [M_EP_TC_1]. 带CP24Time2a继电器保护设备成组输出电路信息
+// [M_EP_TC_1] See companion standard 101, subclass 7.3.1.19
+// 传送原因(coa)用于
+// 监视方向：
+// <3> := 突发(自发)
+func PackedOutputCircuitInfoCP24Time2a(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr, info PackedOutputCircuitInfoInfo) error {
+	return packedOutputCircuitInfo(c, M_EP_TC_1, coa, ca, info)
+}
+
+// packedOutputCircuitInfo sends a type identification [M_EP_TF_1]. 带CP56Time2a继电器保护设备成组输出电路信息
+// [M_EP_TF_1] See companion standard 101, subclass 7.3.1.32
+// 传送原因(coa)用于
+// 监视方向：
+// <3> := 突发(自发)
+func PackedOutputCircuitInfoCP56Time2a(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr, info PackedOutputCircuitInfoInfo) error {
+	return packedOutputCircuitInfo(c, M_EP_TF_1, coa, ca, info)
+}
+
+// PackedSinglePointWithSCDInfo 带变位检出的成组单点信息
+type PackedSinglePointWithSCDInfo struct {
+	Ioa InfoObjAddr
+	Scd StatusAndStatusChangeDetection
+	Qds QualityDescriptor
+}
+
+// PackedSinglePointWithSCD sends a type identification [M_PS_NA_1]. 带变位检出的成组单点信息
+// [M_PS_NA_1] See companion standard 101, subclass 7.3.1.20
+// 传送原因(coa)用于
+// 监视方向：
+// <3> := 突发(自发)
+func PackedSinglePointWithSCD(c Connect, isSequence bool, coa CauseOfTransmission, ca CommonAddr, infos ...PackedSinglePointWithSCDInfo) error {
+	if coa.Cause != Spontaneous {
+		return ErrCmdCause
+	}
+	if err := checkValid(c, M_PS_NA_1, isSequence, len(infos)); err != nil {
+		return err
+	}
+
+	u := NewASDU(c.Params(), Identifier{
+		M_PS_NA_1,
+		VariableStruct{IsSequence: isSequence},
+		coa,
+		0,
+		ca,
+	})
+	if err := u.SetVariableNumber(len(infos)); err != nil {
+		return err
+	}
+	once := false
+	for _, v := range infos {
+		if !isSequence || !once {
+			once = true
+			if err := u.AppendInfoObjAddr(v.Ioa); err != nil {
+				return err
+			}
+		}
+		u.AppendBytes(v.Scd.Value()...)
+		u.AppendBytes(byte(v.Qds))
+	}
+	return c.Send(u)
+}
 
 // GetSinglePoint [M_SP_NA_1], [M_SP_TA_1] or [M_SP_TB_1] 获取单点信息信息体集合
 func (this *ASDU) GetSinglePoint() []SinglePointInfo {

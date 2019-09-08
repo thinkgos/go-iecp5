@@ -14,17 +14,19 @@ type LogProvider interface {
 	Debug(format string, v ...interface{})
 }
 
-// 内部调试实现
+// Clog 日志内部调试实现
 type Clog struct {
 	logger LogProvider
 	// is log output enabled,1: enable, 0: disable
 	hasLog uint32
 }
 
+// New 创建一个新的日志无前缀
 func New() *Clog {
 	return NewWithPrefix("")
 }
 
+// NewWithPrefix 创建一个新的日志，采用指定prefix前缀
 func NewWithPrefix(prefix string) *Clog {
 	return &Clog{
 		logger: NewDefaultLogger(prefix),
@@ -82,6 +84,7 @@ type logger struct {
 
 var _ LogProvider = (*logger)(nil)
 
+// NewDefaultLogger new default logger with prefix output os.Stderr
 func NewDefaultLogger(prefix string) *logger {
 	return &logger{
 		log.New(os.Stderr, prefix, log.LstdFlags),

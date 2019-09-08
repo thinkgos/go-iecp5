@@ -124,6 +124,11 @@ func (this *ASDU) DecodeBinaryCounterReading() BinaryCounterReading {
 	return BinaryCounterReading{v, b}
 }
 
+func (this *ASDU) AppendCP56Time2a(t time.Time, loc *time.Location) *ASDU {
+	this.infoObj = append(this.infoObj, CP56Time2a(t, loc)...)
+	return this
+}
+
 // AppendNormalize append a CP56Time2a value to info object
 func (this *ASDU) DecodeCP56Time2a() time.Time {
 	t := ParseCP56Time2a(this.infoObj, this.Params.InfoObjTimeZone)
@@ -131,8 +136,24 @@ func (this *ASDU) DecodeCP56Time2a() time.Time {
 	return t
 }
 
+func (this *ASDU) AppendCP24Time2a(t time.Time, loc *time.Location) *ASDU {
+	this.infoObj = append(this.infoObj, CP24Time2a(t, loc)...)
+	return this
+}
+
 func (this *ASDU) DecodeCP24Time2a() time.Time {
 	t := ParseCP24Time2a(this.infoObj, this.Params.InfoObjTimeZone)
 	this.infoObj = this.infoObj[3:]
+	return t
+}
+
+func (this *ASDU) AppendCP16Time2a(msec uint16) *ASDU {
+	this.infoObj = append(this.infoObj, CP16Time2a(msec)...)
+	return this
+}
+
+func (this *ASDU) DecodeCP16Time2a() uint16 {
+	t := ParseCP16Time2a(this.infoObj)
+	this.infoObj = this.infoObj[2:]
 	return t
 }
