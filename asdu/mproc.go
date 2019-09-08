@@ -446,8 +446,7 @@ func BitString32CP24Time2a(c Connect, coa CauseOfTransmission, ca CommonAddr, in
 // 监视方向：
 // <3> := 突发(自发)
 // <5> := 被请求
-func BitString32CP56Time2a(c Connect, coa CauseOfTransmission,
-	ca CommonAddr, infos ...BitString32Info) error {
+func BitString32CP56Time2a(c Connect, coa CauseOfTransmission, ca CommonAddr, infos ...BitString32Info) error {
 	if !(coa.Cause == Spontaneous || coa.Cause == Request) {
 		return ErrCmdCause
 	}
@@ -469,8 +468,7 @@ type MeasuredValueNormalInfo struct {
 // [M_ME_TA_1] See companion standard 101, subclass 7.3.1.10
 // [M_ME_TD_1] See companion standard 101, subclass 7.3.1.26
 // [M_ME_ND_1] See companion standard 101, subclass 7.3.1.21， The quality descriptor must default to asdu.GOOD
-func measuredValueNormal(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
-	ca CommonAddr, attrs ...MeasuredValueNormalInfo) error {
+func measuredValueNormal(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission, ca CommonAddr, attrs ...MeasuredValueNormalInfo) error {
 	if err := checkValid(c, typeID, isSequence, len(attrs)); err != nil {
 		return err
 	}
@@ -550,8 +548,7 @@ func MeasuredValueNormalCP24Time2a(c Connect, coa CauseOfTransmission,
 // 监视方向：
 // <3> := 突发(自发)
 // <5> := 被请求
-func MeasuredValueNormalCP56Time2a(c Connect, coa CauseOfTransmission,
-	ca CommonAddr, infos ...MeasuredValueNormalInfo) error {
+func MeasuredValueNormalCP56Time2a(c Connect, coa CauseOfTransmission, ca CommonAddr, infos ...MeasuredValueNormalInfo) error {
 	if !(coa.Cause == Spontaneous || coa.Cause == Request) {
 		return ErrCmdCause
 	}
@@ -571,8 +568,7 @@ func MeasuredValueNormalCP56Time2a(c Connect, coa CauseOfTransmission,
 // <21> := 响应第1组召唤
 // 至
 // <36> := 响应第16组召唤
-func MeasuredValueNormalNoQuality(c Connect, isSequence bool, coa CauseOfTransmission,
-	ca CommonAddr, infos ...MeasuredValueNormalInfo) error {
+func MeasuredValueNormalNoQuality(c Connect, isSequence bool, coa CauseOfTransmission, ca CommonAddr, infos ...MeasuredValueNormalInfo) error {
 	if !(coa.Cause == Periodic || coa.Cause == Background ||
 		coa.Cause == Spontaneous || coa.Cause == Request ||
 		(coa.Cause >= InterrogatedByStation && coa.Cause <= InterrogatedByGroup16)) {
@@ -693,8 +689,7 @@ type MeasuredValueFloatInfo struct {
 // [M_ME_NC_1] See companion standard 101, subclass 7.3.1.13
 // [M_ME_TC_1] See companion standard 101, subclass 7.3.1.14
 // [M_ME_TF_1] See companion standard 101, subclass 7.3.1.28
-func measuredValueFloat(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
-	ca CommonAddr, infos ...MeasuredValueFloatInfo) error {
+func measuredValueFloat(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission, ca CommonAddr, infos ...MeasuredValueFloatInfo) error {
 	if err := checkValid(c, typeID, isSequence, len(infos)); err != nil {
 		return err
 	}
@@ -772,8 +767,7 @@ func MeasuredValueFloatCP24Time2a(c Connect, coa CauseOfTransmission, ca CommonA
 // 监视方向：
 // <3> := 突发(自发)
 // <5> := 被请求
-func MeasuredValueFloatCP56Time2a(c Connect, coa CauseOfTransmission,
-	ca CommonAddr, infos ...MeasuredValueFloatInfo) error {
+func MeasuredValueFloatCP56Time2a(c Connect, coa CauseOfTransmission, ca CommonAddr, infos ...MeasuredValueFloatInfo) error {
 	if !(coa.Cause == Spontaneous || coa.Cause == Request) {
 		return ErrCmdCause
 	}
@@ -792,8 +786,7 @@ type BinaryCounterReadingInfo struct {
 // [M_IT_NA_1] See companion standard 101, subclass 7.3.1.15
 // [M_IT_TA_1] See companion standard 101, subclass 7.3.1.16
 // [M_IT_TB_1] See companion standard 101, subclass 7.3.1.29
-func integratedTotals(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission,
-	ca CommonAddr, infos ...BinaryCounterReadingInfo) error {
+func integratedTotals(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission, ca CommonAddr, infos ...BinaryCounterReadingInfo) error {
 	if err := checkValid(c, typeID, isSequence, len(infos)); err != nil {
 		return err
 	}
@@ -875,8 +868,7 @@ func IntegratedTotalsCP24Time2a(c Connect, coa CauseOfTransmission,
 // <39> := 响应第2组计数量召唤
 // <40> := 响应第3组计数量召唤
 // <41> := 响应第4组计数量召唤
-func IntegratedTotalsCP56Time2a(c Connect, coa CauseOfTransmission,
-	ca CommonAddr, infos ...BinaryCounterReadingInfo) error {
+func IntegratedTotalsCP56Time2a(c Connect, coa CauseOfTransmission, ca CommonAddr, infos ...BinaryCounterReadingInfo) error {
 	if !(coa.Cause == Spontaneous || (coa.Cause >= RequestByGeneralCounter && coa.Cause <= RequestByGroup4Counter)) {
 		return ErrCmdCause
 	}
@@ -892,6 +884,7 @@ func IntegratedTotalsCP56Time2a(c Connect, coa CauseOfTransmission,
 // PackedOutputCircuitInfoCP56Time2a
 // PackedSinglePointWithSCD
 
+// GetSinglePoint [M_SP_NA_1], [M_SP_TA_1] or [M_SP_TB_1] 获取单点信息信息体集合
 func (this *ASDU) GetSinglePoint() []SinglePointInfo {
 	info := make([]SinglePointInfo, 0, this.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
@@ -924,6 +917,7 @@ func (this *ASDU) GetSinglePoint() []SinglePointInfo {
 	return info
 }
 
+// GetDoublePoint [M_DP_NA_1], [M_DP_TA_1] or [M_DP_TB_1] 获得双点信息体集合
 func (this *ASDU) GetDoublePoint() []DoublePointInfo {
 	info := make([]DoublePointInfo, 0, this.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
@@ -956,6 +950,7 @@ func (this *ASDU) GetDoublePoint() []DoublePointInfo {
 	return info
 }
 
+// GetStepPosition [M_ST_NA_1], [M_ST_TA_1] or [M_ST_TB_1] 获得步位置信息体集合
 func (this *ASDU) GetStepPosition() []StepPositionInfo {
 	info := make([]StepPositionInfo, 0, this.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
@@ -989,6 +984,7 @@ func (this *ASDU) GetStepPosition() []StepPositionInfo {
 	return info
 }
 
+// GetBitString32 [M_BO_NA_1], [M_BO_TA_1] or [M_BO_TB_1] 获得比特位串信息体集合
 func (this *ASDU) GetBitString32() []BitString32Info {
 	info := make([]BitString32Info, 0, this.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
@@ -1023,6 +1019,7 @@ func (this *ASDU) GetBitString32() []BitString32Info {
 	return info
 }
 
+// GetMeasuredValueNormal [M_ME_NA_1], [M_ME_TA_1],[ M_ME_TD_1] or [M_ME_ND_1] 获得测量值,规一化值信息体集合
 func (this *ASDU) GetMeasuredValueNormal() []MeasuredValueNormalInfo {
 	info := make([]MeasuredValueNormalInfo, 0, this.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
@@ -1061,6 +1058,7 @@ func (this *ASDU) GetMeasuredValueNormal() []MeasuredValueNormalInfo {
 	return info
 }
 
+// GetMeasuredValueScaled [M_ME_NB_1], [M_ME_TB_1] or [M_ME_TE_1] 获得测量值，标度化值信息体集合
 func (this *ASDU) GetMeasuredValueScaled() []MeasuredValueScaledInfo {
 	info := make([]MeasuredValueScaledInfo, 0, this.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
@@ -1095,6 +1093,7 @@ func (this *ASDU) GetMeasuredValueScaled() []MeasuredValueScaledInfo {
 	return info
 }
 
+// GetMeasuredValueFloat [M_ME_NC_1], [M_ME_TC_1] or [M_ME_TF_1].获得测量值,短浮点数信息体集合
 func (this *ASDU) GetMeasuredValueFloat() []MeasuredValueFloatInfo {
 	info := make([]MeasuredValueFloatInfo, 0, this.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
@@ -1128,6 +1127,7 @@ func (this *ASDU) GetMeasuredValueFloat() []MeasuredValueFloatInfo {
 	return info
 }
 
+// GetIntegratedTotals [M_IT_NA_1], [M_IT_TA_1] or [M_IT_TB_1]. 获得累计量信息体集合
 func (this *ASDU) GetIntegratedTotals() []BinaryCounterReadingInfo {
 	info := make([]BinaryCounterReadingInfo, 0, this.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
