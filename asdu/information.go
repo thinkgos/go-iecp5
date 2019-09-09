@@ -18,10 +18,10 @@ const InfoObjAddrIrrelevant InfoObjAddr = 0
 // See companion standard 101, subclass 7.2.6.1.
 type SinglePoint byte
 
-// 单点信息
+// 单点信息定义
 const (
-	SPIOff SinglePoint = iota
-	SPIOn
+	SPIOff SinglePoint = iota // 关
+	SPIOn                     // 开
 )
 
 // Value single point to byte
@@ -46,11 +46,11 @@ func (this DoublePoint) Value() byte {
 	return byte(this & 0x03)
 }
 
-// Quality descriptor flags attribute measured values.
+// QualityDescriptor Quality descriptor flags attribute measured values.
 // See companion standard 101, subclass 7.2.6.3.
 type QualityDescriptor byte
 
-// Quality descriptor flags attribute measured values.
+// Quality descriptor flags defined.
 const (
 	// QDSOverflow marks whether the value is beyond a predefined range.
 	QDSOverflow QualityDescriptor = 1 << iota
@@ -72,11 +72,11 @@ const (
 	QDSGood = 0
 )
 
-// Quality descriptor Protection Equipment flags attribute.
-// See companion standard 101, subclass 7.2.6.3.
+//QualityDescriptorProtection  Quality descriptor Protection Equipment flags attribute.
+// See companion standard 101, subclass 7.2.6.4.
 type QualityDescriptorProtection byte
 
-// Quality descriptor flags attribute Protection Equipment.
+// Quality descriptor flags attribute Protection Equipment defined.
 const (
 	_ QualityDescriptorProtection = 1 << iota // reserve
 	_                                         // reserve
@@ -101,16 +101,16 @@ const (
 // StepPosition is a measured value with transient state indication.
 // 带瞬变状态指示的测量值，用于变压器步位置或其它步位置的值
 // See companion standard 101, subclass 7.2.6.5.
+// Val range <-64..63>
+// bit[0-6]: <-64..63>
+// NOTE: bit6 为符号位
+// bit7: 0: 设备未在瞬变状态 1： 设备处于瞬变状态
 type StepPosition struct {
 	Val          int
 	HasTransient bool
 }
 
 // Value returns step position value.
-// Values range<-64..63>
-// bit[0-6]: <-64..63>
-// NOTE: bit6 为符号位
-// bit7: 0: 设备未在瞬变状态 1： 设备处于瞬变状态
 func (this StepPosition) Value() byte {
 	p := this.Val & 0x7f
 	if this.HasTransient {
@@ -119,7 +119,7 @@ func (this StepPosition) Value() byte {
 	return byte(p)
 }
 
-// ParseStepPosition 返回 val in [-64, 63] 和 HasTransient 是否瞬变状态.
+// ParseStepPosition parse byte to StepPosition.
 func ParseStepPosition(b byte) StepPosition {
 	step := StepPosition{HasTransient: (b & 0x80) != 0}
 	if b&0x40 == 0 {
@@ -145,11 +145,20 @@ func (this Normalize) Float64() float64 {
 type BinaryCounterReading struct {
 	CounterReading   int32
 	SequenceNotation byte
+	// TODO
 }
 
 // SingleEvent is single event
 // See companion standard 101, subclass 7.2.6.10.
 type SingleEvent byte
+
+// single event defined
+const (
+	SEIndeterminateOrIntermediate SingleEvent = iota // 不确定或中间状态
+	SEDeterminedOff                                  // 确定状态开
+	SEDeterminedOn                                   // 确定状态关
+	SEIndeterminate                                  // 不确定或中间状态
+)
 
 // StartEvent Start event protection
 type StartEvent byte
@@ -157,14 +166,13 @@ type StartEvent byte
 // Start event protection
 // See companion standard 101, subclass 7.2.6.11.
 const (
-	SEPGeneralStart StartEvent = 1 << iota
-	SEPStartL1
-	SEPStartL2
-	SEPStartL3
-	SEPStartEarthCurrent
-	SEPStartReverseDirection
-	_
-	_
+	SEPGeneralStart          StartEvent = 1 << iota // 总启动
+	SEPStartL1                                      // A相保护启动
+	SEPStartL2                                      // B相保护启动
+	SEPStartL3                                      // C相保护启动
+	SEPStartEarthCurrent                            // 接地电流保护启动
+	SEPStartReverseDirection                        // 反向保护启动
+	// other reserved
 )
 
 // OutputCircuitInfo output command information
@@ -173,16 +181,17 @@ type OutputCircuitInfo byte
 
 // output command information
 const (
-	OCIGeneralCommand = 1 << iota
-	OCICommandL1
-	OCICommandL2
-	OCICommandL3
+	OCIGeneralCommand OutputCircuitInfo = 1 << iota // 总命令输出至输出电路
+	OCICommandL1                                    // A 相保护命令输出至输出电路
+	OCICommandL2                                    // B 相保护命令输出至输出电路
+	OCICommandL3                                    // C 相保护命令输出至输出电路
 	// other reserved
 )
 
 // See companion standard 101, subclass 7.2.6.14.
 const FBPTestWord uint16 = 0x55aa
 
+// TODO: check follow
 /**************************************************/
 // See companion standard 101, subclass 7.2.6.16.
 type DoubleCommand byte
@@ -241,10 +250,11 @@ func (this CauseOfInitial) Value() byte {
 	return byte(this.Cause)
 }
 
-// See companion standard 101, subclass 7.2.6.22.
 // QualifierOfInterrogation Qualifier Of Interrogation
+// See companion standard 101, subclass 7.2.6.22.
 type QualifierOfInterrogation byte
 
+// QualifierOfInterrogation defined
 const (
 	// <1..19>: 为标准定义保留
 	QOIStation QualifierOfInterrogation = 20 + iota // interrogated by station interrogation

@@ -253,7 +253,7 @@ func (this TypeID) String() string {
 	var s string
 	switch {
 	case 1 <= this && this <= 21:
-		this -= 1
+		this--
 		s = _TypeIDName0[this*9 : 9*(this+1)]
 	case 30 <= this && this <= 41:
 		this -= 30
@@ -287,7 +287,7 @@ func (this TypeID) String() string {
 	return "TID<" + s + ">"
 }
 
-// Variable is variable structure qualifier
+// VariableStruct is variable structure qualifier
 // See companion standard 101, subclass 7.2.2.
 // number <0..127>:  bit0 - bit6
 // seq: bit7

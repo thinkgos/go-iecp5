@@ -43,7 +43,7 @@ func (this *ASDU) AppendInfoObjAddr(addr InfoObjAddr) error {
 	return nil
 }
 
-// DecodeByte decode info object address then the pass it
+// DecodeInfoObjAddr decode info object address then the pass it
 func (this *ASDU) DecodeInfoObjAddr() InfoObjAddr {
 	var ioa InfoObjAddr
 	switch this.InfoObjAddrSize {
@@ -68,6 +68,7 @@ func (this *ASDU) AppendNormalize(n Normalize) *ASDU {
 	return this
 }
 
+// DecodeNormalize decode info object byte to a Normalize value
 func (this *ASDU) DecodeNormalize() Normalize {
 	n := Normalize(binary.LittleEndian.Uint16(this.infoObj))
 	this.infoObj = this.infoObj[2:]
@@ -75,11 +76,13 @@ func (this *ASDU) DecodeNormalize() Normalize {
 }
 
 // AppendScaled append a Scaled value to info object
+// See companion standard 101, subclass 7.2.6.7.
 func (this *ASDU) AppendScaled(i int16) *ASDU {
 	this.infoObj = append(this.infoObj, byte(i), byte(i>>8))
 	return this
 }
 
+// DecodeScaled decode info object byte to a Scaled value
 func (this *ASDU) DecodeScaled() int16 {
 	s := int16(binary.LittleEndian.Uint16(this.infoObj))
 	this.infoObj = this.infoObj[2:]
@@ -87,36 +90,29 @@ func (this *ASDU) DecodeScaled() int16 {
 }
 
 // AppendFloat32 append a float32 value to info object
+// See companion standard 101, subclass 7.2.6.8.
 func (this *ASDU) AppendFloat32(f float32) *ASDU {
 	bits := math.Float32bits(f)
 	this.infoObj = append(this.infoObj, byte(bits), byte(bits>>8), byte(bits>>16), byte(bits>>24))
 	return this
 }
 
+// DecodeScaled decode info object byte to a float32 value
 func (this *ASDU) DecodeFloat() float32 {
 	f := math.Float32frombits(binary.LittleEndian.Uint32(this.infoObj))
 	this.infoObj = this.infoObj[4:]
 	return f
 }
 
-// AppendBitsString32 append a bits string value to info object
-func (this *ASDU) AppendBitsString32(v uint32) *ASDU {
-	this.infoObj = append(this.infoObj, byte(v), byte(v>>8), byte(v>>16), byte(v>>24))
-	return this
-}
-
-func (this *ASDU) DecodeBitsString32() uint32 {
-	v := binary.LittleEndian.Uint32(this.infoObj)
-	this.infoObj = this.infoObj[4:]
-	return v
-}
-
+// AppendBinaryCounterReading append binary couter reading value to info object
+// See companion standard 101, subclass 7.2.6.9.
 func (this *ASDU) AppendBinaryCounterReading(v BinaryCounterReading) *ASDU {
 	this.infoObj = append(this.infoObj, byte(v.CounterReading), byte(v.CounterReading>>8),
 		byte(v.CounterReading>>16), byte(v.CounterReading>>24), v.SequenceNotation)
 	return this
 }
 
+// DecodeBinaryCounterReading decode info object byte to binary couter reading value
 func (this *ASDU) DecodeBinaryCounterReading() BinaryCounterReading {
 	v := int32(binary.LittleEndian.Uint32(this.infoObj))
 	b := this.infoObj[4]
@@ -124,18 +120,33 @@ func (this *ASDU) DecodeBinaryCounterReading() BinaryCounterReading {
 	return BinaryCounterReading{v, b}
 }
 
+// AppendBitsString32 append a bits string value to info object
+// See companion standard 101, subclass 7.2.6.13.
+func (this *ASDU) AppendBitsString32(v uint32) *ASDU {
+	this.infoObj = append(this.infoObj, byte(v), byte(v>>8), byte(v>>16), byte(v>>24))
+	return this
+}
+
+// DecodeBitsString32 decode info object byte to a bits string value
+func (this *ASDU) DecodeBitsString32() uint32 {
+	v := binary.LittleEndian.Uint32(this.infoObj)
+	this.infoObj = this.infoObj[4:]
+	return v
+}
+
+// AppendCP56Time2a append a CP56Time2a value to info object
 func (this *ASDU) AppendCP56Time2a(t time.Time, loc *time.Location) *ASDU {
 	this.infoObj = append(this.infoObj, CP56Time2a(t, loc)...)
 	return this
 }
 
-// AppendNormalize append a CP56Time2a value to info object
 func (this *ASDU) DecodeCP56Time2a() time.Time {
 	t := ParseCP56Time2a(this.infoObj, this.Params.InfoObjTimeZone)
 	this.infoObj = this.infoObj[7:]
 	return t
 }
 
+// AppendCP24Time2a append CP24Time2a to asdu info object
 func (this *ASDU) AppendCP24Time2a(t time.Time, loc *time.Location) *ASDU {
 	this.infoObj = append(this.infoObj, CP24Time2a(t, loc)...)
 	return this
@@ -147,6 +158,7 @@ func (this *ASDU) DecodeCP24Time2a() time.Time {
 	return t
 }
 
+// AppendCP16Time2a append CP16Time2a to asdu info object
 func (this *ASDU) AppendCP16Time2a(msec uint16) *ASDU {
 	this.infoObj = append(this.infoObj, CP16Time2a(msec)...)
 	return this

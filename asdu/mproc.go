@@ -874,10 +874,11 @@ func IntegratedTotalsCP56Time2a(c Connect, coa CauseOfTransmission, ca CommonAdd
 	return integratedTotals(c, M_IT_TB_1, false, coa, ca, infos...)
 }
 
-// ProtectionEquipmentInfo the counter reading attributes. 二进制计数量读数
+// EventOfProtectionEquipmentInfo the counter reading attributes. 二进制计数量读数
 type EventOfProtectionEquipmentInfo struct {
 	Ioa   InfoObjAddr
 	Event SingleEvent
+	Qdp   QualityDescriptorProtection
 	Msec  uint16
 	// the type does not include timing will ignore
 	Time time.Time
@@ -908,7 +909,7 @@ func eventOfProtectionEquipment(c Connect, typeID TypeID, coa CauseOfTransmissio
 		if err := u.AppendInfoObjAddr(v.Ioa); err != nil {
 			return err
 		}
-		u.AppendBytes(byte(v.Event))
+		u.AppendBytes(byte(v.Event&0x03) | byte(v.Qdp&0xf8))
 		u.AppendCP16Time2a(v.Msec)
 		switch typeID {
 		case M_EP_TA_1:
@@ -922,7 +923,7 @@ func eventOfProtectionEquipment(c Connect, typeID TypeID, coa CauseOfTransmissio
 	return c.Send(u)
 }
 
-// eventOfProtectionEquipment sends a type identification [M_EP_TA_1]. 带时标CP24Time2a继电器保护设备事件
+// EventOfProtectionEquipmentCP24Time2a sends a type identification [M_EP_TA_1]. 带时标CP24Time2a继电器保护设备事件
 // [M_EP_TA_1] See companion standard 101, subclass 7.3.1.17
 // 传送原因(coa)用于
 // 监视方向：
@@ -931,7 +932,7 @@ func EventOfProtectionEquipmentCP24Time2a(c Connect, coa CauseOfTransmission, ca
 	return eventOfProtectionEquipment(c, M_EP_TA_1, coa, ca, infos...)
 }
 
-// eventOfProtectionEquipment sends a type identification [M_EP_TD_1]. 带时标CP24Time2a继电器保护设备事件
+// EventOfProtectionEquipmentCP56Time2a sends a type identification [M_EP_TD_1]. 带时标CP24Time2a继电器保护设备事件
 // [M_EP_TD_1] See companion standard 101, subclass 7.3.1.30
 // 传送原因(coa)用于
 // 监视方向：
@@ -950,7 +951,7 @@ type PackedStartEventsOfProtectionEquipmentInfo struct {
 	Time time.Time
 }
 
-// eventOfProtectionEquipment sends a type identification [M_EP_TB_1], [M_EP_TE_1]. 继电器保护设备事件
+// packedStartEventsOfProtectionEquipment sends a type identification [M_EP_TB_1], [M_EP_TE_1]. 继电器保护设备事件
 // [M_EP_TB_1] See companion standard 101, subclass 7.3.1.18
 // [M_EP_TE_1] See companion standard 101, subclass 7.3.1.31
 func packedStartEventsOfProtectionEquipment(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr, info PackedStartEventsOfProtectionEquipmentInfo) error {
@@ -972,7 +973,7 @@ func packedStartEventsOfProtectionEquipment(c Connect, typeID TypeID, coa CauseO
 	if err := u.AppendInfoObjAddr(info.Ioa); err != nil {
 		return err
 	}
-	u.AppendBytes(byte(info.Event), byte(info.Qdp))
+	u.AppendBytes(byte(info.Event), byte(info.Qdp)&0xf1)
 	u.AppendCP16Time2a(info.Msec)
 	switch typeID {
 	case M_EP_TB_1:
@@ -991,7 +992,7 @@ func packedStartEventsOfProtectionEquipment(c Connect, typeID TypeID, coa CauseO
 // 传送原因(coa)用于
 // 监视方向：
 // <3> := 突发(自发)
-func PackedStartEventsOfProtectionEquipmentCP24Time2a(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr, info PackedStartEventsOfProtectionEquipmentInfo) error {
+func PackedStartEventsOfProtectionEquipmentCP24Time2a(c Connect, coa CauseOfTransmission, ca CommonAddr, info PackedStartEventsOfProtectionEquipmentInfo) error {
 	return packedStartEventsOfProtectionEquipment(c, M_EP_TB_1, coa, ca, info)
 }
 
@@ -1000,7 +1001,7 @@ func PackedStartEventsOfProtectionEquipmentCP24Time2a(c Connect, typeID TypeID, 
 // 传送原因(coa)用于
 // 监视方向：
 // <3> := 突发(自发)
-func PackedStartEventsOfProtectionEquipmentCP56Time2a(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr, info PackedStartEventsOfProtectionEquipmentInfo) error {
+func PackedStartEventsOfProtectionEquipmentCP56Time2a(c Connect, coa CauseOfTransmission, ca CommonAddr, info PackedStartEventsOfProtectionEquipmentInfo) error {
 	return packedStartEventsOfProtectionEquipment(c, M_EP_TE_1, coa, ca, info)
 }
 
@@ -1036,7 +1037,7 @@ func packedOutputCircuitInfo(c Connect, typeID TypeID, coa CauseOfTransmission, 
 	if err := u.AppendInfoObjAddr(info.Ioa); err != nil {
 		return err
 	}
-	u.AppendBytes(byte(info.Oci), byte(info.Qdp))
+	u.AppendBytes(byte(info.Oci), byte(info.Qdp)&0xf1)
 	u.AppendCP16Time2a(info.Msec)
 	switch typeID {
 	case M_EP_TC_1:
@@ -1050,21 +1051,21 @@ func packedOutputCircuitInfo(c Connect, typeID TypeID, coa CauseOfTransmission, 
 	return c.Send(u)
 }
 
-// packedOutputCircuitInfo sends a type identification [M_EP_TC_1]. 带CP24Time2a继电器保护设备成组输出电路信息
+// PackedOutputCircuitInfoCP24Time2a sends a type identification [M_EP_TC_1]. 带CP24Time2a继电器保护设备成组输出电路信息
 // [M_EP_TC_1] See companion standard 101, subclass 7.3.1.19
 // 传送原因(coa)用于
 // 监视方向：
 // <3> := 突发(自发)
-func PackedOutputCircuitInfoCP24Time2a(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr, info PackedOutputCircuitInfoInfo) error {
+func PackedOutputCircuitInfoCP24Time2a(c Connect, coa CauseOfTransmission, ca CommonAddr, info PackedOutputCircuitInfoInfo) error {
 	return packedOutputCircuitInfo(c, M_EP_TC_1, coa, ca, info)
 }
 
-// packedOutputCircuitInfo sends a type identification [M_EP_TF_1]. 带CP56Time2a继电器保护设备成组输出电路信息
+// PackedOutputCircuitInfoCP56Time2a sends a type identification [M_EP_TF_1]. 带CP56Time2a继电器保护设备成组输出电路信息
 // [M_EP_TF_1] See companion standard 101, subclass 7.3.1.32
 // 传送原因(coa)用于
 // 监视方向：
 // <3> := 突发(自发)
-func PackedOutputCircuitInfoCP56Time2a(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr, info PackedOutputCircuitInfoInfo) error {
+func PackedOutputCircuitInfoCP56Time2a(c Connect, coa CauseOfTransmission, ca CommonAddr, info PackedOutputCircuitInfoInfo) error {
 	return packedOutputCircuitInfo(c, M_EP_TF_1, coa, ca, info)
 }
 
@@ -1409,7 +1410,7 @@ func (this *ASDU) GetEventOfProtectionEquipment() []EventOfProtectionEquipmentIn
 			infoObjAddr++
 		}
 
-		value := SingleEvent(this.DecodeByte())
+		value := this.DecodeByte()
 		msec := this.DecodeCP16Time2a()
 		var t time.Time
 		switch this.Type {
@@ -1422,7 +1423,8 @@ func (this *ASDU) GetEventOfProtectionEquipment() []EventOfProtectionEquipmentIn
 		}
 		info = append(info, EventOfProtectionEquipmentInfo{
 			Ioa:   infoObjAddr,
-			Event: value,
+			Event: SingleEvent(value & 0x03),
+			Qdp:   QualityDescriptorProtection(value & 0xf1),
 			Msec:  msec,
 			Time:  t})
 	}
@@ -1439,7 +1441,7 @@ func (this *ASDU) GetPackedStartEventsOfProtectionEquipment() PackedStartEventsO
 
 	info.Ioa = this.DecodeInfoObjAddr()
 	info.Event = StartEvent(this.DecodeByte())
-	info.Qdp = QualityDescriptorProtection(this.DecodeByte())
+	info.Qdp = QualityDescriptorProtection(this.DecodeByte() & 0xf1)
 	info.Msec = this.DecodeCP16Time2a()
 	switch this.Type {
 	case M_EP_TB_1:
@@ -1462,7 +1464,7 @@ func (this *ASDU) GetPackedOutputCircuitInfo() PackedOutputCircuitInfoInfo {
 
 	info.Ioa = this.DecodeInfoObjAddr()
 	info.Oci = OutputCircuitInfo(this.DecodeByte())
-	info.Qdp = QualityDescriptorProtection(this.DecodeByte())
+	info.Qdp = QualityDescriptorProtection(this.DecodeByte() & 0xf1)
 	info.Msec = this.DecodeCP16Time2a()
 	switch this.Type {
 	case M_EP_TC_1:
