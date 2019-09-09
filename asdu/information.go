@@ -461,5 +461,6 @@ func (this QualifierOfSetpointCmd) Value() byte {
 type StatusAndStatusChangeDetection uint32
 
 func (this StatusAndStatusChangeDetection) Value() []byte {
+	// TODO
 	return []byte{}
 }

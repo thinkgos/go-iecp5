@@ -850,8 +850,7 @@ func IntegratedTotals(c Connect, isSequence bool, coa CauseOfTransmission, ca Co
 // <39> := 响应第2组计数量召唤
 // <40> := 响应第3组计数量召唤
 // <41> := 响应第4组计数量召唤
-func IntegratedTotalsCP24Time2a(c Connect, coa CauseOfTransmission,
-	ca CommonAddr, infos ...BinaryCounterReadingInfo) error {
+func IntegratedTotalsCP24Time2a(c Connect, coa CauseOfTransmission, ca CommonAddr, infos ...BinaryCounterReadingInfo) error {
 	if !(coa.Cause == Spontaneous || (coa.Cause >= RequestByGeneralCounter && coa.Cause <= RequestByGroup4Counter)) {
 		return ErrCmdCause
 	}
@@ -879,7 +878,7 @@ func IntegratedTotalsCP56Time2a(c Connect, coa CauseOfTransmission, ca CommonAdd
 type EventOfProtectionEquipmentInfo struct {
 	Ioa   InfoObjAddr
 	Event SingleEvent
-	msec  uint16
+	Msec  uint16
 	// the type does not include timing will ignore
 	Time time.Time
 }
@@ -910,7 +909,7 @@ func eventOfProtectionEquipment(c Connect, typeID TypeID, coa CauseOfTransmissio
 			return err
 		}
 		u.AppendBytes(byte(v.Event))
-		u.AppendCP16Time2a(v.msec)
+		u.AppendCP16Time2a(v.Msec)
 		switch typeID {
 		case M_EP_TA_1:
 			u.AppendCP24Time2a(v.Time, u.InfoObjTimeZone)
@@ -946,7 +945,7 @@ type PackedStartEventsOfProtectionEquipmentInfo struct {
 	Ioa   InfoObjAddr
 	Event StartEvent
 	Qdp   QualityDescriptorProtection
-	msec  uint16
+	Msec  uint16
 	// the type does not include timing will ignore
 	Time time.Time
 }
@@ -974,7 +973,7 @@ func packedStartEventsOfProtectionEquipment(c Connect, typeID TypeID, coa CauseO
 		return err
 	}
 	u.AppendBytes(byte(info.Event), byte(info.Qdp))
-	u.AppendCP16Time2a(info.msec)
+	u.AppendCP16Time2a(info.Msec)
 	switch typeID {
 	case M_EP_TB_1:
 		u.AppendCP24Time2a(info.Time, u.InfoObjTimeZone)
@@ -1010,7 +1009,7 @@ type PackedOutputCircuitInfoInfo struct {
 	Ioa  InfoObjAddr
 	Oci  OutputCircuitInfo
 	Qdp  QualityDescriptorProtection
-	msec uint16
+	Msec uint16
 	// the type does not include timing will ignore
 	Time time.Time
 }
@@ -1038,11 +1037,11 @@ func packedOutputCircuitInfo(c Connect, typeID TypeID, coa CauseOfTransmission, 
 		return err
 	}
 	u.AppendBytes(byte(info.Oci), byte(info.Qdp))
-	u.AppendCP16Time2a(info.msec)
+	u.AppendCP16Time2a(info.Msec)
 	switch typeID {
-	case M_EP_TB_1:
+	case M_EP_TC_1:
 		u.AppendCP24Time2a(info.Time, u.InfoObjTimeZone)
-	case M_EP_TE_1:
+	case M_EP_TF_1:
 		u.AppendCP56Time2a(info.Time, u.InfoObjTimeZone)
 	default:
 		return ErrTypeIDNotMatch
@@ -1080,9 +1079,19 @@ type PackedSinglePointWithSCDInfo struct {
 // [M_PS_NA_1] See companion standard 101, subclass 7.3.1.20
 // 传送原因(coa)用于
 // 监视方向：
+// <2> := 背景扫描
 // <3> := 突发(自发)
+// <5> := 被请求
+// <11> := 由远方命令会紖起的返送信息
+// <12> := 由当地命令会紖起的返送信息
+// <20> := 响应站召唤
+// <21> := 响应第1组召唤
+// 至
+// <36> := 响应第16组召唤
 func PackedSinglePointWithSCD(c Connect, isSequence bool, coa CauseOfTransmission, ca CommonAddr, infos ...PackedSinglePointWithSCDInfo) error {
-	if coa.Cause != Spontaneous {
+	if !(coa.Cause == Background || coa.Cause == Spontaneous || coa.Cause == Request ||
+		coa.Cause == ReturnInfoRemote || coa.Cause == ReturnInfoLocal ||
+		(coa.Cause >= InterrogatedByStation && coa.Cause <= InterrogatedByGroup16)) {
 		return ErrCmdCause
 	}
 	if err := checkValid(c, M_PS_NA_1, isSequence, len(infos)); err != nil {
@@ -1384,6 +1393,105 @@ func (this *ASDU) GetIntegratedTotals() []BinaryCounterReadingInfo {
 			Ioa:   infoObjAddr,
 			Value: value,
 			Time:  t})
+	}
+	return info
+}
+
+// GetEventOfProtectionEquipment [M_EP_TA_1] [M_EP_TD_1] 获取继电器保护设备事件信息体
+func (this *ASDU) GetEventOfProtectionEquipment() []EventOfProtectionEquipmentInfo {
+	info := make([]EventOfProtectionEquipmentInfo, 0, this.Variable.Number)
+	infoObjAddr := InfoObjAddr(0)
+	for i, once := 0, false; i < int(this.Variable.Number); i++ {
+		if !this.Variable.IsSequence || !once {
+			once = true
+			infoObjAddr = this.DecodeInfoObjAddr()
+		} else {
+			infoObjAddr++
+		}
+
+		value := SingleEvent(this.DecodeByte())
+		msec := this.DecodeCP16Time2a()
+		var t time.Time
+		switch this.Type {
+		case M_EP_TA_1:
+			t = this.DecodeCP24Time2a()
+		case M_EP_TD_1:
+			t = this.DecodeCP56Time2a()
+		default:
+			panic(ErrTypeIDNotMatch)
+		}
+		info = append(info, EventOfProtectionEquipmentInfo{
+			Ioa:   infoObjAddr,
+			Event: value,
+			Msec:  msec,
+			Time:  t})
+	}
+	return info
+}
+
+// GetPackedStartEventsOfProtectionEquipment [M_EP_TB_1] [M_EP_TE_1] 获取继电器保护设备事件信息体
+func (this *ASDU) GetPackedStartEventsOfProtectionEquipment() PackedStartEventsOfProtectionEquipmentInfo {
+	info := PackedStartEventsOfProtectionEquipmentInfo{}
+
+	if this.Variable.IsSequence || this.Variable.Number != 1 {
+		return info
+	}
+
+	info.Ioa = this.DecodeInfoObjAddr()
+	info.Event = StartEvent(this.DecodeByte())
+	info.Qdp = QualityDescriptorProtection(this.DecodeByte())
+	info.Msec = this.DecodeCP16Time2a()
+	switch this.Type {
+	case M_EP_TB_1:
+		info.Time = this.DecodeCP24Time2a()
+	case M_EP_TE_1:
+		info.Time = this.DecodeCP56Time2a()
+	default:
+		panic(ErrTypeIDNotMatch)
+	}
+	return info
+}
+
+// GetPackedOutputCircuitInfo [M_EP_TC_1] [M_EP_TF_1] 获取继电器保护设备成组输出电路信息信息体
+func (this *ASDU) GetPackedOutputCircuitInfo() PackedOutputCircuitInfoInfo {
+	info := PackedOutputCircuitInfoInfo{}
+
+	if this.Variable.IsSequence || this.Variable.Number != 1 {
+		return info
+	}
+
+	info.Ioa = this.DecodeInfoObjAddr()
+	info.Oci = OutputCircuitInfo(this.DecodeByte())
+	info.Qdp = QualityDescriptorProtection(this.DecodeByte())
+	info.Msec = this.DecodeCP16Time2a()
+	switch this.Type {
+	case M_EP_TC_1:
+		info.Time = this.DecodeCP24Time2a()
+	case M_EP_TF_1:
+		info.Time = this.DecodeCP56Time2a()
+	default:
+		panic(ErrTypeIDNotMatch)
+	}
+	return info
+}
+
+// GetPackedSinglePointWithSCD [M_PS_NA_1]. 获得带变位检出的成组单点信息
+func (this *ASDU) GetPackedSinglePointWithSCD() []PackedSinglePointWithSCDInfo {
+	info := make([]PackedSinglePointWithSCDInfo, 0, this.Variable.Number)
+	infoObjAddr := InfoObjAddr(0)
+	for i, once := 0, false; i < int(this.Variable.Number); i++ {
+		if !this.Variable.IsSequence || !once {
+			once = true
+			infoObjAddr = this.DecodeInfoObjAddr()
+		} else {
+			infoObjAddr++
+		}
+		scd := this.DecodeStatusAndStatusChangeDetection()
+		qds := QualityDescriptor(this.DecodeByte())
+		info = append(info, PackedSinglePointWithSCDInfo{
+			Ioa: infoObjAddr,
+			Scd: scd,
+			Qds: qds})
 	}
 	return info
 }

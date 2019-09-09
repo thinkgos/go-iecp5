@@ -157,3 +157,8 @@ func (this *ASDU) DecodeCP16Time2a() uint16 {
 	this.infoObj = this.infoObj[2:]
 	return t
 }
+
+func (this *ASDU) DecodeStatusAndStatusChangeDetection() StatusAndStatusChangeDetection {
+	// TODO
+	return 0
+}
