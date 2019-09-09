@@ -8,11 +8,12 @@ import (
 // about data unit identification 应用服务数据单元 - 数据单元标识符
 
 // TypeID is the ASDU type identification.
+// See companion standard 101, subclass 7.2.1.
 type TypeID uint8
 
 // The standard ASDU type identification.
 // M for monitored information
-// Coa for control information
+// C for control information
 // P for parameter
 // F for file transfer.
 // <0> 未用
@@ -252,7 +253,7 @@ func (this TypeID) String() string {
 	var s string
 	switch {
 	case 1 <= this && this <= 21:
-		this--
+		this -= 1
 		s = _TypeIDName0[this*9 : 9*(this+1)]
 	case 30 <= this && this <= 41:
 		this -= 30
@@ -287,8 +288,9 @@ func (this TypeID) String() string {
 }
 
 // Variable is variable structure qualifier
-// number <0..127>, bit0 - bit6
-// seq, bit7
+// See companion standard 101, subclass 7.2.2.
+// number <0..127>:  bit0 - bit6
+// seq: bit7
 // 0: 同一类型，有不同objAddress的信息元素集合 (地址+元素)*N
 // 1： 同一类型，相同objAddress顺序信息元素集合 (一个地址,N元素*N)
 type VariableStruct struct {
@@ -320,20 +322,27 @@ func (this VariableStruct) String() string {
 	return fmt.Sprintf("VSQ<%d>", this.Number)
 }
 
-// Cause is the cause of transmission.
+// CauseOfTransmission is the cause of transmission.
 // See companion standard 101, subclass 7.2.3.
 // | T | P/N | 5..0 cause |
 // T = test, the cause of transmission for testing ,0: 未试验, 1：试验
-// P/N indicates the negative (or positive) confirmation,
+// P/N indicates the negative (or positive) confirmation.
+// Cause is the cause of transmission. bit5 - bit0
 // 对由启动应用功能所请求的激活以肯定或者否定的确认 0: 肯定确认, 1: 否定确认
-// Cause of transmission bit5-bit0
-type Cause byte
+type CauseOfTransmission struct {
+	IsTest     bool
+	IsNegative bool
+	Cause      Cause
+}
 
 // OriginAddr is originator address, See companion standard 101, subclass 7.2.3.
 // The width is controlled by Params.CauseSize. width 2 includes/activates the originator address.
 // <0>: 未用
 // <1..255>: 源发地址
 type OriginAddr byte
+
+// Cause is the cause of transmission. bit5-bit0
+type Cause byte
 
 // Cause of transmission bit5-bit0
 // <0> 未定义
@@ -460,13 +469,6 @@ var causeSemantics = []string{
 	"Special63",
 }
 
-// CauseOfTransmission is the cause of transmission.
-type CauseOfTransmission struct {
-	IsTest     bool
-	IsNegative bool
-	Cause      Cause
-}
-
 // ParseCauseOfTransmission parse byte to cause of transmission
 func ParseCauseOfTransmission(b byte) CauseOfTransmission {
 	return CauseOfTransmission{
@@ -504,16 +506,17 @@ func (this CauseOfTransmission) String() string {
 
 // CommonAddr is a station address.
 // The width is controlled by Params.CommonAddrSize.
-// width 1
-// <0>: 未用
-// <1..254>: 站地址
-// <255>: 全局地址
-// width 2
-// <0>: 未用
-// <1..65534>: 站地址
-// <65535>: 全局地址
+// width 1:
+//      <0>: 未用
+//      <1..254>: 站地址
+//      <255>: 全局地址
+// width 2:
+//      <0>: 未用
+//      <1..65534>: 站地址
+//      <65535>: 全局地址
 type CommonAddr uint16
 
+// special commonAddr
 const (
 	// InvalidCommonAddr is the invalid common address.
 	InvalidCommonAddr CommonAddr = 0
