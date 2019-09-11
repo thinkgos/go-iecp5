@@ -107,8 +107,18 @@ func (this *ASDU) DecodeFloat() float32 {
 // AppendBinaryCounterReading append binary couter reading value to info object
 // See companion standard 101, subclass 7.2.6.9.
 func (this *ASDU) AppendBinaryCounterReading(v BinaryCounterReading) *ASDU {
+	value := v.SeqNumber & 0x1f
+	if v.HasCarry {
+		value |= 0x20
+	}
+	if v.IsAdjusted {
+		value |= 0x40
+	}
+	if v.IsInvalid {
+		value |= 0x80
+	}
 	this.infoObj = append(this.infoObj, byte(v.CounterReading), byte(v.CounterReading>>8),
-		byte(v.CounterReading>>16), byte(v.CounterReading>>24), v.SequenceNotation)
+		byte(v.CounterReading>>16), byte(v.CounterReading>>24), value)
 	return this
 }
 
@@ -117,7 +127,13 @@ func (this *ASDU) DecodeBinaryCounterReading() BinaryCounterReading {
 	v := int32(binary.LittleEndian.Uint32(this.infoObj))
 	b := this.infoObj[4]
 	this.infoObj = this.infoObj[5:]
-	return BinaryCounterReading{v, b}
+	return BinaryCounterReading{
+		v,
+		b & 0x1f,
+		b&0x20 == 0x20,
+		b&0x40 == 0x40,
+		b&0x80 == 0x80,
+	}
 }
 
 // AppendBitsString32 append a bits string value to info object

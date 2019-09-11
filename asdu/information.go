@@ -142,17 +142,25 @@ func (this Normalize) Float64() float64 {
 
 // BinaryCounterReading is binary counter reading
 // See companion standard 101, subclass 7.2.6.9.
+// CounterReading: 计数器读数 [bit0...bit31]
+// SeqNumber: 顺序记法 [bit32...bit40]
+// SQ: 顺序号 [bit32...bit36]
+// CY: 进位 [bit37]
+// CA: 计数量被调整
+// IV: 无效
 type BinaryCounterReading struct {
-	CounterReading   int32
-	SequenceNotation byte
-	// TODO
+	CounterReading int32
+	SeqNumber      byte
+	HasCarry       bool
+	IsAdjusted     bool
+	IsInvalid      bool
 }
 
 // SingleEvent is single event
 // See companion standard 101, subclass 7.2.6.10.
 type SingleEvent byte
 
-// SingleEvent defined
+// SingleEvent dSequenceNotationefined
 const (
 	SEIndeterminateOrIntermediate SingleEvent = iota // 不确定或中间状态
 	SEDeterminedOff                                  // 确定状态开
@@ -191,7 +199,6 @@ const (
 // See companion standard 101, subclass 7.2.6.14.
 const FBPTestWord uint16 = 0x55aa
 
-// TODO: check follow
 /**************************************************/
 // SingleCommand Single command
 // See companion standard 101, subclass 7.2.6.15.
