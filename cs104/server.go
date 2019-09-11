@@ -17,7 +17,7 @@ import (
 // of a second make this system much more responsive i.c.w. S-frames.
 const timeoutResolution = 100 * time.Millisecond
 
-// server the common server
+// Server the common server
 type Server struct {
 	conf      *Config
 	params    *asdu.Params
@@ -116,6 +116,7 @@ func (this *Server) Close() error {
 	return err
 }
 
+// Send imp interface Connect
 func (this *Server) Send(a *asdu.ASDU) error {
 	this.mux.Lock()
 	for k := range this.sessions {
@@ -125,6 +126,8 @@ func (this *Server) Send(a *asdu.ASDU) error {
 	return nil
 }
 
+// Params imp interface Connect
 func (this *Server) Params() *asdu.Params { return this.params }
 
+// UnderlyingConn imp interface Connect
 func (this *Server) UnderlyingConn() net.Conn { return nil }

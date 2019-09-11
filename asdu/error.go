@@ -5,6 +5,7 @@ import (
 	"fmt"
 )
 
+// error defined
 var (
 	ErrTypeIdentifier = errors.New("asdu: type identification unknown")
 	ErrCauseZero      = errors.New("asdu: cause of transmission 0 is not used")

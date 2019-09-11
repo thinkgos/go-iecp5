@@ -8,8 +8,9 @@ import (
 	"time"
 )
 
+// ASDUSizeMax asdu max size
 const (
-	ASDUSizeMax = 249 // ASDU max size
+	ASDUSizeMax = 249
 )
 
 // ASDU format

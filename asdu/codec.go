@@ -97,7 +97,7 @@ func (this *ASDU) AppendFloat32(f float32) *ASDU {
 	return this
 }
 
-// DecodeScaled decode info object byte to a float32 value
+// DecodeFloat decode info object byte to a float32 value
 func (this *ASDU) DecodeFloat() float32 {
 	f := math.Float32frombits(binary.LittleEndian.Uint32(this.infoObj))
 	this.infoObj = this.infoObj[4:]

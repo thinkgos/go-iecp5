@@ -196,10 +196,10 @@ const (
 	// other reserved
 )
 
+// FBPTestWord test special value
 // See companion standard 101, subclass 7.2.6.14.
 const FBPTestWord uint16 = 0x55aa
 
-/**************************************************/
 // SingleCommand Single command
 // See companion standard 101, subclass 7.2.6.15.
 type SingleCommand byte
@@ -315,6 +315,7 @@ type QCCRequest byte
 // See companion standard 101, subclass 7.2.6.23.
 type QCCFreeze byte
 
+// QCCRequest and QCCFreeze defined
 const (
 	QCCUnused QCCRequest = iota
 	QCCGroup1

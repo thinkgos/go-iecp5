@@ -29,7 +29,7 @@ func New() *Clog {
 // NewWithPrefix 创建一个新的日志，采用指定prefix前缀
 func NewWithPrefix(prefix string) *Clog {
 	return &Clog{
-		logger: NewDefaultLogger(prefix),
+		logger: newDefaultLogger(prefix),
 	}
 }
 
@@ -84,8 +84,8 @@ type logger struct {
 
 var _ LogProvider = (*logger)(nil)
 
-// NewDefaultLogger new default logger with prefix output os.Stderr
-func NewDefaultLogger(prefix string) *logger {
+// newDefaultLogger new default logger with prefix output os.Stderr
+func newDefaultLogger(prefix string) *logger {
 	return &logger{
 		log.New(os.Stderr, prefix, log.LstdFlags),
 	}
