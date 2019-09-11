@@ -50,7 +50,7 @@ func ParseCP56Time2a(bytes []byte, loc *time.Location) time.Time {
 }
 
 // CP24Time2a time to CP56Time2a 3个八位位组二进制时间，建议所有时标采用UTC
-// See IEC 60870-5-4 § 6.8 and IEC 60870-5-101 second edition § 7.2.6.19.
+// See companion standard 101, subclass 7.2.6.19.
 func CP24Time2a(t time.Time, loc *time.Location) []byte {
 	if loc == nil {
 		loc = time.UTC
@@ -61,7 +61,7 @@ func CP24Time2a(t time.Time, loc *time.Location) []byte {
 }
 
 // ParseCP24Time2a 3个八位位组二进制时间，建议所有时标采用UTC,读3字节,返回一个时间
-// See IEC 60870-5-4 § 6.8 and IEC 60870-5-101 second edition § 7.2.6.19.
+// See companion standard 101, subclass 7.2.6.19.
 func ParseCP24Time2a(bytes []byte, loc *time.Location) time.Time {
 	if len(bytes) < 3 || bytes[2]&0x80 == 0x80 {
 		return time.Time{}
@@ -89,13 +89,13 @@ func ParseCP24Time2a(bytes []byte, loc *time.Location) time.Time {
 }
 
 // CP16Time2a msec to CP16Time2a 2个八位位组二进制时间
-// See IEC 60870-5-4 § 6.8 and IEC 60870-5-101 second edition § 7.2.6.20.
+// See companion standard 101, subclass 7.2.6.20.
 func CP16Time2a(msec uint16) []byte {
 	return []byte{byte(msec), byte(msec >> 8)}
 }
 
 // ParseCP16Time2a 2个八位位组二进制时间,读2字节,返回一个值
-// See IEC 60870-5-4 § 6.8 and IEC 60870-5-101 second edition § 7.2.6.20.
+// See companion standard 101, subclass 7.2.6.20.
 func ParseCP16Time2a(b []byte) uint16 {
 	return binary.LittleEndian.Uint16(b)
 }

@@ -140,6 +140,7 @@ func (this *ASDU) AppendCP56Time2a(t time.Time, loc *time.Location) *ASDU {
 	return this
 }
 
+// DecodeCP56Time2a decode info object byte to CP56Time2a
 func (this *ASDU) DecodeCP56Time2a() time.Time {
 	t := ParseCP56Time2a(this.infoObj, this.Params.InfoObjTimeZone)
 	this.infoObj = this.infoObj[7:]
@@ -152,6 +153,7 @@ func (this *ASDU) AppendCP24Time2a(t time.Time, loc *time.Location) *ASDU {
 	return this
 }
 
+// DecodeCP24Time2a decode info object byte to CP24Time2a
 func (this *ASDU) DecodeCP24Time2a() time.Time {
 	t := ParseCP24Time2a(this.infoObj, this.Params.InfoObjTimeZone)
 	this.infoObj = this.infoObj[3:]
@@ -164,13 +166,22 @@ func (this *ASDU) AppendCP16Time2a(msec uint16) *ASDU {
 	return this
 }
 
+// DecodeCP16Time2a decode info object byte to CP16Time2a
 func (this *ASDU) DecodeCP16Time2a() uint16 {
 	t := ParseCP16Time2a(this.infoObj)
 	this.infoObj = this.infoObj[2:]
 	return t
 }
 
+// AppendStatusAndStatusChangeDetection append StatusAndStatusChangeDetection value to asdu info object
+func (this *ASDU) AppendStatusAndStatusChangeDetection(scd StatusAndStatusChangeDetection) *ASDU {
+	this.infoObj = append(this.infoObj, byte(scd), byte(scd>>8), byte(scd>>16), byte(scd>>24))
+	return this
+}
+
+// DecodeStatusAndStatusChangeDetection decode info object byte to StatusAndStatusChangeDetection
 func (this *ASDU) DecodeStatusAndStatusChangeDetection() StatusAndStatusChangeDetection {
-	// TODO
-	return 0
+	s := StatusAndStatusChangeDetection(binary.LittleEndian.Uint32(this.infoObj))
+	this.infoObj = this.infoObj[4:]
+	return s
 }

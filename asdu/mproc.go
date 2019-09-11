@@ -1117,7 +1117,7 @@ func PackedSinglePointWithSCD(c Connect, isSequence bool, coa CauseOfTransmissio
 				return err
 			}
 		}
-		u.AppendBytes(v.Scd.Value()...)
+		u.AppendStatusAndStatusChangeDetection(v.Scd)
 		u.AppendBytes(byte(v.Qds))
 	}
 	return c.Send(u)

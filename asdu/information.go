@@ -18,7 +18,7 @@ const InfoObjAddrIrrelevant InfoObjAddr = 0
 // See companion standard 101, subclass 7.2.6.1.
 type SinglePoint byte
 
-// 单点信息定义
+// SinglePoint defined
 const (
 	SPIOff SinglePoint = iota // 关
 	SPIOn                     // 开
@@ -33,7 +33,7 @@ func (this SinglePoint) Value() byte {
 // See companion standard 101, subclass 7.2.6.2.
 type DoublePoint byte
 
-// 双点信息
+// DoublePoint defined
 const (
 	DPIIndeterminateOrIntermediate DoublePoint = iota // 不确定或中间状态
 	DPIDeterminedOff                                  // 确定状态开
@@ -50,7 +50,7 @@ func (this DoublePoint) Value() byte {
 // See companion standard 101, subclass 7.2.6.3.
 type QualityDescriptor byte
 
-// Quality descriptor flags defined.
+// QualityDescriptor defined.
 const (
 	// QDSOverflow marks whether the value is beyond a predefined range.
 	QDSOverflow QualityDescriptor = 1 << iota
@@ -76,7 +76,7 @@ const (
 // See companion standard 101, subclass 7.2.6.4.
 type QualityDescriptorProtection byte
 
-// Quality descriptor flags attribute Protection Equipment defined.
+// QualityDescriptorProtection defined.
 const (
 	_ QualityDescriptorProtection = 1 << iota // reserve
 	_                                         // reserve
@@ -152,7 +152,7 @@ type BinaryCounterReading struct {
 // See companion standard 101, subclass 7.2.6.10.
 type SingleEvent byte
 
-// single event defined
+// SingleEvent defined
 const (
 	SEIndeterminateOrIntermediate SingleEvent = iota // 不确定或中间状态
 	SEDeterminedOff                                  // 确定状态开
@@ -163,7 +163,7 @@ const (
 // StartEvent Start event protection
 type StartEvent byte
 
-// Start event protection
+// StartEvent defined
 // See companion standard 101, subclass 7.2.6.11.
 const (
 	SEPGeneralStart          StartEvent = 1 << iota // 总启动
@@ -179,7 +179,7 @@ const (
 // See companion standard 101, subclass 7.2.6.12.
 type OutputCircuitInfo byte
 
-// output command information
+// OutputCircuitInfo defined
 const (
 	OCIGeneralCommand OutputCircuitInfo = 1 << iota // 总命令输出至输出电路
 	OCICommandL1                                    // A 相保护命令输出至输出电路
@@ -193,9 +193,21 @@ const FBPTestWord uint16 = 0x55aa
 
 // TODO: check follow
 /**************************************************/
+// SingleCommand Single command
+// See companion standard 101, subclass 7.2.6.15.
+type SingleCommand byte
+
+// SingleCommand defined
+const (
+	SCOOn SingleCommand = iota
+	SCOOff
+)
+
+// DoubleCommand double command
 // See companion standard 101, subclass 7.2.6.16.
 type DoubleCommand byte
 
+// DoubleCommand defined
 const (
 	DCONotAllow0 DoubleCommand = iota
 	DCOOn
@@ -203,9 +215,11 @@ const (
 	DCONotAllow3
 )
 
+// StepCommand step command
 // See companion standard 101, subclass 7.2.6.17.
 type StepCommand byte
 
+// StepCommand defined
 const (
 	SCONotAllow0 StepCommand = iota
 	SCOStepDown
@@ -213,10 +227,11 @@ const (
 	SCONotAllow3
 )
 
-// See companion standard 101, subclass 7.2.6.21.
 // COICause Initialization reason
+// See companion standard 101, subclass 7.2.6.21.
 type COICause byte
 
+// COICause defined
 // 0: 当地电源合上
 // 1： 当地手动复位
 // 2： 远方复位
@@ -229,6 +244,9 @@ const (
 )
 
 // CauseOfInitial cause of initial
+// Cause:  see COICause
+// IsLocalChange: false - 未改变当地参数的初始化
+//                true - 改变当地参数后的初始化
 type CauseOfInitial struct {
 	Cause         COICause
 	IsLocalChange bool
@@ -277,12 +295,17 @@ const (
 
 	// <37..63>：为标准定义保留
 	// <64..255>: 为特定使用保留
+
 	// 0:未使用
 	QOIUnused QualifierOfInterrogation = 0
 )
 
+// QCCRequest 请求 [bit0...bit5]
 // See companion standard 101, subclass 7.2.6.23.
 type QCCRequest byte
+
+// QCCFreeze 冻结 [bit6,bit7]
+// See companion standard 101, subclass 7.2.6.23.
 type QCCFreeze byte
 
 const (
@@ -294,17 +317,20 @@ const (
 	QCCTotal
 	// <6..31>: 为标准定义
 	// <32..63>： 为特定使用保留
-	QCCFrzRead          QCCFreeze = 0x00
-	QCCFrzFreezeNoReset QCCFreeze = 0x40
-	QCCFrzFreezeReset   QCCFreeze = 0x80
-	QCCFrzReset         QCCFreeze = 0xc0
+	QCCFrzRead          QCCFreeze = 0x00 // 读(无冻结或复位)
+	QCCFrzFreezeNoReset QCCFreeze = 0x40 // 计数量冻结不带复位(被冻结的值为累计量)
+	QCCFrzFreezeReset   QCCFreeze = 0x80 // 计数量冻结带复位(被冻结的值为增量信息)
+	QCCFrzReset         QCCFreeze = 0xc0 // 计数量复位
 )
 
+// QualifierCountCall 计数量召唤命令限定词
+// See companion standard 101, subclass 7.2.6.23.
 type QualifierCountCall struct {
 	Request QCCRequest
 	Freeze  QCCFreeze
 }
 
+// ParseQualifierCountCall parse byte to QualifierCountCall
 func ParseQualifierCountCall(b byte) QualifierCountCall {
 	return QualifierCountCall{
 		Request: QCCRequest(b & 0x3f),
@@ -312,15 +338,15 @@ func ParseQualifierCountCall(b byte) QualifierCountCall {
 	}
 }
 
-// Value Qualifier Count Call to byte
+// Value QualifierCountCall to byte
 func (this QualifierCountCall) Value() byte {
 	return byte(this.Request&0x3f) | byte(this.Freeze&0xc0)
 }
 
-// See companion standard 101, subclass 7.2.6.24.
 // QPMCategory 测量参数类别
 type QPMCategory byte
 
+// QPMCategory defined
 const (
 	QPMUnused    QPMCategory = iota // 0: not used
 	QPMThreshold                    // 1: threshold value
@@ -335,15 +361,18 @@ const (
 	QPMInOperationFlag QPMCategory = 0x80 // bit7 marks parameter operation 参数在运行
 )
 
-// QualifierOfParameterMV Qualifier Of Parameter Of Measured Values
-// 测量值参数限定词
+// QualifierOfParameterMV Qualifier Of Parameter Of Measured Values 测量值参数限定词
+// See companion standard 101, subclass 7.2.6.24.
+// QPMCategory : [bit0...bit5] 参数类型
+// IsChange : [bit6]当地参数改变,false - 未改变,true - 改变
+// IsInOperation : [bit7] 参数在运行,false - 运行, true - 不在运行
 type QualifierOfParameterMV struct {
 	Category      QPMCategory
 	IsChange      bool
 	IsInOperation bool
 }
 
-// ParseQualifierOfParamMV
+// ParseQualifierOfParamMV parse byte to QualifierOfParameterMV
 func ParseQualifierOfParamMV(b byte) QualifierOfParameterMV {
 	return QualifierOfParameterMV{
 		Category:      QPMCategory(b & 0x3f),
@@ -352,63 +381,68 @@ func ParseQualifierOfParamMV(b byte) QualifierOfParameterMV {
 	}
 }
 
-// Value
+// Value QualifierOfParameterMV to byte
 func (this QualifierOfParameterMV) Value() byte {
-	v := this.Category & 0x3f
+	v := byte(this.Category) & 0x3f
 	if this.IsChange {
 		v |= 0x40
 	}
 	if this.IsInOperation {
 		v |= 0x80
 	}
-	return byte(v)
+	return v
 }
 
-// Qualifier Of Parameter Activation
-// 参数激活限定词
+// QualifierOfParameterAct Qualifier Of Parameter Activation 参数激活限定词
 // See companion standard 101, subclass 7.2.6.25.
 type QualifierOfParameterAct byte
 
+// QualifierOfParameterAct defined
 const (
 	QPAUnused QualifierOfParameterAct = iota
-	// 激活/仃止激活这之前装载的参数(信息对象地址=0)
+	// 激活/停止激活这之前装载的参数(信息对象地址=0)
 	QPADeActPrevLoadedParameter
-	// 激活/仃止激活所寻址信息对象的参数
+	// 激活/停止激活所寻址信息对象的参数
 	QPADeActObjectParameter
-	// 激活/仃止激活所寻址的持续循环或周期传输的信息对象
+	// 激活/停止激活所寻址的持续循环或周期传输的信息对象
 	QPADeActObjectTransmission
 	// 4‥127: reserved for standard definitions of this companion standard (compatible range)
 	// 128‥255: reserved for special use (private range)
 )
 
-// QOCQual is a qualifier of qual.
+// QOCQual the qualifier of qual.
 // See companion standard 101, subclass 7.2.6.26.
-//  the qualifier of command.
 type QOCQual byte
 
+// QOCQual defined
 const (
-	//	0: no additional definition
+	// 0: no additional definition
+	// 无另外的定义
 	QOCNoAdditionalDefinition QOCQual = iota
-	//	1: short pulse duration (circuit-breaker), duration determined by a system parameter in the outstation
+	// 1: short pulse duration (circuit-breaker), duration determined by a system parameter in the outstation
+	// 短脉冲持续时间(断路器),持续时间由被控站内的系统参数所确定
 	QOCShortPulseDuration
-	//	2: long pulse duration, duration determined by a system parameter in the outstation
+	// 2: long pulse duration, duration determined by a system parameter in the outstation
+	// 长脉冲持续时间,持续时间由被控站内的系统参数所确定
 	QOCLongPulseDuration
-	//	3: persistant output
+	// 3: persistant output
+	// 持续输出
 	QOCPersistantOutput
 	//	4‥8: reserved for standard definitions of this companion standard
 	//	9‥15: reserved for the selection of other predefined functions
 	//	16‥31: reserved for special use (private range)
 )
 
-// QualifierOfCommand is a  qualifier of command.
-// 命令限定词
+// QualifierOfCommand is a  qualifier of command. 命令限定词
+// See companion standard 101, subclass 7.2.6.26.
+// See section 5, subclass 6.8.
+// InSelect: true - selects, false - executes.
 type QualifierOfCommand struct {
-	Qual QOCQual
-	// See section 5, subclass 6.8.
-	// selects(true) (or executes(false)).
+	Qual     QOCQual
 	InSelect bool
 }
 
+// ParseQualifierOfCommand parse byte to QualifierOfCommand
 func ParseQualifierOfCommand(b byte) QualifierOfCommand {
 	return QualifierOfCommand{
 		Qual:     QOCQual((b >> 2) & 0x1f),
@@ -416,6 +450,7 @@ func ParseQualifierOfCommand(b byte) QualifierOfCommand {
 	}
 }
 
+// Value QualifierOfCommand to byte
 func (this QualifierOfCommand) Value() byte {
 	v := (byte(this.Qual) & 0x1f) << 2
 	if this.InSelect {
@@ -424,17 +459,25 @@ func (this QualifierOfCommand) Value() byte {
 	return v
 }
 
+// QualifierOfResetProcessCmd 复位进程命令限定词
 // See companion standard 101, subclass 7.2.6.27.
-// 复位进程命令限定词
 type QualifierOfResetProcessCmd byte
 
+// QualifierOfResetProcessCmd defined
 const (
+	// 未采用
 	QRPUnused QualifierOfResetProcessCmd = iota
+	// 进程的总复位
 	QPRGeneralRest
+	// 复位事件缓冲区等待处理的带时标的信息
 	QPRResetPendingInfoWithTimeTag
 	// <3..127>: 为标准保留
 	//<128..255>: 为特定使用保留
 )
+
+/*
+TODO: file 文件相关未定义
+*/
 
 // QOSQual is the qualifier of a set-point command qual.
 // See companion standard 101, subclass 7.2.6.39.
@@ -443,14 +486,15 @@ const (
 //	64‥127: reserved for special use (private range)
 type QOSQual uint
 
-// QualifierOfSetpointCmd is a qualifier of command.
+// QualifierOfSetpointCmd is a qualifier of command. 设定命令限定词
+// See section 5, subclass 6.8.
+// InSelect: true - selects, false - executes.
 type QualifierOfSetpointCmd struct {
-	Qual QOSQual
-	// See section 5, subclass 6.8.
-	// selects(true) (or executes(false)).
+	Qual     QOSQual
 	InSelect bool
 }
 
+// ParseQualifierOfSetpointCmd parse byte to QualifierOfSetpointCmd
 func ParseQualifierOfSetpointCmd(b byte) QualifierOfSetpointCmd {
 	return QualifierOfSetpointCmd{
 		Qual:     QOSQual(b & 0x7f),
@@ -458,6 +502,7 @@ func ParseQualifierOfSetpointCmd(b byte) QualifierOfSetpointCmd {
 	}
 }
 
+// Value QualifierOfSetpointCmd to byte
 func (this QualifierOfSetpointCmd) Value() byte {
 	v := byte(this.Qual) & 0x7f
 	if this.InSelect {
@@ -466,11 +511,6 @@ func (this QualifierOfSetpointCmd) Value() byte {
 	return v
 }
 
-// StatusAndStatusChangeDetection
+// StatusAndStatusChangeDetection 状态和状态变位检出
 // See companion standard 101, subclass 7.2.6.40.
 type StatusAndStatusChangeDetection uint32
-
-func (this StatusAndStatusChangeDetection) Value() []byte {
-	// TODO
-	return []byte{}
-}
