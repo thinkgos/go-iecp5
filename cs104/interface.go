@@ -6,7 +6,7 @@ import (
 	"github.com/thinkgos/go-iecp5/asdu"
 )
 
-//ServerHandlerInterface is the interface of server handler
+// ServerHandlerInterface is the interface of server handler
 type ServerHandlerInterface interface {
 	InterrogationHandler(asdu.Connect, *asdu.ASDU, asdu.QualifierOfInterrogation) error
 	CounterInterrogationHandler(asdu.Connect, *asdu.ASDU, asdu.QualifierCountCall) error

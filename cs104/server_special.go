@@ -176,7 +176,7 @@ func (this *serverSpec) running() {
 			return
 		default:
 			// 随机500ms-1s的重试，避免快速重试造成服务器许多无效连接
-			time.Sleep(time.Millisecond * time.Duration(500+rand.Intn(5)))
+			time.Sleep(time.Millisecond * time.Duration(500+rand.Intn(500)))
 		}
 	}
 }

@@ -102,7 +102,7 @@ func newSFrame(RcvSN uint16) []byte {
 
 // newUFrame 创建U帧,返回apdu
 func newUFrame(which byte) []byte {
-	return []byte{startFrame, 4, byte(which | 0x03), 0x00, 0x00, 0x00}
+	return []byte{startFrame, 4, which | 0x03, 0x00, 0x00, 0x00}
 }
 
 // APCI apci 应用规约控制信息

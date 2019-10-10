@@ -12,13 +12,14 @@ import (
 	"github.com/thinkgos/go-iecp5/clog"
 )
 
-// TimeoutResolution is seconds according to companion standard 104,
+// timeoutResolution is seconds according to companion standard 104,
 // subclass 6.9, caption "Definition of time outs". However, then
 // of a second make this system much more responsive i.c.w. S-frames.
 const timeoutResolution = 100 * time.Millisecond
 
 // Server the common server
 type Server struct {
+	TimeoutResolution
 	conf      *Config
 	params    *asdu.Params
 	handler   ServerHandlerInterface
