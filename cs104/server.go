@@ -19,7 +19,6 @@ const timeoutResolution = 100 * time.Millisecond
 
 // Server the common server
 type Server struct {
-	TimeoutResolution
 	conf      *Config
 	params    *asdu.Params
 	handler   ServerHandlerInterface

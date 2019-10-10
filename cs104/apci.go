@@ -6,15 +6,15 @@ import (
 	"github.com/thinkgos/go-iecp5/asdu"
 )
 
-const (
-	startFrame byte = 0x68 // 起动字符
-)
+const startFrame byte = 0x68 // 起动字符
 
-// APDU form  Max size 255
-//      |              APCI                   |       ASDU         |
-//      | start | APDU length | control field |       ASDU         |
-//                       |          APDU field size(253)           |
-// bytes|    1  |    1   |        4           |                    |
+/*
+ * APDU form Max size 255
+ *      |              APCI                   |       ASDU         |
+ *      | start | APDU length | control field |       ASDU         |
+ *                       |          APDU field size(253)           |
+ * bytes|    1  |    1   |        4           |                    |
+ */
 const (
 	APCICtlFiledSize = 4 // control filed(4)
 

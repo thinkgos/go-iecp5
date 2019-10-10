@@ -18,12 +18,15 @@ const (
 	// "t₀" 范围[1, 255]s 默认 30s
 	ConnectTimeout0Min = 1 * time.Second
 	ConnectTimeout0Max = 255 * time.Second
+
 	// "t₁" 范围[1, 255]s 默认 15s. See IEC 60870-5-104, figure 18.
 	SendUnAckTimeout1Min = 1 * time.Second
 	SendUnAckTimeout1Max = 255 * time.Second
+
 	// "t₂" 范围[1, 255]s 默认 10s, See IEC 60870-5-104, figure 10.
 	RecvUnAckTimeout2Min = 1 * time.Second
 	RecvUnAckTimeout2Max = 255 * time.Second
+
 	// "t₃" 范围[1 second, 48 hours] 默认 20 s, See IEC 60870-5-104, subclass 5.2.
 	IdleTimeout3Min = 1 * time.Second
 	IdleTimeout3Max = 48 * time.Hour
@@ -31,6 +34,7 @@ const (
 	// "k" 范围[1, 32767] 默认 12. See IEC 60870-5-104, subclass 5.5.
 	SendUnAckLimitKMin = 1
 	SendUnAckLimitKMax = 32767
+
 	// "w" 范围 [1， 32767] 默认 8. See IEC 60870-5-104, subclass 5.5.
 	RecvUnAckLimitWMin = 1
 	RecvUnAckLimitWMax = 32767
