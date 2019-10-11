@@ -6,15 +6,15 @@ import (
 	"github.com/thinkgos/go-iecp5/asdu"
 )
 
-const startFrame byte = 0x68 // 起动字符
+const (
+	startFrame byte = 0x68 // 起动字符
+)
 
-/*
- * APDU form Max size 255
- *      |              APCI                   |       ASDU         |
- *      | start | APDU length | control field |       ASDU         |
- *                       |          APDU field size(253)           |
- * bytes|    1  |    1   |        4           |                    |
- */
+// APDU form  Max size 255
+//      |              APCI                   |       ASDU         |
+//      | start | APDU length | control field |       ASDU         |
+//                       |          APDU field size(253)           |
+// bytes|    1  |    1   |        4           |                    |
 const (
 	APCICtlFiledSize = 4 // control filed(4)
 
@@ -38,7 +38,7 @@ type iAPCI struct {
 }
 
 func (this iAPCI) String() string {
-	return fmt.Sprintf("I[sendNO: %d, recvNO: %d]", this.rcvSN, this.sendSN)
+	return fmt.Sprintf("I[sendNO: %d, recvNO: %d]", this.sendSN, this.rcvSN)
 }
 
 // S帧 只含apci S帧用于主要用确认帧的正确传输,协议称是监视. supervisory
@@ -102,7 +102,7 @@ func newSFrame(RcvSN uint16) []byte {
 
 // newUFrame 创建U帧,返回apdu
 func newUFrame(which byte) []byte {
-	return []byte{startFrame, 4, which | 0x03, 0x00, 0x00, 0x00}
+	return []byte{startFrame, 4, byte(which | 0x03), 0x00, 0x00, 0x00}
 }
 
 // APCI apci 应用规约控制信息
@@ -113,21 +113,23 @@ type APCI struct {
 }
 
 // return frame type , APCI, remain data
-func parse(apdu []byte) (interface{}, []byte) {
+func parse(apdu []byte) (interface{}, []byte, error) {
 	apci := APCI{apdu[0], apdu[1], apdu[2], apdu[3], apdu[4], apdu[5]}
 	if apci.ctr1&0x01 == 0 {
 		return iAPCI{
 			sendSN: uint16(apci.ctr1)>>1 + uint16(apci.ctr2)<<7,
 			rcvSN:  uint16(apci.ctr3)>>1 + uint16(apci.ctr4)<<7,
-		}, apdu[6:]
+		}, apdu[6:], nil
 	}
 	if apci.ctr1&0x03 == 0x01 {
 		return sAPCI{
 			rcvSN: uint16(apci.ctr3)>>1 + uint16(apci.ctr4)<<7,
-		}, apdu[6:]
+		}, apdu[6:], nil
 	}
-	// apci.ctrl&0x03 == 0x03
-	return uAPCI{
-		function: apci.ctr1 & 0xfc,
-	}, apdu[6:]
+	if apci.ctr1&0x03 == 0x03 {
+		return uAPCI{
+			function: apci.ctr1 & 0xfc,
+		}, apdu[6:], nil
+	}
+	return nil, []byte{}, fmt.Errorf("Wrong apci")
 }

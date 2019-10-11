@@ -228,7 +228,11 @@ func (this *SrvSession) run(ctx context.Context) {
 
 		case apdu := <-this.recv:
 			idleTimeout3Sine = time.Now() // 每收到一个i帧,S帧,U帧, 重置空闲定时器, t3
-			apci, asdu := parse(apdu)
+			apci, asdu, err := parse(apdu)
+			if err != nil {
+				this.Debug(err.Error())
+				continue
+			}
 			switch head := apci.(type) {
 			case sAPCI:
 				this.Debug("RX sFrame %v", head)
