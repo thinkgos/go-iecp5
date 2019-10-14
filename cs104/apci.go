@@ -113,23 +113,20 @@ type APCI struct {
 }
 
 // return frame type , APCI, remain data
-func parse(apdu []byte) (interface{}, []byte, error) {
+func parse(apdu []byte) (interface{}, []byte) {
 	apci := APCI{apdu[0], apdu[1], apdu[2], apdu[3], apdu[4], apdu[5]}
 	if apci.ctr1&0x01 == 0 {
 		return iAPCI{
 			sendSN: uint16(apci.ctr1)>>1 + uint16(apci.ctr2)<<7,
 			rcvSN:  uint16(apci.ctr3)>>1 + uint16(apci.ctr4)<<7,
-		}, apdu[6:], nil
+		}, apdu[6:]
 	}
 	if apci.ctr1&0x03 == 0x01 {
 		return sAPCI{
 			rcvSN: uint16(apci.ctr3)>>1 + uint16(apci.ctr4)<<7,
-		}, apdu[6:], nil
+		}, apdu[6:]
 	}
-	if apci.ctr1&0x03 == 0x03 {
-		return uAPCI{
+	return uAPCI{
 			function: apci.ctr1 & 0xfc,
-		}, apdu[6:], nil
-	}
-	return nil, []byte{}, fmt.Errorf("Wrong apci")
+	}, apdu[6:]
 }

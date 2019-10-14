@@ -13,8 +13,6 @@ import(
 	"github.com/thinkgos/go-iecp5/clog"
 )
 
-var enableLogging = true
-
 type sendFr struct {
 	t 	time.Time
 	sn 	uint16
@@ -59,8 +57,11 @@ type Client struct {
 	uFlag			bool
 	uTime			time.Time
 
-	// 是否启动
-	isActive 		bool
+	// 服务器是否激活
+	isServerActive 	bool
+
+	// 连接是否被关闭(只能通过Disconnect()修改)
+	isClosed		bool
 
 	// 其他
 	*clog.Clog
@@ -95,7 +96,7 @@ func NewClient(conf *Config, params *asdu.Params, handler ClientHandler) (c *Cli
 		Clog: 			clog.NewWithPrefix("IEC104 client =>"),
 	}
 	err = nil
-	c.LogMode(enableLogging)
+	c.LogMode(false)
 
 	return 
 }
@@ -115,7 +116,8 @@ func (c *Client) Connect(addr string) error {
 	c.ackSN = 0
 	c.t2Flag = false
 	c.recvCnt = 0
-	c.isActive = false
+	c.isServerActive = false
+	c.isClosed = false
 	c.recvChan = make(chan []byte, APDUSizeMax)
 	c.sendChan = make(chan []byte, APDUSizeMax)
 	c.sendBuf = &sendBuf{
@@ -138,10 +140,17 @@ func (c *Client) Connect(addr string) error {
 		cancel()
 		c.wg.Wait()
 		c.Debug("Connection to %s Ended!", addr)
+		if !c.isClosed {					// 非人为关闭情况下,主动重连
+			c.Connect(addr)
+		}
 	}()
 
 
 	for {
+		if c.isClosed {
+			return fmt.Errorf("Connection is closed")
+		}
+
 		// TODO: need sleep?
 		time.Sleep(time.Second)
 		if time.Since(c.t3Time) >= c.conf.IdleTimeout3 {
@@ -191,11 +200,7 @@ func (c *Client) handleLoop(ctx context.Context, cancel context.CancelFunc) {
 		case <- ctx.Done():
 			return
 		case apdu := <- c.recvChan:
-			apci, rawAsdu, err := parse(apdu)
-			if err != nil {
-				c.Debug(err.Error())
-				continue
-			}
+			apci, rawAsdu := parse(apdu)
 			c.t3Time = time.Now()
 			switch apci := apci.(type) {
 			case uAPCI:
@@ -204,7 +209,7 @@ func (c *Client) handleLoop(ctx context.Context, cancel context.CancelFunc) {
 				switch apci.function {
 				// case uStartDtActive:
 				case uStartDtConfirm:
-					c.isActive = true
+					c.isServerActive = true
 					Activate67(c)								// 激活之后进行时钟同步?
 				case uTestFrActive:
 					c.SendTestCon()
@@ -432,59 +437,12 @@ func (c *Client) sendUFrame(b byte) {
 	c.sendChan <- newUFrame(b)
 }
 
-
-func (c *Client) SendStartDt() {
-	if !c.uFlag {
-		c.uFlag = true
-		c.uTime = time.Now()
-	}
-	c.sendUFrame(uStartDtActive)
-}
-func (c *Client) SendStopDt() {
-	if !c.uFlag {
-		c.uFlag = true
-		c.uTime = time.Now()
-	}
-	c.sendUFrame(uStopDtActive)
-}
-func (c *Client) SendTestDt() {
-	if !c.uFlag {
-		c.uFlag = true
-		c.uTime = time.Now()
-	}
-	c.sendUFrame(uTestFrActive)
-}
-func (c *Client) SendTestCon() {
-	c.sendUFrame(uTestFrConfirm)
-}
-
-// Send sends
-func (c *Client) Send(a *asdu.ASDU) error {
-	if !c.isActive {
-		return fmt.Errorf("ErrorUnactive")
-	}
-	data, err := a.MarshalBinary()
-	if err != nil {
-		return err
-	}
-	c.sendIFrame(data)
-	return nil
-}
-//Params returns params of client
-func (c *Client) Params() *asdu.Params {
-	return c.param
-}
-//UnderlyingConn returns underlying conn of client
-func (c *Client) UnderlyingConn() net.Conn {
-	return c.conn
-}
-
 // 接收到I帧后根据TYPEID进行不同的处理,分别调用对应的接口函数
 func (c *Client) handleIFrame(a *asdu.ASDU) error {
 	
 	defer func() {
 		if err := recover(); err != nil {
-			c.Critical("server handler %+v", err)
+			c.Critical("Client handler %+v", err)
 		}
 	}()
 
@@ -516,7 +474,7 @@ func (c *Client) handleIFrame(a *asdu.ASDU) error {
 			return a.SendReplyMirror(c, asdu.UnknownCOT)
 		}
 		spi := a.GetSinglePoint()
-		return c.handler.Handle01_02_1e(c, spi)
+		c.handler.Handle01_02_1e(c, a, spi)
 	case asdu.M_DP_NA_1, asdu.M_DP_TA_1, asdu.M_DP_TB_1: 					// 遥信 双点信息 3,4,31
 		// check cot
 		if !( a.Identifier.Coa.Cause == asdu.Background ||
@@ -530,7 +488,7 @@ func (c *Client) handleIFrame(a *asdu.ASDU) error {
 			return a.SendReplyMirror(c, asdu.UnknownCOT)
 		}
 		dpi := a.GetDoublePoint()
-		return c.handler.Handle03_04_1f(dpi)
+		c.handler.Handle03_04_1f(c, a, dpi)
 	case asdu.M_BO_NA_1, asdu.M_BO_TA_1, asdu.M_BO_TB_1:					// 遥信 比特串信息 07,08,33								// 比特串,07
 		// check cot
 		if !( a.Identifier.Coa.Cause == asdu.Background ||
@@ -542,7 +500,7 @@ func (c *Client) handleIFrame(a *asdu.ASDU) error {
 		  	return a.SendReplyMirror(c, asdu.UnknownCOT)
 		}
 		bsi := a.GetBitString32()
-		return c.handler.Handle07_08_21(bsi)
+		c.handler.Handle07_08_21(c, a, bsi)
 	case asdu.M_ME_NA_1, asdu.M_ME_TA_1, asdu.M_ME_TD_1, asdu.M_ME_ND_1:	// 遥测 归一化测量值 09,10,21,34
 		// check cot
 		if !( a.Identifier.Coa.Cause == asdu.Periodic ||
@@ -553,7 +511,7 @@ func (c *Client) handleIFrame(a *asdu.ASDU) error {
 			return a.SendReplyMirror(c, asdu.UnknownCOT)
 	  	}
 	  	valueInfos := a.GetMeasuredValueNormal()
-	  	return c.handler.Handle09_0a_15_22(c, valueInfos)
+	  	c.handler.Handle09_0a_15_22(c, a, valueInfos)
 	case asdu.M_ME_NB_1, asdu.M_ME_TB_1, asdu.M_ME_TE_1:					//遥测 标度化值 11,12,35
 		// check cot
 		if !( a.Identifier.Coa.Cause == asdu.Periodic ||
@@ -566,7 +524,7 @@ func (c *Client) handleIFrame(a *asdu.ASDU) error {
 			return a.SendReplyMirror(c, asdu.UnknownCOT)
 		}
 		mvsi := a.GetMeasuredValueScaled()
-		return c.handler.Handle0b_0c_23(mvsi)
+		c.handler.Handle0b_0c_23(c, a, mvsi)
 	case asdu.M_ME_NC_1, asdu.M_ME_TC_1, asdu.M_ME_TF_1:					// 遥信 短浮点数 13,14,16
 		// check cot
 		if !( a.Identifier.Coa.Cause == asdu.Periodic ||
@@ -579,7 +537,7 @@ func (c *Client) handleIFrame(a *asdu.ASDU) error {
 			return a.SendReplyMirror(c, asdu.UnknownCOT)
 		}
 		mvfi := a.GetMeasuredValueFloat()
-		return c.handler.Handle0d_0e_10(mvfi)
+		c.handler.Handle0d_0e_10(c, a, mvfi)
 	case asdu.M_EI_NA_1:													// 站初始化结束 70
 		// check cause of transmission
 		if 	!( a.Identifier.Coa.Cause == asdu.Initialized ) {
@@ -589,7 +547,7 @@ func (c *Client) handleIFrame(a *asdu.ASDU) error {
 		if 	ioa != asdu.InfoObjAddrIrrelevant {
 			return a.SendReplyMirror(c, asdu.UnknownIOA)
 		}
-		return c.handler.Handle46(c, coi)
+		c.handler.Handle46(c, coi)
 	case asdu.C_IC_NA_1: 													// 总召唤 100
 		// check cot
 		if 	!( a.Identifier.Coa.Cause == asdu.ActivationCon ||
@@ -603,7 +561,7 @@ func (c *Client) handleIFrame(a *asdu.ASDU) error {
 		if 	ioa != asdu.InfoObjAddrIrrelevant {
 			return a.SendReplyMirror(c, asdu.UnknownIOA)
 		}
-		return c.handler.Handle64(c, a, qoi)
+		c.handler.Handle64(c, a, qoi)
 	case asdu.C_CS_NA_1:													// 时钟同步 103
 		// check cot
 		if !( a.Identifier.Coa.Cause == asdu.ActivationCon ||
@@ -616,9 +574,9 @@ func (c *Client) handleIFrame(a *asdu.ASDU) error {
 		if 	ioa != asdu.InfoObjAddrIrrelevant {
 			return a.SendReplyMirror(c, asdu.UnknownIOA)
 		}
-		return c.handler.Handle67(c, a, t)
-	
-	
+		c.handler.Handle67(c, a, t)
+	default:
+		return a.SendReplyMirror(c, asdu.UnknownTypeID)
 	}
 
 	// if err := c.handler.ASDUHandler(c, a); err != nil {
@@ -632,37 +590,91 @@ type ClientHandler interface {
 	// 01:[M_SP_NA_1] 不带时标单点信息
 	// 02:[M_SP_TA_1] 带时标CP24Time2a的单点信息,只有(SQ = 0)单个信息元素集合
 	// 1e:[M_SP_TB_1] 带时标CP56Time2a的单点信息,只有(SQ = 0)单个信息元素集合
-	Handle01_02_1e(*Client, []asdu.SinglePointInfo) error
+	Handle01_02_1e(asdu.Connect, *asdu.ASDU, []asdu.SinglePointInfo)
 	// 03:[M_DP_NA_1].双点信息
 	// 04:[M_DP_TA_1] .带CP24Time2a双点信息,只有(SQ = 0)单个信息元素集合
 	// 1f:[M_DP_TB_1].带CP56Time2a的双点信息,只有(SQ = 0)单个信息元素集合
-	Handle03_04_1f([]asdu.DoublePointInfo) error
+	Handle03_04_1f(asdu.Connect, *asdu.ASDU, []asdu.DoublePointInfo)
 	// 07:[M_BO_NA_1] 比特位串
 	// 08:[M_BO_TA_1] 带时标CP24Time2a比特位串，只有(SQ = 0)单个信息元素集合
 	// 21:[M_BO_TB_1] 带时标CP56Time2a比特位串，只有(SQ = 0)单个信息元素集
-	Handle07_08_21([]asdu.BitString32Info) error
+	Handle07_08_21(asdu.Connect, *asdu.ASDU, []asdu.BitString32Info)
 	// 09:[M_ME_NA_1] 测量值,规一化值
 	// 0a:[M_ME_TA_1] 带时标CP24Time2a的测量值,规一化值,只有(SQ = 0)单个信息元素集合
 	// 15:[M_ME_ND_1] 不带品质的测量值,规一化值
 	// 22:[M_ME_TD_1] 带时标CP57Time2a的测量值,规一化值,只有(SQ = 0)单个信息元素集合
-	Handle09_0a_15_22(*Client, []asdu.MeasuredValueNormalInfo) error
+	Handle09_0a_15_22(asdu.Connect, *asdu.ASDU, []asdu.MeasuredValueNormalInfo)
 	// 0b:[M_ME_NB_1].测量值,标度化值
 	// 0c:[M_ME_TB_1].带时标CP24Time2a的测量值,标度化值,只有(SQ = 0)单个信息元素集合
 	// 23:[M_ME_TE_1].带时标CP56Time2a的测量值,标度化值,只有(SQ = 0)单个信息元素集合
-	Handle0b_0c_23([]asdu.MeasuredValueScaledInfo) error
+	Handle0b_0c_23(asdu.Connect, *asdu.ASDU, []asdu.MeasuredValueScaledInfo)
 	// 0d:[M_ME_TF_1] 测量值,短浮点数
 	// 0e:[M_ME_TC_1].带时标CP24Time2a的测量值,短浮点数,只有(SQ = 0)单个信息元素集合
 	// 10:[M_ME_TF_1].带时标CP56Time2a的测量值,短浮点数,只有(SQ = 0)单个信息元素集合
-	Handle0d_0e_10([]asdu.MeasuredValueFloatInfo) error
+	Handle0d_0e_10(asdu.Connect, *asdu.ASDU, []asdu.MeasuredValueFloatInfo)
 	// 46:[M_EI_NA_1] 站初始化结束
-	Handle46(asdu.Connect, asdu.CauseOfInitial) error
+	Handle46(asdu.Connect, asdu.CauseOfInitial)
 	// 64:[C_IC_NA_1] 总召唤
-	Handle64(asdu.Connect, *asdu.ASDU, asdu.QualifierOfInterrogation) error
+	Handle64(asdu.Connect, *asdu.ASDU, asdu.QualifierOfInterrogation)
 	// 65:[C_CI_NA_1] 计数量召唤
-	// Handle65(asdu.Connect, *asdu.ASDU, asdu.QualifierOfInterrogation) error
+	// Handle65(asdu.Connect, *asdu.ASDU, asdu.QualifierOfInterrogation)
 	// 67:[C_CS_NA_1] 时钟同步
-	Handle67(asdu.Connect, *asdu.ASDU, time.Time) error
+	Handle67(asdu.Connect, *asdu.ASDU, time.Time)
 
+}
+
+func (c *Client) SendStartDt() {
+	if !c.uFlag {
+		c.uFlag = true
+		c.uTime = time.Now()
+	}
+	c.sendUFrame(uStartDtActive)
+}
+func (c *Client) SendStopDt() {
+	if !c.uFlag {
+		c.uFlag = true
+		c.uTime = time.Now()
+	}
+	c.sendUFrame(uStopDtActive)
+}
+func (c *Client) SendTestDt() {
+	if !c.uFlag {
+		c.uFlag = true
+		c.uTime = time.Now()
+	}
+	c.sendUFrame(uTestFrActive)
+}
+func (c *Client) SendTestCon() {
+	c.sendUFrame(uTestFrConfirm)
+}
+
+// Send sends
+func (c *Client) Send(a *asdu.ASDU) error {
+	if !c.isServerActive {
+		return fmt.Errorf("ErrorUnactive")
+	}
+	data, err := a.MarshalBinary()
+	if err != nil {
+		return err
+	}
+	c.sendIFrame(data)
+	return nil
+}
+//Params returns params of client
+func (c *Client) Params() *asdu.Params {
+	return c.param
+}
+//UnderlyingConn returns underlying conn of client
+func (c *Client) UnderlyingConn() net.Conn {
+	return c.conn
+}
+
+func (c *Client) EnableLogging(b bool) {
+	c.LogMode(b)
+}
+
+func (c *Client) Disconnect() {
+	c.isClosed = true
 }
 
 // Activate64 wraps InterrogationCmd for easy use
