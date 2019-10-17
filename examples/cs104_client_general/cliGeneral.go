@@ -18,7 +18,7 @@ func main() {
 		fmt.Printf("Failed to creat cs104 client. error:%v\n", err)
 	}
 	client.LogMode(true)
-	err = client.Connect("192.168.9.33:2404")
+	err = client.Connect("127.0.0.1:2404")
 	if err != nil {
 		fmt.Printf("Failed to connect. error:%v\n", err)
 	}
@@ -41,6 +41,15 @@ func (c *myClient) Handle01_02_1e(conn asdu.Connect, a *asdu.ASDU, infos []asdu.
 func (c *myClient) Handle03_04_1f(conn asdu.Connect, a *asdu.ASDU, infos []asdu.DoublePointInfo) {
 	for i := range infos {
 		fmt.Println(byte(infos[i].Value), uint8(a.Identifier.Type), uint(infos[i].Ioa))
+	}
+}
+
+// Handle05_20 ...
+// 05:[M_ST_NA_1].步位置信息
+// 20:[M_ST_TB_1].带时标CP56Time2a的双点信息,只有(SQ = 0)单个信息元素集合
+func (c *myClient) Handle05_20(conn asdu.Connect, a *asdu.ASDU, infos []asdu.StepPositionInfo) {
+	for i := range infos {
+		fmt.Println(byte(infos[i].Value.Value()), a.Identifier.Type, infos[i].Ioa)
 	}
 }
 

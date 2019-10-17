@@ -102,7 +102,7 @@ const (
 // 带瞬变状态指示的测量值，用于变压器步位置或其它步位置的值
 // See companion standard 101, subclass 7.2.6.5.
 // Val range <-64..63>
-// bit[0-6]: <-64..63>
+// bit[0-5]: <-64..63>
 // NOTE: bit6 为符号位
 // bit7: 0: 设备未在瞬变状态 1： 设备处于瞬变状态
 type StepPosition struct {

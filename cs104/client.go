@@ -461,7 +461,7 @@ func (c *Client) handleIFrame(a *asdu.ASDU) error {
 	}
 
 	switch a.Identifier.Type {
-	case asdu.M_SP_NA_1, asdu.M_SP_TA_1, asdu.M_SP_TB_1:					// 遥信 单点信息 01 02 30
+	case asdu.M_SP_NA_1, asdu.M_SP_TA_1, asdu.M_SP_TB_1:		// 遥信 单点信息 01 02 30
 		// check cot
 		if !( a.Identifier.Coa.Cause == asdu.Background ||
 			  a.Identifier.Coa.Cause == asdu.Spontaneous ||
@@ -473,9 +473,9 @@ func (c *Client) handleIFrame(a *asdu.ASDU) error {
 			  a.Identifier.Coa.Cause <= asdu.InterrogatedByGroup16 ) ) {
 			return a.SendReplyMirror(c, asdu.UnknownCOT)
 		}
-		spi := a.GetSinglePoint()
-		c.handler.Handle01_02_1e(c, a, spi)
-	case asdu.M_DP_NA_1, asdu.M_DP_TA_1, asdu.M_DP_TB_1: 					// 遥信 双点信息 3,4,31
+		info := a.GetSinglePoint()
+		c.handler.Handle01_02_1e(c, a, info)
+	case asdu.M_DP_NA_1, asdu.M_DP_TA_1, asdu.M_DP_TB_1: 		// 遥信 双点信息 3,4,31
 		// check cot
 		if !( a.Identifier.Coa.Cause == asdu.Background ||
 			  a.Identifier.Coa.Cause == asdu.Spontaneous ||
@@ -487,9 +487,23 @@ func (c *Client) handleIFrame(a *asdu.ASDU) error {
 			  a.Identifier.Coa.Cause <= asdu.InterrogatedByGroup16 ) ) {
 			return a.SendReplyMirror(c, asdu.UnknownCOT)
 		}
-		dpi := a.GetDoublePoint()
-		c.handler.Handle03_04_1f(c, a, dpi)
-	case asdu.M_BO_NA_1, asdu.M_BO_TA_1, asdu.M_BO_TB_1:					// 遥信 比特串信息 07,08,33								// 比特串,07
+		info := a.GetDoublePoint()
+		c.handler.Handle03_04_1f(c, a, info)
+		case asdu.M_ST_NA_1, asdu.M_ST_TB_1: 					// 遥信 步调节信息 5,32
+			// check cot
+			if !( a.Identifier.Coa.Cause == asdu.Background ||
+				  a.Identifier.Coa.Cause == asdu.Spontaneous ||
+				  a.Identifier.Coa.Cause == asdu.Request ||
+				  a.Identifier.Coa.Cause == asdu.ReturnInfoRemote ||
+				  a.Identifier.Coa.Cause == asdu.ReturnInfoLocal ||
+				  a.Identifier.Coa.Cause == asdu.InterrogatedByStation ||
+				( a.Identifier.Coa.Cause >= asdu.InterrogatedByGroup1 &&
+				  a.Identifier.Coa.Cause <= asdu.InterrogatedByGroup16 ) ) {
+				return a.SendReplyMirror(c, asdu.UnknownCOT)
+			}
+			info := a.GetStepPosition()
+			c.handler.Handle05_20(c, a, info)
+	case asdu.M_BO_NA_1, asdu.M_BO_TA_1, asdu.M_BO_TB_1:		// 遥信 比特串信息 07,08,33								// 比特串,07
 		// check cot
 		if !( a.Identifier.Coa.Cause == asdu.Background ||
 			  a.Identifier.Coa.Cause == asdu.Spontaneous ||
@@ -499,8 +513,8 @@ func (c *Client) handleIFrame(a *asdu.ASDU) error {
 			  a.Identifier.Coa.Cause <= asdu.InterrogatedByGroup16 ) ) {
 		  	return a.SendReplyMirror(c, asdu.UnknownCOT)
 		}
-		bsi := a.GetBitString32()
-		c.handler.Handle07_08_21(c, a, bsi)
+		info := a.GetBitString32()
+		c.handler.Handle07_08_21(c, a, info)
 	case asdu.M_ME_NA_1, asdu.M_ME_TA_1, asdu.M_ME_TD_1, asdu.M_ME_ND_1:	// 遥测 归一化测量值 09,10,21,34
 		// check cot
 		if !( a.Identifier.Coa.Cause == asdu.Periodic ||
@@ -509,10 +523,10 @@ func (c *Client) handleIFrame(a *asdu.ASDU) error {
 			  a.Identifier.Coa.Cause == asdu.Request ||
 			  a.Identifier.Coa.Cause == asdu.InterrogatedByStation ) {
 			return a.SendReplyMirror(c, asdu.UnknownCOT)
-	  	}
-	  	valueInfos := a.GetMeasuredValueNormal()
-	  	c.handler.Handle09_0a_15_22(c, a, valueInfos)
-	case asdu.M_ME_NB_1, asdu.M_ME_TB_1, asdu.M_ME_TE_1:					//遥测 标度化值 11,12,35
+		  }
+		  value := a.GetMeasuredValueNormal()
+		  c.handler.Handle09_0a_15_22(c, a, value)
+	case asdu.M_ME_NB_1, asdu.M_ME_TB_1, asdu.M_ME_TE_1:		//遥测 标度化值 11,12,35
 		// check cot
 		if !( a.Identifier.Coa.Cause == asdu.Periodic ||
 			  a.Identifier.Coa.Cause == asdu.Background ||
@@ -523,9 +537,9 @@ func (c *Client) handleIFrame(a *asdu.ASDU) error {
 			  a.Identifier.Coa.Cause <= asdu.InterrogatedByGroup16 ) ) {
 			return a.SendReplyMirror(c, asdu.UnknownCOT)
 		}
-		mvsi := a.GetMeasuredValueScaled()
-		c.handler.Handle0b_0c_23(c, a, mvsi)
-	case asdu.M_ME_NC_1, asdu.M_ME_TC_1, asdu.M_ME_TF_1:					// 遥信 短浮点数 13,14,16
+		value := a.GetMeasuredValueScaled()
+		c.handler.Handle0b_0c_23(c, a, value)
+	case asdu.M_ME_NC_1, asdu.M_ME_TC_1, asdu.M_ME_TF_1:		// 遥信 短浮点数 13,14,16
 		// check cot
 		if !( a.Identifier.Coa.Cause == asdu.Periodic ||
 			  a.Identifier.Coa.Cause == asdu.Background ||
@@ -536,9 +550,9 @@ func (c *Client) handleIFrame(a *asdu.ASDU) error {
 			  a.Identifier.Coa.Cause <= asdu.InterrogatedByGroup16 ) ) {
 			return a.SendReplyMirror(c, asdu.UnknownCOT)
 		}
-		mvfi := a.GetMeasuredValueFloat()
-		c.handler.Handle0d_0e_10(c, a, mvfi)
-	case asdu.M_EI_NA_1:													// 站初始化结束 70
+		value := a.GetMeasuredValueFloat()
+		c.handler.Handle0d_0e_10(c, a, value)
+	case asdu.M_EI_NA_1:										// 站初始化结束 70
 		// check cause of transmission
 		if 	!( a.Identifier.Coa.Cause == asdu.Initialized ) {
 			return a.SendReplyMirror(c, asdu.UnknownCOT)
@@ -548,7 +562,7 @@ func (c *Client) handleIFrame(a *asdu.ASDU) error {
 			return a.SendReplyMirror(c, asdu.UnknownIOA)
 		}
 		c.handler.Handle46(c, coi)
-	case asdu.C_IC_NA_1: 													// 总召唤 100
+	case asdu.C_IC_NA_1: 										// 总召唤 100
 		// check cot
 		if 	!( a.Identifier.Coa.Cause == asdu.ActivationCon ||
 			  a.Identifier.Coa.Cause == asdu.Deactivation ||
@@ -562,7 +576,7 @@ func (c *Client) handleIFrame(a *asdu.ASDU) error {
 			return a.SendReplyMirror(c, asdu.UnknownIOA)
 		}
 		c.handler.Handle64(c, a, qoi)
-	case asdu.C_CS_NA_1:													// 时钟同步 103
+	case asdu.C_CS_NA_1:										// 时钟同步 103
 		// check cot
 		if !( a.Identifier.Coa.Cause == asdu.ActivationCon ||
 			  a.Identifier.Coa.Cause == asdu.ActivationTerm ||
@@ -598,6 +612,10 @@ type ClientHandler interface {
 	// 07:[M_BO_NA_1] 比特位串
 	// 08:[M_BO_TA_1] 带时标CP24Time2a比特位串，只有(SQ = 0)单个信息元素集合
 	// 21:[M_BO_TB_1] 带时标CP56Time2a比特位串，只有(SQ = 0)单个信息元素集
+	Handle05_20(asdu.Connect, *asdu.ASDU, []asdu.StepPositionInfo)
+	// 07:[M_BO_NA_1] 比特位串
+	// 08:[M_BO_TA_1] 带时标CP24Time2a比特位串，只有(SQ = 0)单个信息元素集合
+	// 21:[M_BO_TB_1] 带时标CP56Time2a比特位串，只有(SQ = 0)单个信息元素集
 	Handle07_08_21(asdu.Connect, *asdu.ASDU, []asdu.BitString32Info)
 	// 09:[M_ME_NA_1] 测量值,规一化值
 	// 0a:[M_ME_TA_1] 带时标CP24Time2a的测量值,规一化值,只有(SQ = 0)单个信息元素集合
@@ -620,7 +638,6 @@ type ClientHandler interface {
 	// Handle65(asdu.Connect, *asdu.ASDU, asdu.QualifierOfInterrogation)
 	// 67:[C_CS_NA_1] 时钟同步
 	Handle67(asdu.Connect, *asdu.ASDU, time.Time)
-
 }
 
 func (c *Client) SendStartDt() {

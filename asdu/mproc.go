@@ -302,7 +302,7 @@ func step(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission, ca
 	return c.Send(u)
 }
 
-// Step sends a type identification [M_ST_NA_1].双点信息
+// Step sends a type identification [M_ST_NA_1].步位置信息
 // [M_ST_NA_1] See companion standard 101, subclass 7.3.1.5
 // 传送原因(coa)用于
 // 监视方向：
