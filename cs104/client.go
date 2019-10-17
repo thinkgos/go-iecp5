@@ -63,6 +63,9 @@ type Client struct {
 	// 连接是否被关闭(只能通过Disconnect()修改)
 	isClosed		bool
 
+	// 测试命令计数
+	testCnt			uint16
+
 	// 其他
 	*clog.Clog
 	wg              sync.WaitGroup
@@ -116,6 +119,7 @@ func (c *Client) Connect(addr string) error {
 	c.ackSN = 0
 	c.t2Flag = false
 	c.recvCnt = 0
+	c.testCnt = 0
 	c.isServerActive = false
 	c.isClosed = false
 	c.recvChan = make(chan []byte, APDUSizeMax)
@@ -210,7 +214,7 @@ func (c *Client) handleLoop(ctx context.Context, cancel context.CancelFunc) {
 				// case uStartDtActive:
 				case uStartDtConfirm:
 					c.isServerActive = true
-					Activate67(c)								// 激活之后进行时钟同步?
+					c.SysCmd(103)								// 激活之后进行时钟同步?
 				case uTestFrActive:
 					c.SendTestCon()
 				// case uTestFrConfirm:
@@ -564,23 +568,36 @@ func (c *Client) handleIFrame(a *asdu.ASDU) error {
 		c.handler.Handle46(c, coi)
 	case asdu.C_IC_NA_1: 										// 总召唤 100
 		// check cot
-		if 	!( a.Identifier.Coa.Cause == asdu.ActivationCon ||
-			  a.Identifier.Coa.Cause == asdu.Deactivation ||
+		if !( a.Identifier.Coa.Cause == asdu.ActivationCon ||
+			  a.Identifier.Coa.Cause == asdu.DeactivationCon ||
 			  a.Identifier.Coa.Cause == asdu.ActivationTerm ) {
 			return a.SendReplyMirror(c, asdu.UnknownCOT)
 		}
 		// get ioa and qoi
-		ioa, qoi := a.GetInterrogationCmd()
+		ioa, qua := a.GetInterrogationCmd()
 		// check ioa
 		if 	ioa != asdu.InfoObjAddrIrrelevant {
 			return a.SendReplyMirror(c, asdu.UnknownIOA)
 		}
-		c.handler.Handle64(c, a, qoi)
+		c.handler.Handle64(c, a, qua)
+	case asdu.C_CI_NA_1: 										// 计数量召唤 101
+		// check cot
+		if !( a.Identifier.Coa.Cause == asdu.ActivationCon ||
+			  a.Identifier.Coa.Cause == asdu.DeactivationCon ||
+			  a.Identifier.Coa.Cause == asdu.ActivationTerm ) {
+			return a.SendReplyMirror(c, asdu.UnknownCOT)
+		}
+		// get ioa and qoi
+		ioa, qua := a.GetCounterInterrogationCmd()
+		// check ioa
+		if 	ioa != asdu.InfoObjAddrIrrelevant {
+			return a.SendReplyMirror(c, asdu.UnknownIOA)
+		}
+		c.handler.Handle65(c, a, qua)
 	case asdu.C_CS_NA_1:										// 时钟同步 103
 		// check cot
 		if !( a.Identifier.Coa.Cause == asdu.ActivationCon ||
-			  a.Identifier.Coa.Cause == asdu.ActivationTerm ||
-			  a.Identifier.Coa.Cause == asdu.UnknownTypeID ) {
+			  a.Identifier.Coa.Cause == asdu.ActivationTerm ) {
 		  	return a.SendReplyMirror(c, asdu.UnknownCOT)
 		}
 		ioa, t := a.GetClockSynchronizationCmd()
@@ -589,6 +606,23 @@ func (c *Client) handleIFrame(a *asdu.ASDU) error {
 			return a.SendReplyMirror(c, asdu.UnknownIOA)
 		}
 		c.handler.Handle67(c, a, t)
+	case asdu.C_RP_NA_1:										// 复位进程 105
+		// check cot
+		if !( a.Identifier.Coa.Cause == asdu.ActivationCon) {
+			return a.SendReplyMirror(c, asdu.UnknownCOT)
+		}
+		ioa, qua := a.GetResetProcessCmd()
+		// check ioa
+		if 	ioa != asdu.InfoObjAddrIrrelevant {
+			return a.SendReplyMirror(c, asdu.UnknownIOA)
+		}
+		c.handler.Handle69(c, a, qua)
+	// case asdu.C_TS_TA_1:										// 测试命令 107
+	// 	// check cot
+	// 	if !( a.Identifier.Coa.Cause == asdu.ActivationCon) {
+	// 	  	return a.SendReplyMirror(c, asdu.UnknownCOT)
+	// 	}
+	// 	c.handler.Handle6b(c, a, true)
 	default:
 		return a.SendReplyMirror(c, asdu.UnknownTypeID)
 	}
@@ -635,9 +669,13 @@ type ClientHandler interface {
 	// 64:[C_IC_NA_1] 总召唤
 	Handle64(asdu.Connect, *asdu.ASDU, asdu.QualifierOfInterrogation)
 	// 65:[C_CI_NA_1] 计数量召唤
-	// Handle65(asdu.Connect, *asdu.ASDU, asdu.QualifierOfInterrogation)
+	Handle65(asdu.Connect, *asdu.ASDU, asdu.QualifierCountCall)
 	// 67:[C_CS_NA_1] 时钟同步
 	Handle67(asdu.Connect, *asdu.ASDU, time.Time)
+	// 69:[C_RP_NA_1] 复位进程
+	Handle69(asdu.Connect, *asdu.ASDU, asdu.QualifierOfResetProcessCmd)
+	// 6B:[C_TS_TA_1] 测试命令
+	Handle6b(asdu.Connect, *asdu.ASDU, bool)
 }
 
 func (c *Client) SendStartDt() {
@@ -694,25 +732,60 @@ func (c *Client) Disconnect() {
 	c.isClosed = true
 }
 
-// Activate64 wraps InterrogationCmd for easy use
-func Activate64(c asdu.Connect) error {
-	if err := asdu.InterrogationCmd(c, asdu.ParseCauseOfTransmission(0x06), 0xFFFF, 0x14); err != nil {
-		return err
-	}
-	return nil
-}
-// Activate67 wraps ClockSynchronizationCmd for easy use
-func Activate67(c asdu.Connect) error {
-	if err := asdu.ClockSynchronizationCmd(c, asdu.ParseCauseOfTransmission(0x06), 0xFFFF, time.Now()); err != nil {
-		return err
+// SysCmd wraps sysCmds
+func (c *Client) SysCmd(typeID asdu.TypeID) error {
+	switch typeID {
+	case 100:
+		if err := asdu.InterrogationCmd(c, asdu.ParseCauseOfTransmission(0x06), 0xFFFF, 0x14); err != nil {
+			return err
+		}
+	case 101:
+		if err := asdu.CounterInterrogationCmd(c, asdu.ParseCauseOfTransmission(0x06), 0xFFFF, asdu.ParseQualifierCountCall(0x05)); err != nil {
+			return err
+		}
+	case 103:
+		if err := asdu.ClockSynchronizationCmd(c, asdu.ParseCauseOfTransmission(0x06), 0xFFFF, time.Now()); err != nil {
+			return err
+		}
+	case 105:
+		if err := asdu.ResetProcessCmd(c, asdu.ParseCauseOfTransmission(0x06), 0xFFFF, 0x01); err != nil {
+			return err
+		}
+	case 107:
+		if err := c.TestCommand(); err != nil {
+			return err
+		}
+		c.testCnt++
+	default:
+		return fmt.Errorf("Unknow typeID for writeCmd")
 	}
 	return nil
 }
 
-// Read66 wraps ReadCmd for easy use
-func Read66(c asdu.Connect, i asdu.InfoObjAddr) error {
-	if err := asdu.ReadCmd(c, asdu.ParseCauseOfTransmission(0x05), 0xFFFF, i); err != nil {
+// TestCommand ...
+func (c *Client) TestCommand() error {
+	if err := c.Params().Valid(); err != nil {
 		return err
 	}
-	return nil
+	u := asdu.NewASDU(c.Params(), asdu.Identifier{
+		asdu.C_TS_TA_1,
+		asdu.VariableStruct{IsSequence: false, Number: 1},
+		asdu.ParseCauseOfTransmission(0x06),
+		0,
+		0xFFFF,
+	})
+	if err := u.AppendInfoObjAddr(asdu.InfoObjAddrIrrelevant); err != nil {
+		return err
+	}
+	u.AppendBytes(byte(c.testCnt&0xff), byte(c.testCnt>>8))
+	u.AppendBytes(asdu.CP56Time2a(time.Now(), u.InfoObjTimeZone)...)
+	return c.Send(u)
 }
+
+// // GetTestCommand ...
+// func GetTestCommand(a *asdu.ASDU) (ioa asdu.InfoObjAddr, tsc uint16, t time.Time) {
+// 	ioa = a.DecodeInfoObjAddr()
+// 	tsc = a.infoObj[0] + (a.infoObj[1] << 8)
+// 	t = asdu.ParseCP56Time2a(a.infoObj, a.InfoObjTimeZone)
+// 	return
+// }
