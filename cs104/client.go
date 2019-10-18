@@ -24,14 +24,21 @@ type sendBuf struct {
 	mutex   sync.Mutex
 }
 
+type states uint8
+const (
+	Waiting states = iota
+	Running
+	Closing
+)
+
 // Client is an IEC104 master
 type Client struct {
 	conf 			*Config
 	param 			*asdu.Params
-
 	handler 		ClientHandler			// 接口
 
 	conn 			net.Conn
+	cancelFunc   	context.CancelFunc
 
 	// channel 
 	recvChan		chan []byte				// 接收到的数据包
@@ -61,7 +68,7 @@ type Client struct {
 	isServerActive 	bool
 
 	// 连接是否被关闭(只能通过Disconnect()修改)
-	isClosed		bool
+	state			states
 
 	// 测试命令计数
 	testCnt			uint16
@@ -96,6 +103,7 @@ func NewClient(conf *Config, params *asdu.Params, handler ClientHandler) (c *Cli
 		conf: 			conf,
 		param: 			params,
 		handler: 		handler,
+		state:			Waiting,
 		Clog: 			clog.NewWithPrefix("IEC104 client =>"),
 	}
 	err = nil
@@ -106,12 +114,14 @@ func NewClient(conf *Config, params *asdu.Params, handler ClientHandler) (c *Cli
 
 // Connect is 
 func (c *Client) Connect(addr string) error {
+	c.state = Running
 	conn, err := net.DialTimeout("tcp", addr, c.conf.ConnectTimeout0)
 	if err != nil {
+		c.state = Waiting
 		return fmt.Errorf("Failed to dial %s, error: %v", addr, err)
 	}
 	c.conn = conn
-	defer c.conn.Close()
+	c.Debug("Connected to %s!", addr)
 
 	// initialization
 	c.sendSN = 0
@@ -121,7 +131,6 @@ func (c *Client) Connect(addr string) error {
 	c.recvCnt = 0
 	c.testCnt = 0
 	c.isServerActive = false
-	c.isClosed = false
 	c.recvChan = make(chan []byte, APDUSizeMax)
 	c.sendChan = make(chan []byte, APDUSizeMax)
 	c.sendBuf = &sendBuf{
@@ -132,6 +141,7 @@ func (c *Client) Connect(addr string) error {
 	c.t3Time = time.Now()
 
 	ctx, cancel := context.WithCancel(context.Background())
+	c.cancelFunc = cancel
 	c.wg.Add(3)
 	go c.recvLoop(ctx)
 	go c.sendLoop(ctx)
@@ -143,18 +153,15 @@ func (c *Client) Connect(addr string) error {
 	defer func() {
 		cancel()
 		c.wg.Wait()
+		c.conn.Close()
 		c.Debug("Connection to %s Ended!", addr)
-		if !c.isClosed {					// 非人为关闭情况下,主动重连
+		if c.state != Closing {					// 非人为关闭情况下,主动重连
 			c.Connect(addr)
 		}
+		c.state = Waiting
 	}()
 
-
 	for {
-		if c.isClosed {
-			return fmt.Errorf("Connection is closed")
-		}
-
 		// TODO: need sleep?
 		time.Sleep(time.Second)
 		if time.Since(c.t3Time) >= c.conf.IdleTimeout3 {
@@ -164,7 +171,8 @@ func (c *Client) Connect(addr string) error {
 
 		if c.uFlag {
 			if time.Since(c.uTime) >= c.conf.SendUnAckTimeout1 {
-				return fmt.Errorf("SendUnAckTimeout1 of uFrame expires")
+				c.Error("SendUnAckTimeout1 of uFrame expires, timeout:%v", time.Since(c.uTime))
+				return nil
 			}
 		}
 		if c.t2Flag {
@@ -177,7 +185,8 @@ func (c *Client) Connect(addr string) error {
 
 		if c.sendBuf.head != c.sendBuf.tail {
 			if time.Since(c.sendBuf.buf[c.sendBuf.head].t) >= c.conf.SendUnAckTimeout1 {
-				return fmt.Errorf("SendUnAckTimeout1 of iFrame expires")
+				c.Error("SendUnAckTimeout1 of iFrame expires, timeout:%v", time.Since(c.sendBuf.buf[c.sendBuf.head].t))
+				return nil
 			}
 			c.ackSN = c.sendBuf.buf[c.sendBuf.head].sn - 1
 		} else {
@@ -224,6 +233,7 @@ func (c *Client) handleLoop(ctx context.Context, cancel context.CancelFunc) {
 			case sAPCI:
 				c.Debug(apci.String())
 				if err := c.checkRecvSN(apci.rcvSN); err != nil {
+					c.Error("Check SFrame recvSN error:%v", err)
 					cancel()
 					return
 				}
@@ -241,14 +251,14 @@ func (c *Client) handleLoop(ctx context.Context, cancel context.CancelFunc) {
 
 				// 判断接收到的I帧发送序号是否等于客户端的I帧接收序号,第一帧时同为0
 				if apci.sendSN != c.recvSN {
-					c.Debug("IFrame sequence error, close connection!")
+					c.Error("IFrame sendSN error, close connection!")
 					cancel()
 					return
 				}
 
 				// 判断接收到的I帧接收序号与客户端的I帧发送情况是否匹配
 				if err := c.checkRecvSN(apci.rcvSN); err != nil {
-					c.Debug(err.Error())
+					c.Error("Check IFrame recvSN error:%v", err)
 					cancel()
 					return
 				}
@@ -257,11 +267,11 @@ func (c *Client) handleLoop(ctx context.Context, cancel context.CancelFunc) {
 
 				asduPack := asdu.NewEmptyASDU(c.param)
 				if err := asduPack.UnmarshalBinary(rawAsdu); err != nil {
-					c.Error("asdu UnmarshalBinary failed,%+v", err)
+					c.Warn("asdu UnmarshalBinary failed,%+v", err)
 					continue
 				}
 				if err := c.handleIFrame(asduPack); err != nil {
-					c.Error("Falied handling I frame, error: %v", err)
+					c.Warn("Falied handling I frame, error: %v", err)
 				}
 			}
 		}
@@ -428,9 +438,9 @@ func (c *Client) sendIFrame(asdu []byte) {
 
 	c.sendBuf.mutex.Lock()
 	defer c.sendBuf.mutex.Unlock()
-	c.sendBuf.tail++
 	c.sendBuf.buf[c.sendBuf.tail].t = time.Now()
 	c.sendBuf.buf[c.sendBuf.tail].sn = c.sendSN
+	c.sendBuf.tail++
 }
 func (c *Client) sendSFrame() {
 	c.Debug("TX sFrame %v", sAPCI{c.recvSN})
@@ -728,8 +738,13 @@ func (c *Client) EnableLogging(b bool) {
 	c.LogMode(b)
 }
 
+func (c *Client) GetState() states {
+	return c.state
+}
+
 func (c *Client) Disconnect() {
-	c.isClosed = true
+	c.state = Closing
+	c.cancelFunc()
 }
 
 // SysCmd wraps sysCmds
