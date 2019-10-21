@@ -10,3 +10,8 @@
 asdu package: [![GoDoc](https://godoc.org/github.com/thinkgos/go-iecp5/asdu?status.svg)](https://godoc.org/github.com/thinkgos/go-iecp5/asdu)  
 clog package: [![GoDoc](https://godoc.org/github.com/thinkgos/go-iecp5/clog?status.svg)](https://godoc.org/github.com/thinkgos/go-iecp5/clog)  
 cs104 package: [![GoDoc](https://godoc.org/github.com/thinkgos/go-iecp5/cs104?status.svg)](https://godoc.org/github.com/thinkgos/go-iecp5/cs104)  
+
+
+# Reference
+lib60870 c library [lib60870](https://github.com/mz-automation/lib60870)  
+lib60870 c library doc [lib60870 doc](https://support.mz-automation.de/doc/lib60870/latest/group__CS104__MASTER.html)
