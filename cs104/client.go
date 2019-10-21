@@ -37,6 +37,7 @@ type Client struct {
 	param 			*asdu.Params
 	handler 		ClientHandler			// 接口
 
+	srvAddr			string
 	conn 			net.Conn
 	cancelFunc   	context.CancelFunc
 
@@ -92,38 +93,54 @@ func DefaultParam() *asdu.Params {
 }
 
 // NewClient returns an IEC104 master
-func NewClient(conf *Config, params *asdu.Params, handler ClientHandler) (c *Client, err error) {
+func NewClient(conf *Config, params *asdu.Params, srvAddr string, handler ClientHandler) (*Client, error) {
 	if err := conf.Valid(); err != nil {
 		return nil, err
 	}
 	if err := params.Valid(); err != nil {
 		return nil, err
 	}
-	c = &Client{
+	c := &Client{
 		conf: 			conf,
 		param: 			params,
 		handler: 		handler,
 		state:			Waiting,
+		srvAddr: 		srvAddr,
 		Clog: 			clog.NewWithPrefix("IEC104 client =>"),
 	}
-	err = nil
 	c.LogMode(false)
 
-	return 
+	// TODO: check srvAddr
+	err := c.connect()
+	if err != nil {
+		return c, err
+	}
+	return c, nil
 }
 
 // Connect is 
-func (c *Client) Connect(addr string) error {
-	c.state = Running
-	conn, err := net.DialTimeout("tcp", addr, c.conf.ConnectTimeout0)
+func (c *Client) connect() error {
+	conn, err := net.DialTimeout("tcp", c.srvAddr, c.conf.ConnectTimeout0)
 	if err != nil {
-		c.state = Waiting
-		return fmt.Errorf("Failed to dial %s, error: %v", addr, err)
+		return fmt.Errorf("Failed to dial %s, error: %v", c.srvAddr, err)
 	}
 	c.conn = conn
-	c.Debug("Connected to %s!", addr)
+	c.Debug("Connected to %s!", c.srvAddr)
+	return nil
+}
 
+func (c *Client) reconnect() {
+	if err := c.connect(); err != nil {
+		c.state = Waiting
+		return
+	}
+	c.Run()
+}
+
+// Run ...
+func (c *Client) Run() error {
 	// initialization
+	c.state = Running
 	c.sendSN = 0
 	c.recvSN = 0
 	c.ackSN = 0
@@ -154,11 +171,10 @@ func (c *Client) Connect(addr string) error {
 		cancel()
 		c.wg.Wait()
 		c.conn.Close()
-		c.Debug("Connection to %s Ended!", addr)
+		c.Debug("Connection to %s Ended!", c.srvAddr)
 		if c.state != Closing {					// 非人为关闭情况下,主动重连
-			c.Connect(addr)
+			c.reconnect()
 		}
-		c.state = Waiting
 	}()
 
 	for {
