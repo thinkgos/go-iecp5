@@ -433,9 +433,9 @@ const (
 	// 2: long pulse duration, duration determined by a system parameter in the outstation
 	// 长脉冲持续时间,持续时间由被控站内的系统参数所确定
 	QOCLongPulseDuration
-	// 3: persistant output
+	// 3: persistent output
 	// 持续输出
-	QOCPersistantOutput
+	QOCPersistentOutput
 	//	4‥8: reserved for standard definitions of this companion standard
 	//	9‥15: reserved for the selection of other predefined functions
 	//	16‥31: reserved for special use (private range)
