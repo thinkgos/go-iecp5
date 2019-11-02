@@ -24,27 +24,27 @@ type TypeID uint8
 const (
 	_ TypeID = iota // 0: not defined
 	// 在监视方向上的过程信息 <0..44>
-	M_SP_NA_1 // single-point information, 单点信息
-	M_SP_TA_1 // single-point information with time tag, 单点信息-带时标
-	M_DP_NA_1 // double-point information, 双点信息
-	M_DP_TA_1 // double-point information with time tag, 双点信息-带时标
-	M_ST_NA_1 // step position information, 步位置信息
-	M_ST_TA_1 // step position information with time tag, 步位置信息-带时标
-	M_BO_NA_1 // bitstring of 32 bit, 32位比特串
-	M_BO_TA_1 // bitstring of 32 bit with time tag, 32位比特串-带时标
-	M_ME_NA_1 // measured value, normalized value, 测量值，规一化值
-	M_ME_TA_1 // measured value, normalized value with time tag, 测量值，规一化值-带时标
-	M_ME_NB_1 // measured value, scaled value, 测量值，标度化值
-	M_ME_TB_1 // measured value, scaled value with time tag, 测量值带时标，标度化值-带时标
-	M_ME_NC_1 // measured value, short floating point number, 测量值，短浮点数
-	M_ME_TC_1 // measured value, short floating point number with time tag, 测量值，短浮数-带时标
-	M_IT_NA_1 // integrated totals, 累积量
-	M_IT_TA_1 // integrated totals with time tag, 累积量带时标
-	M_EP_TA_1 // event of protection equipment with time tag, 继电器保护设备事件-带时标
-	M_EP_TB_1 // packed start events of protection equipment with time tag, 继电保护设备成组启动事件-带时标
-	M_EP_TC_1 // packed output circuit information of protection equipment with time tag, 继电保护设备成组输出电路信息-带时标
-	M_PS_NA_1 // packed single-point information with status change detection, 带变位检出的成组单点信息
-	M_ME_ND_1 // measured value, normalized value without quality descriptor, 测量值,不带品质描述词的规一化值
+	M_SP_NA_1 // 1: single-point information, 单点信息
+	M_SP_TA_1 // 2: single-point information with time tag, 单点信息-带时标
+	M_DP_NA_1 // 3: double-point information, 双点信息
+	M_DP_TA_1 // 4: double-point information with time tag, 双点信息-带时标
+	M_ST_NA_1 // 5: step position information, 步位置信息
+	M_ST_TA_1 // 6: step position information with time tag, 步位置信息-带时标
+	M_BO_NA_1 // 7: bitstring of 32 bit, 32位比特串
+	M_BO_TA_1 // 8: bitstring of 32 bit with time tag, 32位比特串-带时标
+	M_ME_NA_1 // 9: measured value, normalized value, 测量值，规一化值
+	M_ME_TA_1 // 10: measured value, normalized value with time tag, 测量值，规一化值-带时标
+	M_ME_NB_1 // 11: measured value, scaled value, 测量值，标度化值
+	M_ME_TB_1 // 12: measured value, scaled value with time tag, 测量值带时标，标度化值-带时标
+	M_ME_NC_1 // 13: measured value, short floating point number, 测量值，短浮点数
+	M_ME_TC_1 // 14: measured value, short floating point number with time tag, 测量值，短浮数-带时标
+	M_IT_NA_1 // 15: integrated totals, 累积量
+	M_IT_TA_1 // 16: integrated totals with time tag, 累积量带时标
+	M_EP_TA_1 // 17: event of protection equipment with time tag, 继电器保护设备事件-带时标
+	M_EP_TB_1 // 18: packed start events of protection equipment with time tag, 继电保护设备成组启动事件-带时标
+	M_EP_TC_1 // 19: packed output circuit information of protection equipment with time tag, 继电保护设备成组输出电路信息-带时标
+	M_PS_NA_1 // 20: packed single-point information with status change detection, 带变位检出的成组单点信息
+	M_ME_ND_1 // 21: measured value, normalized value without quality descriptor, 测量值,不带品质描述词的规一化值
 	_         // 22: reserved for further compatible definitions
 	_         // 23: reserved for further compatible definitions
 	_         // 24: reserved for further compatible definitions
@@ -53,49 +53,49 @@ const (
 	_         // 27: reserved for further compatible definitions
 	_         // 28: reserved for further compatible definitions
 	_         // 29: reserved for further compatible definitions
-	M_SP_TB_1 // single-point information with time tag CP56Time2a, 单点信息-带CP56Time2a
-	M_DP_TB_1 // double-point information with time tag CP56Time2a, 双点信息-带CP56Time2a
-	M_ST_TB_1 // step position information with time tag CP56Time2a, 步位置信息-带CP56Time2a
-	M_BO_TB_1 // bitstring of 32 bits with time tag CP56Time2a, 32比特串-带CP56Time2a
-	M_ME_TD_1 // measured value, normalized value with time tag CP56Time2a, 测量值,规一化值-带CP56Time2a
-	M_ME_TE_1 // measured value, scaled value with time tag CP56Time2a, 测量值,标度化值-带CP56Time2a
-	M_ME_TF_1 // measured value, short floating point number with time tag CP56Time2a, 测量值,短浮点数-带CP56Time2a
-	M_IT_TB_1 // integrated totals with time tag CP56Time2a, 累积值-带CP56Time2a
-	M_EP_TD_1 // event of protection equipment with time tag CP56Time2a, 继电保护装置事件-带CP56Time2a
-	M_EP_TE_1 // packed start events of protection equipment with time tag CP56Time2a, 继电保护装置成组启动事件-带CP56Time2a
-	M_EP_TF_1 // packed output circuit information of protection equipment with time tag CP56Time2a, 继电保护装置成组输出电路信息-带CP56Time2a
-	S_IT_TC_1 // integrated totals containing time-tagged security statistics
+	M_SP_TB_1 // 30: single-point information with time tag CP56Time2a, 单点信息-带CP56Time2a
+	M_DP_TB_1 // 31: double-point information with time tag CP56Time2a, 双点信息-带CP56Time2a
+	M_ST_TB_1 // 32: step position information with time tag CP56Time2a, 步位置信息-带CP56Time2a
+	M_BO_TB_1 // 33: bitstring of 32 bits with time tag CP56Time2a, 32比特串-带CP56Time2a
+	M_ME_TD_1 // 34: measured value, normalized value with time tag CP56Time2a, 测量值,规一化值-带CP56Time2a
+	M_ME_TE_1 // 35: measured value, scaled value with time tag CP56Time2a, 测量值,标度化值-带CP56Time2a
+	M_ME_TF_1 // 36: measured value, short floating point number with time tag CP56Time2a, 测量值,短浮点数-带CP56Time2a
+	M_IT_TB_1 // 37: integrated totals with time tag CP56Time2a, 累积值-带CP56Time2a
+	M_EP_TD_1 // 38: event of protection equipment with time tag CP56Time2a, 继电保护装置事件-带CP56Time2a
+	M_EP_TE_1 // 39: packed start events of protection equipment with time tag CP56Time2a, 继电保护装置成组启动事件-带CP56Time2a
+	M_EP_TF_1 // 40: packed output circuit information of protection equipment with time tag CP56Time2a, 继电保护装置成组输出电路信息-带CP56Time2a
+	S_IT_TC_1 // 41: integrated totals containing time-tagged security statistics
 	_         // 42: reserved for further compatible definitions
 	_         // 43: reserved for further compatible definitions
 	_         // 44: reserved for further compatible definitions
 	// 在控制方向的过程信息 <45..69>
-	C_SC_NA_1 // single command 单点命令
-	C_DC_NA_1 // double command 双点命令
-	C_RC_NA_1 // regulating step command 调节步命令
-	C_SE_NA_1 // set-point command, normalized value 设定值命令，归一化值
-	C_SE_NB_1 // set-point command, scaled value 设定值命令，规度化值
-	C_SE_NC_1 // set-point command, short floating point number 设定值命令，短浮点数值
-	C_BO_NA_1 // bitstring of 32 bits 23位比特串
+	C_SC_NA_1 // 45: single command 单点命令
+	C_DC_NA_1 // 46: double command 双点命令
+	C_RC_NA_1 // 47: regulating step command 调节步命令
+	C_SE_NA_1 // 48: set-point command, normalized value 设定值命令，归一化值
+	C_SE_NB_1 // 49: set-point command, scaled value 设定值命令，规度化值
+	C_SE_NC_1 // 50: set-point command, short floating point number 设定值命令，短浮点数值
+	C_BO_NA_1 // 51: bitstring of 32 bits 23位比特串
 	_         // 52: reserved for further compatible definitions
 	_         // 53: reserved for further compatible definitions
 	_         // 54: reserved for further compatible definitions
 	_         // 55: reserved for further compatible definitions
 	_         // 56: reserved for further compatible definitions
 	_         // 57: reserved for further compatible definitions
-	C_SC_TA_1 // single command with time tag CP56Time2a
-	C_DC_TA_1 // double command with time tag CP56Time2a
-	C_RC_TA_1 // regulating step command with time tag CP56Time2a
-	C_SE_TA_1 // set-point command with time tag CP56Time2a, normalized value
-	C_SE_TB_1 // set-point command with time tag CP56Time2a, scaled value
-	C_SE_TC_1 // set-point command with time tag CP56Time2a, short floating point number
-	C_BO_TA_1 // bitstring of 32-bit with time tag CP56Time2a
+	C_SC_TA_1 // 58: single command with time tag CP56Time2a
+	C_DC_TA_1 // 59: double command with time tag CP56Time2a
+	C_RC_TA_1 // 60: regulating step command with time tag CP56Time2a
+	C_SE_TA_1 // 61: set-point command with time tag CP56Time2a, normalized value
+	C_SE_TB_1 // 62: set-point command with time tag CP56Time2a, scaled value
+	C_SE_TC_1 // 63: set-point command with time tag CP56Time2a, short floating point number
+	C_BO_TA_1 // 64: bitstring of 32-bit with time tag CP56Time2a
 	_         // 65: reserved for further compatible definitions
 	_         // 66: reserved for further compatible definitions
 	_         // 67: reserved for further compatible definitions
 	_         // 68: reserved for further compatible definitions
 	_         // 69: reserved for further compatible definitions
 	// 在监视方向的系统命令 <70..99>
-	M_EI_NA_1 // end of initialization  初始化结束
+	M_EI_NA_1 // 70: end of initialization  初始化结束
 	_         // 71: reserved for further compatible definitions
 	_         // 72: reserved for further compatible definitions
 	_         // 73: reserved for further compatible definitions
@@ -106,41 +106,41 @@ const (
 	_         // 78: reserved for further compatible definitions
 	_         // 79: reserved for further compatible definitions
 	_         // 80: reserved for further compatible definitions
-	S_CH_NA_1 // authentication challenge
-	S_RP_NA_1 // authentication reply
-	S_AR_NA_1 // aggressive mode authentication request
-	S_KR_NA_1 // session key status request
-	S_KS_NA_1 // session key status
-	S_KC_NA_1 // session key change
-	S_ER_NA_1 // authentication error
+	S_CH_NA_1 // 81: authentication challenge
+	S_RP_NA_1 // 82: authentication reply
+	S_AR_NA_1 // 83: aggressive mode authentication request
+	S_KR_NA_1 // 84: session key status request
+	S_KS_NA_1 // 85: session key status
+	S_KC_NA_1 // 86: session key change
+	S_ER_NA_1 // 87: authentication error
 	_         // 88: reserved for further compatible definitions
 	_         // 89: reserved for further compatible definitions
-	S_US_NA_1 // user status change
-	S_UQ_NA_1 // update key change request
-	S_UR_NA_1 // update key change reply
-	S_UK_NA_1 // update key change — symetric
-	S_UA_NA_1 // update key change — asymetric
-	S_UC_NA_1 // update key change confirmation
+	S_US_NA_1 // 90: user status change
+	S_UQ_NA_1 // 91: update key change request
+	S_UR_NA_1 // 92: update key change reply
+	S_UK_NA_1 // 93: update key change — symetric
+	S_UA_NA_1 // 94: update key change — asymetric
+	S_UC_NA_1 // 95: update key change confirmation
 	_         // 96: reserved for further compatible definitions
 	_         // 97: reserved for further compatible definitions
 	_         // 98: reserved for further compatible definitions
 	_         // 99: reserved for further compatible definitions
 	// 在控制方向的系统命令 <100..109>
-	C_IC_NA_1 // interrogation command 总召唤
-	C_CI_NA_1 // counter interrogation command 计数量召唤
-	C_RD_NA_1 // read command 读命令
-	C_CS_NA_1 // clock synchronization command 时钟同步命令
-	C_TS_NA_1 // test command 测试命令
-	C_RP_NA_1 // reset process command 复位进程命令
-	C_CD_NA_1 // delay acquisition command 延时获得命令
-	C_TS_TA_1 // test command with time tag CP56Time2a  带CP56Time2a的测试命令
+	C_IC_NA_1 // 100: interrogation command 总召唤
+	C_CI_NA_1 // 101: counter interrogation command 计数量召唤
+	C_RD_NA_1 // 102: read command 读命令
+	C_CS_NA_1 // 103: clock synchronization command 时钟同步命令
+	C_TS_NA_1 // 104: test command 测试命令
+	C_RP_NA_1 // 105: reset process command 复位进程命令
+	C_CD_NA_1 // 106: delay acquisition command 延时获得命令
+	C_TS_TA_1 // 107: test command with time tag CP56Time2a  带CP56Time2a的测试命令
 	_         // 108: reserved for further compatible definitions
 	_         // 109: reserved for further compatible definitions
 	// 在控制方向的参数命令 <110..119>
-	P_ME_NA_1 // parameter of measured value, normalized value 测量值参数,规一化值
-	P_ME_NB_1 // parameter of measured value, scaled value 测量值参数,标度化值
-	P_ME_NC_1 // parameter of measured value, short floating point number 测量值参数,短浮点数
-	P_AC_NA_1 // parameter activation 参数激活
+	P_ME_NA_1 // 110: parameter of measured value, normalized value 测量值参数,规一化值
+	P_ME_NB_1 // 111: parameter of measured value, scaled value 测量值参数,标度化值
+	P_ME_NC_1 // 112: parameter of measured value, short floating point number 测量值参数,短浮点数
+	P_AC_NA_1 // 113: parameter activation 参数激活
 	_         // 114: reserved for further compatible definitions
 	_         // 115: reserved for further compatible definitions
 	_         // 116: reserved for further compatible definitions
@@ -148,14 +148,14 @@ const (
 	_         // 118: reserved for further compatible definitions
 	_         // 119: reserved for further compatible definitions
 	// 文件传输 <120..127>
-	F_FR_NA_1 // file ready  文件准备就绪
-	F_SR_NA_1 // section ready 节准备就绪
-	F_SC_NA_1 // call directory, select file, call file, call section 如唤目录，选择文件，召唤文件，召唤节
-	F_LS_NA_1 // last section, last segment 最后的节，最后的段
-	F_AF_NA_1 // ack file, ack section 认可文件，认可节
-	F_SG_NA_1 // segment 段
-	F_DR_TA_1 // directory 目录
-	F_SC_NB_1 // QueryLog - request archive file (section 104) 查询日志
+	F_FR_NA_1 // 120: file ready  文件准备就绪
+	F_SR_NA_1 // 121: section ready 节准备就绪
+	F_SC_NA_1 // 122: call directory, select file, call file, call section 如唤目录，选择文件，召唤文件，召唤节
+	F_LS_NA_1 // 123: last section, last segment 最后的节，最后的段
+	F_AF_NA_1 // 124: ack file, ack section 认可文件，认可节
+	F_SG_NA_1 // 125: segment 段
+	F_DR_TA_1 // 126: directory 目录
+	F_SC_NB_1 // 127: QueryLog - request archive file (section 104) 查询日志
 )
 
 // infoObjSize maps the type identification (TypeID) to the serial octet size.
