@@ -215,7 +215,8 @@ func (c *Client) handleLoop(ctx context.Context, cancel context.CancelFunc) {
 				// case uStartDtActive:
 				case uStartDtConfirm:
 					c.isServerActive = true
-					c.SysCmd(103) // 激活之后进行时钟同步?
+					// 激活之后进行时钟同步?
+					_ = c.ClockSynchronizationCmd(asdu.CauseOfTransmission{Cause: asdu.Activation}, 0xffff, time.Now())
 				case uTestFrActive:
 					c.SendTestCon()
 				// case uTestFrConfirm:
@@ -419,10 +420,10 @@ func (c *Client) sendLoop(ctx context.Context) {
 	}
 }
 
-func (c *Client) sendIFrame(asdu []byte) {
+func (c *Client) sendIFrame(asdu []byte) error {
 	iFrame, err := newIFrame(c.sendSN, c.recvSN, asdu)
 	if err != nil {
-		c.Debug(err.Error())
+		return err
 	}
 	c.sendChan <- iFrame
 	c.Debug("TX iFrame %v", iAPCI{c.sendSN, c.recvSN})
@@ -433,6 +434,7 @@ func (c *Client) sendIFrame(asdu []byte) {
 	c.sendBuf.buf[c.sendBuf.tail].t = time.Now()
 	c.sendBuf.buf[c.sendBuf.tail].sn = c.sendSN
 	c.sendBuf.tail++
+	return nil
 }
 func (c *Client) sendSFrame() {
 	c.Debug("TX sFrame %v", sAPCI{c.recvSN})
@@ -705,7 +707,7 @@ func (c *Client) SendTestCon() {
 	c.sendUFrame(uTestFrConfirm)
 }
 
-// Send sends
+// Send send asdu
 func (c *Client) Send(a *asdu.ASDU) error {
 	if !c.isServerActive {
 		return fmt.Errorf("ErrorUnactive")
@@ -714,22 +716,17 @@ func (c *Client) Send(a *asdu.ASDU) error {
 	if err != nil {
 		return err
 	}
-	c.sendIFrame(data)
-	return nil
+	return c.sendIFrame(data)
 }
 
-//Params returns params of client
+// Params returns params of client
 func (c *Client) Params() *asdu.Params {
 	return c.param
 }
 
-//UnderlyingConn returns underlying conn of client
+// UnderlyingConn returns underlying conn of client
 func (c *Client) UnderlyingConn() net.Conn {
 	return c.conn
-}
-
-func (c *Client) EnableLogging(b bool) {
-	c.LogMode(b)
 }
 
 func (c *Client) GetState() states {
@@ -741,53 +738,48 @@ func (c *Client) Disconnect() {
 	c.cancelFunc()
 }
 
-// SysCmd wraps sysCmds
-func (c *Client) SysCmd(typeID asdu.TypeID) error {
-	switch typeID {
-	case 100:
-		if err := asdu.InterrogationCmd(c, asdu.ParseCauseOfTransmission(0x06), 0xFFFF, 0x14); err != nil {
-			return err
-		}
-	case 101:
-		if err := asdu.CounterInterrogationCmd(c, asdu.ParseCauseOfTransmission(0x06), 0xFFFF, asdu.ParseQualifierCountCall(0x05)); err != nil {
-			return err
-		}
-	case 103:
-		if err := asdu.ClockSynchronizationCmd(c, asdu.ParseCauseOfTransmission(0x06), 0xFFFF, time.Now()); err != nil {
-			return err
-		}
-	case 105:
-		if err := asdu.ResetProcessCmd(c, asdu.ParseCauseOfTransmission(0x06), 0xFFFF, 0x01); err != nil {
-			return err
-		}
-	case 107:
-		if err := c.TestCommand(); err != nil {
-			return err
-		}
-		c.testCnt++
-	default:
-		return fmt.Errorf("Unknow typeID for writeCmd")
-	}
-	return nil
+//InterrogationCmd wrap asdu.InterrogationCmd
+func (c *Client) InterrogationCmd(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, qoi asdu.QualifierOfInterrogation) error {
+	return asdu.InterrogationCmd(c, coa, ca, qoi)
 }
 
-// TestCommand ...
-func (c *Client) TestCommand() error {
+// CounterInterrogationCmd wrap asdu.CounterInterrogationCmd
+func (sf *Client) CounterInterrogationCmd(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, qcc asdu.QualifierCountCall) error {
+	return asdu.CounterInterrogationCmd(sf, coa, ca, qcc)
+}
+
+// ClockSynchronizationCmd wrap asdu.ClockSynchronizationCmd
+func (sf *Client) ClockSynchronizationCmd(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, t time.Time) error {
+	return asdu.ClockSynchronizationCmd(sf, coa, ca, t)
+}
+
+// ResetProcessCmd wrap asdu.ResetProcessCmd
+func (sf *Client) ResetProcessCmd(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, qrp asdu.QualifierOfResetProcessCmd) error {
+	return asdu.ResetProcessCmd(sf, coa, ca, qrp)
+}
+
+// TestCommand  wrap asdu.TestCommand
+func (sf *Client) TestCommand(coa asdu.CauseOfTransmission, ca asdu.CommonAddr) error {
+	return asdu.TestCommand(sf, coa, ca)
+}
+
+// TestCommandCP56Time2a send test command [C_TS_TA_1]，测试命令, 只有单个信息对象(SQ = 0)
+func (c *Client) TestCommandCP56Time2a(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, t time.Time) error {
 	if err := c.Params().Valid(); err != nil {
 		return err
 	}
 	u := asdu.NewASDU(c.Params(), asdu.Identifier{
 		asdu.C_TS_TA_1,
 		asdu.VariableStruct{IsSequence: false, Number: 1},
-		asdu.ParseCauseOfTransmission(0x06),
+		coa,
 		0,
-		0xFFFF,
+		ca,
 	})
 	if err := u.AppendInfoObjAddr(asdu.InfoObjAddrIrrelevant); err != nil {
 		return err
 	}
 	u.AppendBytes(byte(c.testCnt&0xff), byte(c.testCnt>>8))
-	u.AppendBytes(asdu.CP56Time2a(time.Now(), u.InfoObjTimeZone)...)
+	u.AppendBytes(asdu.CP56Time2a(t, u.InfoObjTimeZone)...)
 	return c.Send(u)
 }
 
