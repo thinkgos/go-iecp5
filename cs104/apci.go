@@ -6,11 +6,9 @@ import (
 	"github.com/thinkgos/go-iecp5/asdu"
 )
 
-const (
-	startFrame byte = 0x68 // 起动字符
-)
+const startFrame byte = 0x68 // 起动字符
 
-// APDU form  Max size 255
+// APDU form Max size 255
 //      |              APCI                   |       ASDU         |
 //      | start | APDU length | control field |       ASDU         |
 //                       |          APDU field size(253)           |
@@ -38,7 +36,7 @@ type iAPCI struct {
 }
 
 func (this iAPCI) String() string {
-	return fmt.Sprintf("I[sendNO: %d, recvNO: %d]", this.sendSN, this.rcvSN)
+	return fmt.Sprintf("I[sendNO: %d, recvNO: %d]", this.rcvSN, this.sendSN)
 }
 
 // S帧 只含apci S帧用于主要用确认帧的正确传输,协议称是监视. supervisory
@@ -102,7 +100,7 @@ func newSFrame(RcvSN uint16) []byte {
 
 // newUFrame 创建U帧,返回apdu
 func newUFrame(which byte) []byte {
-	return []byte{startFrame, 4, byte(which | 0x03), 0x00, 0x00, 0x00}
+	return []byte{startFrame, 4, which | 0x03, 0x00, 0x00, 0x00}
 }
 
 // APCI apci 应用规约控制信息
@@ -126,7 +124,8 @@ func parse(apdu []byte) (interface{}, []byte) {
 			rcvSN: uint16(apci.ctr3)>>1 + uint16(apci.ctr4)<<7,
 		}, apdu[6:]
 	}
+	// apci.ctrl&0x03 == 0x03
 	return uAPCI{
-			function: apci.ctr1 & 0xfc,
+		function: apci.ctr1 & 0xfc,
 	}, apdu[6:]
 }
