@@ -1,6 +1,6 @@
 package main
 
-import(
+import (
 	"fmt"
 	"time"
 
@@ -13,7 +13,7 @@ type myClient struct{}
 func main() {
 	mycli := &myClient{}
 
-	client, err := cs104.NewClient(cs104.DefaultConfig(), cs104.DefaultParam(), mycli)
+	client, err := cs104.NewClient(&cs104.Config{}, asdu.ParamsWide, mycli)
 	if err != nil {
 		fmt.Printf("Failed to creat cs104 client. error:%v\n", err)
 	}
@@ -105,12 +105,22 @@ func (c *myClient) Handle64(conn asdu.Connect, a *asdu.ASDU, qoi asdu.QualifierO
 }
 
 // Handle65 65:[C_CI_NA_1], 计数量召唤
-// func (m *myclient) Handle65(asdu.Connect, *asdu.ASDU, asdu.QualifierOfInterrogation) {
-// 	
-// }
+func (c *myClient) Handle65(asdu.Connect, *asdu.ASDU, asdu.QualifierCountCall) {
+
+}
 
 // Handle67 67:[C_CS_NA_1], 时钟同步
 func (c *myClient) Handle67(conn asdu.Connect, a *asdu.ASDU, t time.Time) {
 	fmt.Println(fmt.Sprintf("Receivced IFrame typeID 67, clock sync: %v", t))
-	
+
+}
+
+// 69:[C_RP_NA_1] 复位进程
+func (c *myClient) Handle69(asdu.Connect, *asdu.ASDU, asdu.QualifierOfResetProcessCmd) {
+
+}
+
+// 6B:[C_TS_TA_1] 测试命令
+func (c *myClient) Handle6b(asdu.Connect, *asdu.ASDU, bool) {
+
 }

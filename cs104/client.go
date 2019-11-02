@@ -1,30 +1,35 @@
 package cs104
 
-import(
-	"fmt"
-	"net"
-	"time"
-	"sync"
-	"io"
-	"strings"
+import (
 	"context"
+	"fmt"
+	"io"
+	"net"
+	"strings"
+	"sync"
+	"time"
 
 	"github.com/thinkgos/go-iecp5/asdu"
 	"github.com/thinkgos/go-iecp5/clog"
 )
 
+// TODO: should check all
+// TODO: check when remote connect closed
+// TODO: make simple
+
 type sendFr struct {
-	t 	time.Time
-	sn 	uint16
+	t  time.Time
+	sn uint16
 }
 type sendBuf struct {
-	buf 	[]sendFr						// 已发送的I帧暂存区
-	head 	uint16							// 以发送的未确认I帧序号头
-	tail 	uint16							// 以发送的未确认I帧序号尾
-	mutex   sync.Mutex
+	buf   []sendFr // 已发送的I帧暂存区
+	head  uint16   // 以发送的未确认I帧序号头
+	tail  uint16   // 以发送的未确认I帧序号尾
+	mutex sync.Mutex
 }
 
 type states uint8
+
 const (
 	Waiting states = iota
 	Running
@@ -33,62 +38,49 @@ const (
 
 // Client is an IEC104 master
 type Client struct {
-	conf 			*Config
-	param 			*asdu.Params
-	handler 		ClientHandler			// 接口
+	conf    *Config
+	param   *asdu.Params
+	handler ClientHandler // 接口
 
-	conn 			net.Conn
-	cancelFunc   	context.CancelFunc
+	conn       net.Conn
+	cancelFunc context.CancelFunc
 
-	// channel 
-	recvChan		chan []byte				// 接收到的数据包
-	sendChan		chan []byte				// 要发送的数据包
-	
+	// channel
+	recvChan chan []byte // 接收到的数据包
+	sendChan chan []byte // 要发送的数据包
+
 	// I帧的发送与接收序号
-	sendSN 			uint16					// 发送序号
-	recvSN 			uint16					// 接收序号
-	ackSN			uint16					// 已确认的最大的发送I帧序号
+	sendSN uint16 // 发送序号
+	recvSN uint16 // 接收序号
+	ackSN  uint16 // 已确认的最大的发送I帧序号
 
 	// I帧发送控制
-	*sendBuf								// 已发送的未确认I帧暂存区
+	*sendBuf // 已发送的未确认I帧暂存区
 
 	// I帧接收控制
-	t2Flag			bool					// 超时时间t2被设置标志
-	t2Time			time.Time				// 接收到连续I帧第一帧的时间
-	recvCnt			uint16					// 接收到的连续I帧数量
+	t2Flag  bool      // 超时时间t2被设置标志
+	t2Time  time.Time // 接收到连续I帧第一帧的时间
+	recvCnt uint16    // 接收到的连续I帧数量
 
 	// IdleTimeout3控制
-	t3Time			time.Time
+	t3Time time.Time
 
 	// u帧接收控制
-	uFlag			bool
-	uTime			time.Time
+	uFlag bool
+	uTime time.Time
 
 	// 服务器是否激活
-	isServerActive 	bool
+	isServerActive bool
 
 	// 连接是否被关闭(只能通过Disconnect()修改)
-	state			states
+	state states
 
 	// 测试命令计数
-	testCnt			uint16
+	testCnt uint16
 
 	// 其他
 	*clog.Clog
-	wg              sync.WaitGroup
-}
-
-// DefaultConfig is
-func DefaultConfig() *Config {
-	return &Config{
-		SendUnAckTimeout1: 10 * time.Second,
-		IdleTimeout3: 20 *time.Second,
-	}
-}
-
-// DefaultParam is
-func DefaultParam() *asdu.Params {
-	return asdu.ParamsWide
+	wg sync.WaitGroup
 }
 
 // NewClient returns an IEC104 master
@@ -100,19 +92,19 @@ func NewClient(conf *Config, params *asdu.Params, handler ClientHandler) (c *Cli
 		return nil, err
 	}
 	c = &Client{
-		conf: 			conf,
-		param: 			params,
-		handler: 		handler,
-		state:			Waiting,
-		Clog: 			clog.NewWithPrefix("IEC104 client =>"),
+		conf:    conf,
+		param:   params,
+		handler: handler,
+		state:   Waiting,
+		Clog:    clog.NewWithPrefix("IEC104 client =>"),
 	}
 	err = nil
 	c.LogMode(false)
 
-	return 
+	return
 }
 
-// Connect is 
+// Connect is
 func (c *Client) Connect(addr string) error {
 	c.state = Running
 	conn, err := net.DialTimeout("tcp", addr, c.conf.ConnectTimeout0)
@@ -134,9 +126,9 @@ func (c *Client) Connect(addr string) error {
 	c.recvChan = make(chan []byte, APDUSizeMax)
 	c.sendChan = make(chan []byte, APDUSizeMax)
 	c.sendBuf = &sendBuf{
-		buf:	make([]sendFr, c.conf.SendUnAckLimitK),
-		head:	0,
-		tail:	0,
+		buf:  make([]sendFr, c.conf.SendUnAckLimitK),
+		head: 0,
+		tail: 0,
 	}
 	c.t3Time = time.Now()
 
@@ -146,16 +138,16 @@ func (c *Client) Connect(addr string) error {
 	go c.recvLoop(ctx)
 	go c.sendLoop(ctx)
 	go c.handleLoop(ctx, cancel)
-	c.SendStopDt()							// 发送stopDt激活指令
-	time.Sleep(c.conf.SendUnAckTimeout1/2)
-	c.SendStartDt()							// 发送startDt激活指令
+	c.SendStopDt() // 发送stopDt激活指令
+	time.Sleep(c.conf.SendUnAckTimeout1 / 2)
+	c.SendStartDt() // 发送startDt激活指令
 
 	defer func() {
 		cancel()
 		c.wg.Wait()
 		c.conn.Close()
 		c.Debug("Connection to %s Ended!", addr)
-		if c.state != Closing {					// 非人为关闭情况下,主动重连
+		if c.state != Closing { // 非人为关闭情况下,主动重连
 			c.Connect(addr)
 		}
 		c.state = Waiting
@@ -194,7 +186,7 @@ func (c *Client) Connect(addr string) error {
 		}
 
 		select {
-		case <- ctx.Done():
+		case <-ctx.Done():
 			return fmt.Errorf("ctx done")
 		default:
 		}
@@ -210,9 +202,9 @@ func (c *Client) handleLoop(ctx context.Context, cancel context.CancelFunc) {
 
 	for {
 		select {
-		case <- ctx.Done():
+		case <-ctx.Done():
 			return
-		case apdu := <- c.recvChan:
+		case apdu := <-c.recvChan:
 			apci, rawAsdu := parse(apdu)
 			c.t3Time = time.Now()
 			switch apci := apci.(type) {
@@ -223,7 +215,7 @@ func (c *Client) handleLoop(ctx context.Context, cancel context.CancelFunc) {
 				// case uStartDtActive:
 				case uStartDtConfirm:
 					c.isServerActive = true
-					c.SysCmd(103)								// 激活之后进行时钟同步?
+					c.SysCmd(103) // 激活之后进行时钟同步?
 				case uTestFrActive:
 					c.SendTestCon()
 				// case uTestFrConfirm:
@@ -282,17 +274,17 @@ func (c *Client) handleLoop(ctx context.Context, cancel context.CancelFunc) {
 func (c *Client) checkRecvSN(recvSN uint16) error {
 	c.sendBuf.mutex.Lock()
 	defer c.sendBuf.mutex.Unlock()
-	if c.sendBuf.head == c.sendBuf.tail {				// sendBuf为空,没有未确认的已发送I帧
+	if c.sendBuf.head == c.sendBuf.tail { // sendBuf为空,没有未确认的已发送I帧
 		if recvSN == c.sendSN {
 			return nil
 		}
-	} else {											// sendBuf不为空,有未被确认的以发送帧
+	} else { // sendBuf不为空,有未被确认的以发送帧
 		head, tail := c.sendBuf.buf[c.sendBuf.head].sn, c.sendBuf.buf[c.sendBuf.tail].sn
-		if recvSN == tail {								// S帧确认了所有已发送的I帧
+		if recvSN == tail { // S帧确认了所有已发送的I帧
 			c.sendBuf.head, c.sendBuf.tail = 0, 0
 			return nil
 		}
-		if head < tail {								// 客户端I帧发送序号未溢出
+		if head < tail { // 客户端I帧发送序号未溢出
 			if recvSN >= head && recvSN <= tail {
 				for recvSN >= head {
 					c.sendBuf.head++
@@ -304,8 +296,8 @@ func (c *Client) checkRecvSN(recvSN uint16) error {
 				}
 				return nil
 			}
-		} else {										//客户端I帧发送序号溢出
-			if recvSN >= head && recvSN <= 32767 {		// 发送和接收序号最大为15位,2^15-1
+		} else { //客户端I帧发送序号溢出
+			if recvSN >= head && recvSN <= 32767 { // 发送和接收序号最大为15位,2^15-1
 				for recvSN >= head {
 					c.sendBuf.head++
 					head = c.sendBuf.buf[c.sendBuf.head].sn
@@ -314,7 +306,7 @@ func (c *Client) checkRecvSN(recvSN uint16) error {
 					}
 				}
 				return nil
-			} else if recvSN <= tail{
+			} else if recvSN <= tail {
 				for head != 0 {
 					c.sendBuf.head++
 					head = c.sendBuf.buf[c.sendBuf.head].sn
@@ -360,7 +352,7 @@ func (c *Client) recvLoop(ctx context.Context) {
 				return
 			}
 		}
-			
+
 		switch head {
 		case 0:
 			if apdu[head] == startFrame {
@@ -370,7 +362,7 @@ func (c *Client) recvLoop(ctx context.Context) {
 		case 1:
 			tail += int(apdu[head])
 			head += rdCnt
-			if tail < APCICtlFiledSize + 2 || tail > APDUSizeMax {
+			if tail < APCICtlFiledSize+2 || tail > APDUSizeMax {
 				head = 0
 				tail = 1
 				apdu = make([]byte, APDUSizeMax)
@@ -387,7 +379,7 @@ func (c *Client) recvLoop(ctx context.Context) {
 		}
 
 		select {
-		case <- ctx.Done():
+		case <-ctx.Done():
 			return
 		default:
 		}
@@ -402,9 +394,9 @@ func (c *Client) sendLoop(ctx context.Context) {
 	}()
 	for {
 		select {
-		case <- ctx.Done():
+		case <-ctx.Done():
 			return
-		case apdu := <- c.sendChan:
+		case apdu := <-c.sendChan:
 			c.Debug("TX [% X]", apdu)
 			for wrCnt := 0; len(apdu) > wrCnt; {
 				byteCount, err := c.conn.Write(apdu[wrCnt:])
@@ -453,7 +445,7 @@ func (c *Client) sendUFrame(b byte) {
 
 // 接收到I帧后根据TYPEID进行不同的处理,分别调用对应的接口函数
 func (c *Client) handleIFrame(a *asdu.ASDU) error {
-	
+
 	defer func() {
 		if err := recover(); err != nil {
 			c.Critical("Client handler %+v", err)
@@ -463,11 +455,11 @@ func (c *Client) handleIFrame(a *asdu.ASDU) error {
 	c.Debug("ASDU %+v", a)
 
 	// check common addr
-	if 	a.CommonAddr == asdu.InvalidCommonAddr {
+	if a.CommonAddr == asdu.InvalidCommonAddr {
 		return a.SendReplyMirror(c, asdu.UnknownCA)
 	}
 
-	if 	a.Identifier.Coa.Cause == asdu.UnknownTypeID ||
+	if a.Identifier.Coa.Cause == asdu.UnknownTypeID ||
 		a.Identifier.Coa.Cause == asdu.UnknownCOT ||
 		a.Identifier.Coa.Cause == asdu.UnknownCA ||
 		a.Identifier.Coa.Cause == asdu.UnknownIOA {
@@ -475,155 +467,155 @@ func (c *Client) handleIFrame(a *asdu.ASDU) error {
 	}
 
 	switch a.Identifier.Type {
-	case asdu.M_SP_NA_1, asdu.M_SP_TA_1, asdu.M_SP_TB_1:		// 遥信 单点信息 01 02 30
+	case asdu.M_SP_NA_1, asdu.M_SP_TA_1, asdu.M_SP_TB_1: // 遥信 单点信息 01 02 30
 		// check cot
-		if !( a.Identifier.Coa.Cause == asdu.Background ||
-			  a.Identifier.Coa.Cause == asdu.Spontaneous ||
-			  a.Identifier.Coa.Cause == asdu.Request ||
-			  a.Identifier.Coa.Cause == asdu.ReturnInfoRemote ||
-			  a.Identifier.Coa.Cause == asdu.ReturnInfoLocal ||
-			  a.Identifier.Coa.Cause == asdu.InterrogatedByStation ||
-		    ( a.Identifier.Coa.Cause >= asdu.InterrogatedByGroup1 &&
-			  a.Identifier.Coa.Cause <= asdu.InterrogatedByGroup16 ) ) {
+		if !(a.Identifier.Coa.Cause == asdu.Background ||
+			a.Identifier.Coa.Cause == asdu.Spontaneous ||
+			a.Identifier.Coa.Cause == asdu.Request ||
+			a.Identifier.Coa.Cause == asdu.ReturnInfoRemote ||
+			a.Identifier.Coa.Cause == asdu.ReturnInfoLocal ||
+			a.Identifier.Coa.Cause == asdu.InterrogatedByStation ||
+			(a.Identifier.Coa.Cause >= asdu.InterrogatedByGroup1 &&
+				a.Identifier.Coa.Cause <= asdu.InterrogatedByGroup16)) {
 			return a.SendReplyMirror(c, asdu.UnknownCOT)
 		}
 		info := a.GetSinglePoint()
 		c.handler.Handle01_02_1e(c, a, info)
-	case asdu.M_DP_NA_1, asdu.M_DP_TA_1, asdu.M_DP_TB_1: 		// 遥信 双点信息 3,4,31
+	case asdu.M_DP_NA_1, asdu.M_DP_TA_1, asdu.M_DP_TB_1: // 遥信 双点信息 3,4,31
 		// check cot
-		if !( a.Identifier.Coa.Cause == asdu.Background ||
-			  a.Identifier.Coa.Cause == asdu.Spontaneous ||
-			  a.Identifier.Coa.Cause == asdu.Request ||
-			  a.Identifier.Coa.Cause == asdu.ReturnInfoRemote ||
-			  a.Identifier.Coa.Cause == asdu.ReturnInfoLocal ||
-			  a.Identifier.Coa.Cause == asdu.InterrogatedByStation ||
-		    ( a.Identifier.Coa.Cause >= asdu.InterrogatedByGroup1 &&
-			  a.Identifier.Coa.Cause <= asdu.InterrogatedByGroup16 ) ) {
+		if !(a.Identifier.Coa.Cause == asdu.Background ||
+			a.Identifier.Coa.Cause == asdu.Spontaneous ||
+			a.Identifier.Coa.Cause == asdu.Request ||
+			a.Identifier.Coa.Cause == asdu.ReturnInfoRemote ||
+			a.Identifier.Coa.Cause == asdu.ReturnInfoLocal ||
+			a.Identifier.Coa.Cause == asdu.InterrogatedByStation ||
+			(a.Identifier.Coa.Cause >= asdu.InterrogatedByGroup1 &&
+				a.Identifier.Coa.Cause <= asdu.InterrogatedByGroup16)) {
 			return a.SendReplyMirror(c, asdu.UnknownCOT)
 		}
 		info := a.GetDoublePoint()
 		c.handler.Handle03_04_1f(c, a, info)
-		case asdu.M_ST_NA_1, asdu.M_ST_TB_1: 					// 遥信 步调节信息 5,32
-			// check cot
-			if !( a.Identifier.Coa.Cause == asdu.Background ||
-				  a.Identifier.Coa.Cause == asdu.Spontaneous ||
-				  a.Identifier.Coa.Cause == asdu.Request ||
-				  a.Identifier.Coa.Cause == asdu.ReturnInfoRemote ||
-				  a.Identifier.Coa.Cause == asdu.ReturnInfoLocal ||
-				  a.Identifier.Coa.Cause == asdu.InterrogatedByStation ||
-				( a.Identifier.Coa.Cause >= asdu.InterrogatedByGroup1 &&
-				  a.Identifier.Coa.Cause <= asdu.InterrogatedByGroup16 ) ) {
-				return a.SendReplyMirror(c, asdu.UnknownCOT)
-			}
-			info := a.GetStepPosition()
-			c.handler.Handle05_20(c, a, info)
-	case asdu.M_BO_NA_1, asdu.M_BO_TA_1, asdu.M_BO_TB_1:		// 遥信 比特串信息 07,08,33								// 比特串,07
+	case asdu.M_ST_NA_1, asdu.M_ST_TB_1: // 遥信 步调节信息 5,32
 		// check cot
-		if !( a.Identifier.Coa.Cause == asdu.Background ||
-			  a.Identifier.Coa.Cause == asdu.Spontaneous ||
-			  a.Identifier.Coa.Cause == asdu.Request ||
-			  a.Identifier.Coa.Cause == asdu.InterrogatedByStation ||
-			( a.Identifier.Coa.Cause >= asdu.InterrogatedByGroup1 &&
-			  a.Identifier.Coa.Cause <= asdu.InterrogatedByGroup16 ) ) {
-		  	return a.SendReplyMirror(c, asdu.UnknownCOT)
+		if !(a.Identifier.Coa.Cause == asdu.Background ||
+			a.Identifier.Coa.Cause == asdu.Spontaneous ||
+			a.Identifier.Coa.Cause == asdu.Request ||
+			a.Identifier.Coa.Cause == asdu.ReturnInfoRemote ||
+			a.Identifier.Coa.Cause == asdu.ReturnInfoLocal ||
+			a.Identifier.Coa.Cause == asdu.InterrogatedByStation ||
+			(a.Identifier.Coa.Cause >= asdu.InterrogatedByGroup1 &&
+				a.Identifier.Coa.Cause <= asdu.InterrogatedByGroup16)) {
+			return a.SendReplyMirror(c, asdu.UnknownCOT)
+		}
+		info := a.GetStepPosition()
+		c.handler.Handle05_20(c, a, info)
+	case asdu.M_BO_NA_1, asdu.M_BO_TA_1, asdu.M_BO_TB_1: // 遥信 比特串信息 07,08,33								// 比特串,07
+		// check cot
+		if !(a.Identifier.Coa.Cause == asdu.Background ||
+			a.Identifier.Coa.Cause == asdu.Spontaneous ||
+			a.Identifier.Coa.Cause == asdu.Request ||
+			a.Identifier.Coa.Cause == asdu.InterrogatedByStation ||
+			(a.Identifier.Coa.Cause >= asdu.InterrogatedByGroup1 &&
+				a.Identifier.Coa.Cause <= asdu.InterrogatedByGroup16)) {
+			return a.SendReplyMirror(c, asdu.UnknownCOT)
 		}
 		info := a.GetBitString32()
 		c.handler.Handle07_08_21(c, a, info)
-	case asdu.M_ME_NA_1, asdu.M_ME_TA_1, asdu.M_ME_TD_1, asdu.M_ME_ND_1:	// 遥测 归一化测量值 09,10,21,34
+	case asdu.M_ME_NA_1, asdu.M_ME_TA_1, asdu.M_ME_TD_1, asdu.M_ME_ND_1: // 遥测 归一化测量值 09,10,21,34
 		// check cot
-		if !( a.Identifier.Coa.Cause == asdu.Periodic ||
-			  a.Identifier.Coa.Cause == asdu.Background ||
-			  a.Identifier.Coa.Cause == asdu.Spontaneous ||
-			  a.Identifier.Coa.Cause == asdu.Request ||
-			  a.Identifier.Coa.Cause == asdu.InterrogatedByStation ) {
+		if !(a.Identifier.Coa.Cause == asdu.Periodic ||
+			a.Identifier.Coa.Cause == asdu.Background ||
+			a.Identifier.Coa.Cause == asdu.Spontaneous ||
+			a.Identifier.Coa.Cause == asdu.Request ||
+			a.Identifier.Coa.Cause == asdu.InterrogatedByStation) {
 			return a.SendReplyMirror(c, asdu.UnknownCOT)
-		  }
-		  value := a.GetMeasuredValueNormal()
-		  c.handler.Handle09_0a_15_22(c, a, value)
-	case asdu.M_ME_NB_1, asdu.M_ME_TB_1, asdu.M_ME_TE_1:		//遥测 标度化值 11,12,35
+		}
+		value := a.GetMeasuredValueNormal()
+		c.handler.Handle09_0a_15_22(c, a, value)
+	case asdu.M_ME_NB_1, asdu.M_ME_TB_1, asdu.M_ME_TE_1: //遥测 标度化值 11,12,35
 		// check cot
-		if !( a.Identifier.Coa.Cause == asdu.Periodic ||
-			  a.Identifier.Coa.Cause == asdu.Background ||
-			  a.Identifier.Coa.Cause == asdu.Spontaneous ||
-			  a.Identifier.Coa.Cause == asdu.Request ||
-			  a.Identifier.Coa.Cause == asdu.InterrogatedByStation ||
-		    ( a.Identifier.Coa.Cause >= asdu.InterrogatedByGroup1 &&
-			  a.Identifier.Coa.Cause <= asdu.InterrogatedByGroup16 ) ) {
+		if !(a.Identifier.Coa.Cause == asdu.Periodic ||
+			a.Identifier.Coa.Cause == asdu.Background ||
+			a.Identifier.Coa.Cause == asdu.Spontaneous ||
+			a.Identifier.Coa.Cause == asdu.Request ||
+			a.Identifier.Coa.Cause == asdu.InterrogatedByStation ||
+			(a.Identifier.Coa.Cause >= asdu.InterrogatedByGroup1 &&
+				a.Identifier.Coa.Cause <= asdu.InterrogatedByGroup16)) {
 			return a.SendReplyMirror(c, asdu.UnknownCOT)
 		}
 		value := a.GetMeasuredValueScaled()
 		c.handler.Handle0b_0c_23(c, a, value)
-	case asdu.M_ME_NC_1, asdu.M_ME_TC_1, asdu.M_ME_TF_1:		// 遥信 短浮点数 13,14,16
+	case asdu.M_ME_NC_1, asdu.M_ME_TC_1, asdu.M_ME_TF_1: // 遥信 短浮点数 13,14,16
 		// check cot
-		if !( a.Identifier.Coa.Cause == asdu.Periodic ||
-			  a.Identifier.Coa.Cause == asdu.Background ||
-			  a.Identifier.Coa.Cause == asdu.Spontaneous ||
-			  a.Identifier.Coa.Cause == asdu.Request ||
-			  a.Identifier.Coa.Cause == asdu.InterrogatedByStation ||
-		    ( a.Identifier.Coa.Cause >= asdu.InterrogatedByGroup1 &&
-			  a.Identifier.Coa.Cause <= asdu.InterrogatedByGroup16 ) ) {
+		if !(a.Identifier.Coa.Cause == asdu.Periodic ||
+			a.Identifier.Coa.Cause == asdu.Background ||
+			a.Identifier.Coa.Cause == asdu.Spontaneous ||
+			a.Identifier.Coa.Cause == asdu.Request ||
+			a.Identifier.Coa.Cause == asdu.InterrogatedByStation ||
+			(a.Identifier.Coa.Cause >= asdu.InterrogatedByGroup1 &&
+				a.Identifier.Coa.Cause <= asdu.InterrogatedByGroup16)) {
 			return a.SendReplyMirror(c, asdu.UnknownCOT)
 		}
 		value := a.GetMeasuredValueFloat()
 		c.handler.Handle0d_0e_10(c, a, value)
-	case asdu.M_EI_NA_1:										// 站初始化结束 70
+	case asdu.M_EI_NA_1: // 站初始化结束 70
 		// check cause of transmission
-		if 	!( a.Identifier.Coa.Cause == asdu.Initialized ) {
+		if !(a.Identifier.Coa.Cause == asdu.Initialized) {
 			return a.SendReplyMirror(c, asdu.UnknownCOT)
 		}
 		ioa, coi := a.GetEndOfInitialization()
-		if 	ioa != asdu.InfoObjAddrIrrelevant {
+		if ioa != asdu.InfoObjAddrIrrelevant {
 			return a.SendReplyMirror(c, asdu.UnknownIOA)
 		}
 		c.handler.Handle46(c, coi)
-	case asdu.C_IC_NA_1: 										// 总召唤 100
+	case asdu.C_IC_NA_1: // 总召唤 100
 		// check cot
-		if !( a.Identifier.Coa.Cause == asdu.ActivationCon ||
-			  a.Identifier.Coa.Cause == asdu.DeactivationCon ||
-			  a.Identifier.Coa.Cause == asdu.ActivationTerm ) {
+		if !(a.Identifier.Coa.Cause == asdu.ActivationCon ||
+			a.Identifier.Coa.Cause == asdu.DeactivationCon ||
+			a.Identifier.Coa.Cause == asdu.ActivationTerm) {
 			return a.SendReplyMirror(c, asdu.UnknownCOT)
 		}
 		// get ioa and qoi
 		ioa, qua := a.GetInterrogationCmd()
 		// check ioa
-		if 	ioa != asdu.InfoObjAddrIrrelevant {
+		if ioa != asdu.InfoObjAddrIrrelevant {
 			return a.SendReplyMirror(c, asdu.UnknownIOA)
 		}
 		c.handler.Handle64(c, a, qua)
-	case asdu.C_CI_NA_1: 										// 计数量召唤 101
+	case asdu.C_CI_NA_1: // 计数量召唤 101
 		// check cot
-		if !( a.Identifier.Coa.Cause == asdu.ActivationCon ||
-			  a.Identifier.Coa.Cause == asdu.DeactivationCon ||
-			  a.Identifier.Coa.Cause == asdu.ActivationTerm ) {
+		if !(a.Identifier.Coa.Cause == asdu.ActivationCon ||
+			a.Identifier.Coa.Cause == asdu.DeactivationCon ||
+			a.Identifier.Coa.Cause == asdu.ActivationTerm) {
 			return a.SendReplyMirror(c, asdu.UnknownCOT)
 		}
 		// get ioa and qoi
 		ioa, qua := a.GetCounterInterrogationCmd()
 		// check ioa
-		if 	ioa != asdu.InfoObjAddrIrrelevant {
+		if ioa != asdu.InfoObjAddrIrrelevant {
 			return a.SendReplyMirror(c, asdu.UnknownIOA)
 		}
 		c.handler.Handle65(c, a, qua)
-	case asdu.C_CS_NA_1:										// 时钟同步 103
+	case asdu.C_CS_NA_1: // 时钟同步 103
 		// check cot
-		if !( a.Identifier.Coa.Cause == asdu.ActivationCon ||
-			  a.Identifier.Coa.Cause == asdu.ActivationTerm ) {
-		  	return a.SendReplyMirror(c, asdu.UnknownCOT)
+		if !(a.Identifier.Coa.Cause == asdu.ActivationCon ||
+			a.Identifier.Coa.Cause == asdu.ActivationTerm) {
+			return a.SendReplyMirror(c, asdu.UnknownCOT)
 		}
 		ioa, t := a.GetClockSynchronizationCmd()
 		// check ioa
-		if 	ioa != asdu.InfoObjAddrIrrelevant {
+		if ioa != asdu.InfoObjAddrIrrelevant {
 			return a.SendReplyMirror(c, asdu.UnknownIOA)
 		}
 		c.handler.Handle67(c, a, t)
-	case asdu.C_RP_NA_1:										// 复位进程 105
+	case asdu.C_RP_NA_1: // 复位进程 105
 		// check cot
-		if !( a.Identifier.Coa.Cause == asdu.ActivationCon) {
+		if !(a.Identifier.Coa.Cause == asdu.ActivationCon) {
 			return a.SendReplyMirror(c, asdu.UnknownCOT)
 		}
 		ioa, qua := a.GetResetProcessCmd()
 		// check ioa
-		if 	ioa != asdu.InfoObjAddrIrrelevant {
+		if ioa != asdu.InfoObjAddrIrrelevant {
 			return a.SendReplyMirror(c, asdu.UnknownIOA)
 		}
 		c.handler.Handle69(c, a, qua)
@@ -643,7 +635,7 @@ func (c *Client) handleIFrame(a *asdu.ASDU) error {
 	return nil
 }
 
-// ClientHandler is 
+// ClientHandler is
 type ClientHandler interface {
 	// 01:[M_SP_NA_1] 不带时标单点信息
 	// 02:[M_SP_TA_1] 带时标CP24Time2a的单点信息,只有(SQ = 0)单个信息元素集合
@@ -725,10 +717,12 @@ func (c *Client) Send(a *asdu.ASDU) error {
 	c.sendIFrame(data)
 	return nil
 }
+
 //Params returns params of client
 func (c *Client) Params() *asdu.Params {
 	return c.param
 }
+
 //UnderlyingConn returns underlying conn of client
 func (c *Client) UnderlyingConn() net.Conn {
 	return c.conn
