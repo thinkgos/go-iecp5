@@ -36,7 +36,7 @@ type iAPCI struct {
 }
 
 func (this iAPCI) String() string {
-	return fmt.Sprintf("I[sendNO: %d, recvNO: %d]", this.rcvSN, this.sendSN)
+	return fmt.Sprintf("I[sendNO: %d, recvNO: %d]", this.sendSN, this.rcvSN)
 }
 
 // S帧 只含apci S帧用于主要用确认帧的正确传输,协议称是监视. supervisory
