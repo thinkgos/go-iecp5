@@ -542,6 +542,7 @@ func (sf *Client) IsConnected() bool {
 }
 
 // 接收到I帧后根据TYPEID进行不同的处理,分别调用对应的接口函数
+// TODO: fix response handler
 func (sf *Client) clientHandler(asduPack *asdu.ASDU) error {
 	defer func() {
 		if err := recover(); err != nil {
