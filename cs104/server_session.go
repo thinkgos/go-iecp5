@@ -61,8 +61,7 @@ func (this *SrvSession) recvLoop() {
 
 	for {
 		rawData := make([]byte, APDUSizeMax)
-		length := 2
-		for rdCnt := 0; rdCnt < length; {
+		for rdCnt, length := 0, 2; rdCnt < length; {
 			byteCount, err := io.ReadFull(this.conn, rawData[rdCnt:length])
 			if err != nil {
 				// See: https://github.com/golang/go/issues/4373
@@ -85,10 +84,11 @@ func (this *SrvSession) recvLoop() {
 
 			rdCnt += byteCount
 			if rdCnt == 0 {
-				break
+				continue
 			} else if rdCnt == 1 {
 				if rawData[0] != startFrame {
-					break
+					rdCnt = 0
+					continue
 				}
 			} else {
 				if rawData[0] != startFrame {
@@ -96,7 +96,9 @@ func (this *SrvSession) recvLoop() {
 				}
 				length = int(rawData[1]) + 2
 				if length < APCICtlFiledSize+2 || length > APDUSizeMax {
-					break
+					rdCnt = 0
+					length = 2
+					continue
 				}
 				if rdCnt == length {
 					apdu := rawData[:length]
@@ -228,7 +230,7 @@ func (this *SrvSession) run(ctx context.Context) {
 
 		case apdu := <-this.recv:
 			idleTimeout3Sine = time.Now() // 每收到一个i帧,S帧,U帧, 重置空闲定时器, t3
-			apci, asdu:= parse(apdu)
+			apci, asdu := parse(apdu)
 			switch head := apci.(type) {
 			case sAPCI:
 				this.Debug("RX sFrame %v", head)
