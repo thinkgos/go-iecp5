@@ -45,16 +45,16 @@ type SrvSession struct {
 
 	*clog.Clog
 
-	wg         sync.WaitGroup
-	cancelFunc context.CancelFunc
-	ctx        context.Context
+	wg     sync.WaitGroup
+	cancel context.CancelFunc
+	ctx    context.Context
 }
 
 // RecvLoop feeds t.rcvRaw.
 func (sf *SrvSession) recvLoop() {
 	sf.Debug("recvLoop started!")
 	defer func() {
-		sf.cancelFunc()
+		sf.cancel()
 		sf.wg.Done()
 		sf.Debug("recvLoop stopped!")
 	}()
@@ -116,7 +116,7 @@ func (sf *SrvSession) recvLoop() {
 func (sf *SrvSession) sendLoop() {
 	sf.Debug("sendLoop started!")
 	defer func() {
-		sf.cancelFunc()
+		sf.cancel()
 		sf.wg.Done()
 		sf.Debug("sendLoop stopped!")
 	}()
@@ -154,7 +154,7 @@ func (sf *SrvSession) run(ctx context.Context) {
 	// before any thing make sure init
 	sf.cleanUp()
 
-	sf.ctx, sf.cancelFunc = context.WithCancel(ctx)
+	sf.ctx, sf.cancel = context.WithCancel(ctx)
 	sf.setConnectStatus(connected)
 	sf.wg.Add(3)
 	go sf.recvLoop()

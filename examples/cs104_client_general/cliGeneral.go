@@ -18,10 +18,17 @@ func main() {
 		fmt.Printf("Failed to creat cs104 client. error:%v\n", err)
 	}
 	client.LogMode(true)
-	err = client.Connect("127.0.0.1:2404")
+	if err = client.AddRemoteServer("127.0.0.1:2404"); err != nil {
+		panic(err)
+	}
+	err = client.Start()
 	if err != nil {
 		fmt.Printf("Failed to connect. error:%v\n", err)
 	}
+	for {
+		time.Sleep(time.Second * 100)
+	}
+
 }
 
 // Handle01_02_1e ...

@@ -82,13 +82,28 @@ func (sf *serverSpec) SetReconnectInterval(t time.Duration) {
 	sf.reconnectInterval = t
 }
 
-func (sf *serverSpec) EnableAutoReconnect(b bool) {
+// SetAutoReconnect enable auto reconnect
+func (sf *serverSpec) SetAutoReconnect(b bool) {
 	sf.autoReconnect = b
 }
 
 // SetTLSConfig set tls config
 func (sf *serverSpec) SetTLSConfig(t *tls.Config) {
 	sf.TLSConfig = t
+}
+
+// SetOnConnectHandler set on connect handler
+func (sf *serverSpec) SetOnConnectHandler(f func(c ServerSpecial) error) {
+	if f != nil {
+		sf.onConnect = f
+	}
+}
+
+// SetConnectionLostHandler set connection lost handler
+func (sf *serverSpec) SetConnectionLostHandler(f func(c ServerSpecial)) {
+	if f != nil {
+		sf.onConnectionLost = f
+	}
 }
 
 // AddRemoteServer adds a broker URI to the list of brokers to be used.
@@ -166,20 +181,6 @@ func (sf *serverSpec) running() {
 			// 随机500ms-1s的重试，避免快速重试造成服务器许多无效连接
 			time.Sleep(time.Millisecond * time.Duration(500+rand.Intn(500)))
 		}
-	}
-}
-
-// SetOnConnectHandler set on connect handler
-func (sf *serverSpec) SetOnConnectHandler(f func(c ServerSpecial) error) {
-	if f != nil {
-		sf.onConnect = f
-	}
-}
-
-// SetConnectionLostHandler set connection lost handler
-func (sf *serverSpec) SetConnectionLostHandler(f func(c ServerSpecial)) {
-	if f != nil {
-		sf.onConnectionLost = f
 	}
 }
 

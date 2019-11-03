@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"net"
 	"net/url"
 	"strings"
@@ -80,22 +81,120 @@ func NewClient(conf *Config, params *asdu.Params, handler ClientHandler) (*Clien
 		sendASDU: make(chan []byte, 1024),
 		rcvRaw:   make(chan []byte, 1024),
 		sendRaw:  make(chan []byte, 1024), // may not block!
-		status:   initial,
 		Clog:     clog.NewWithPrefix("IEC104 client =>"),
+
+		autoReconnect:     true,
+		reconnectInterval: DefaultReconnectInterval,
+		onConnect:         func(*Client) error { return nil },
+		onConnectionLost:  func(*Client) {},
 	}, nil
 }
 
-// Connect is
-func (sf *Client) Connect(addr string) error {
-	conn, err := net.DialTimeout("tcp", addr, sf.conf.ConnectTimeout0)
-	if err != nil {
-		return fmt.Errorf("Failed to dial %s, error: %v", addr, err)
+// SetReconnectInterval set tcp  reconnect the host interval when connect failed after try
+func (sf *Client) SetReconnectInterval(t time.Duration) {
+	sf.reconnectInterval = t
+}
+
+// SetAutoReconnect enable auto reconnect
+func (sf *Client) SetAutoReconnect(b bool) {
+	sf.autoReconnect = b
+}
+
+// SetTLSConfig set tls config
+func (sf *Client) SetTLSConfig(t *tls.Config) {
+	sf.TLSConfig = t
+}
+
+// AddRemoteServer adds a broker URI to the list of brokers to be used.
+// The format should be scheme://host:port
+// Default values for hostname is "127.0.0.1", for schema is "tcp://".
+// An example broker URI would look like: tcp://foobar.com:1204
+func (sf *Client) AddRemoteServer(server string) error {
+	if len(server) > 0 && server[0] == ':' {
+		server = "127.0.0.1" + server
 	}
-	sf.Debug("Connected to %s!", addr)
-	sf.conn = conn
-	sf.ctx, sf.cancel = context.WithCancel(context.Background())
-	sf.run()
+	if !strings.Contains(server, "://") {
+		server = "tcp://" + server
+	}
+	remoteURL, err := url.Parse(server)
+	if err != nil {
+		return err
+	}
+	sf.server = remoteURL
 	return nil
+}
+
+// SetOnConnectHandler set on connect handler
+func (sf *Client) SetOnConnectHandler(f func(c *Client) error) {
+	if f != nil {
+		sf.onConnect = f
+	}
+}
+
+// SetConnectionLostHandler set connection lost handler
+func (sf *Client) SetConnectionLostHandler(f func(c *Client)) {
+	if f != nil {
+		sf.onConnectionLost = f
+	}
+}
+
+// Start start the server,and return quickly,if it nil,the server will disconnected background,other failed
+func (sf *Client) Start() error {
+	if sf.server == nil {
+		return errors.New("empty remote server")
+	}
+
+	go sf.running()
+	return nil
+}
+
+// Connect is
+func (sf *Client) running() {
+	var ctx context.Context
+
+	sf.rwMux.Lock()
+	if !atomic.CompareAndSwapUint32(&sf.status, initial, disconnected) {
+		sf.rwMux.Unlock()
+		return
+	}
+	ctx, sf.cancel = context.WithCancel(context.Background())
+	sf.rwMux.Unlock()
+	defer sf.setConnectStatus(initial)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		sf.Debug("connecting server %+v", sf.server)
+		conn, err := openConnection(sf.server, sf.TLSConfig, sf.conf.ConnectTimeout0)
+		if err != nil {
+			sf.Error("connect failed, %v", err)
+			if !sf.autoReconnect {
+				return
+			}
+			time.Sleep(sf.reconnectInterval)
+			continue
+		}
+		sf.Debug("connect success")
+		sf.conn = conn
+		if err = sf.onConnect(sf); err != nil {
+			time.Sleep(sf.reconnectInterval)
+			continue
+		}
+		sf.run(ctx)
+		sf.onConnectionLost(sf)
+		sf.Debug("disconnected server %+v", sf.server)
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			// 随机500ms-1s的重试，避免快速重试造成服务器许多无效连接
+			time.Sleep(time.Millisecond * time.Duration(500+rand.Intn(500)))
+		}
+	}
 }
 
 func (sf *Client) recvLoop() {
@@ -192,11 +291,12 @@ func (sf *Client) sendLoop() {
 }
 
 // run is the big fat state machine.
-func (sf *Client) run() {
+func (sf *Client) run(ctx context.Context) {
 	sf.Debug("run started!")
 	// before any thing make sure init
 	sf.cleanUp()
 
+	sf.ctx, sf.cancel = context.WithCancel(ctx)
 	sf.setConnectStatus(connected)
 	sf.wg.Add(3)
 	go sf.recvLoop()
