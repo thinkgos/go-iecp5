@@ -175,6 +175,30 @@ func (sf *SrvSession) run(ctx context.Context) {
 	// var startDtActiveSendSince = willNotTimeout
 	// var stopDtActiveSendSince = willNotTimeout
 
+	sendSFrame := func(rcvSN uint16) {
+		sf.Debug("TX sFrame %v", sAPCI{rcvSN})
+		sf.sendRaw <- newSFrame(rcvSN)
+	}
+	sendUFrame := func(which byte) {
+		sf.Debug("TX uFrame %v", uAPCI{which})
+		sf.sendRaw <- newUFrame(which)
+	}
+
+	sendIFrame := func(asdu1 []byte) {
+		seqNo := sf.seqNoSend
+
+		iframe, err := newIFrame(seqNo, sf.seqNoRcv, asdu1)
+		if err != nil {
+			return
+		}
+		sf.ackNoRcv = sf.seqNoRcv
+		sf.seqNoSend = (seqNo + 1) & 32767
+		sf.pending = append(sf.pending, seqPending{seqNo & 32767, time.Now()})
+
+		sf.Debug("TX iFrame %v", iAPCI{seqNo, sf.seqNoRcv})
+		sf.sendRaw <- iframe
+	}
+
 	defer func() {
 		sf.setConnectStatus(disconnected)
 		checkTicker.Stop()
@@ -187,7 +211,7 @@ func (sf *SrvSession) run(ctx context.Context) {
 		if isActive && seqNoCount(sf.ackNoSend, sf.seqNoSend) <= sf.SendUnAckLimitK {
 			select {
 			case o := <-sf.sendASDU:
-				sf.sendIFrame(o)
+				sendIFrame(o)
 				idleTimeout3Sine = time.Now()
 				continue
 			case <-sf.ctx.Done():
@@ -219,13 +243,13 @@ func (sf *SrvSession) run(ctx context.Context) {
 			if sf.ackNoRcv != sf.seqNoRcv &&
 				(now.Sub(unAckRcvSince) >= sf.RecvUnAckTimeout2 ||
 					now.Sub(idleTimeout3Sine) >= timeoutResolution) {
-				sf.sendSFrame(sf.seqNoRcv)
+				sendSFrame(sf.seqNoRcv)
 				sf.ackNoRcv = sf.seqNoRcv
 			}
 
 			// 空闲时间到，发送TestFrActive帧,保活
 			if now.Sub(idleTimeout3Sine) >= sf.IdleTimeout3 {
-				sf.sendUFrame(uTestFrActive)
+				sendUFrame(uTestFrActive)
 				testFrAliveSendSince = time.Now()
 				idleTimeout3Sine = testFrAliveSendSince
 			}
@@ -259,7 +283,7 @@ func (sf *SrvSession) run(ctx context.Context) {
 
 				sf.seqNoRcv = (sf.seqNoRcv + 1) & 32767
 				if seqNoCount(sf.ackNoRcv, sf.seqNoRcv) >= sf.RecvUnAckLimitW {
-					sf.sendSFrame(sf.seqNoRcv)
+					sendSFrame(sf.seqNoRcv)
 					sf.ackNoRcv = sf.seqNoRcv
 				}
 
@@ -267,19 +291,19 @@ func (sf *SrvSession) run(ctx context.Context) {
 				sf.Debug("RX uFrame %v", head)
 				switch head.function {
 				case uStartDtActive:
-					sf.sendUFrame(uStartDtConfirm)
+					sendUFrame(uStartDtConfirm)
 					isActive = true
 				// case uStartDtConfirm:
 				// 	isActive = true
 				// 	startDtActiveSendSince = willNotTimeout
 				case uStopDtActive:
-					sf.sendUFrame(uStopDtConfirm)
+					sendUFrame(uStopDtConfirm)
 					isActive = false
 				// case uStopDtConfirm:
 				// 	isActive = false
 				// 	stopDtActiveSendSince = willNotTimeout
 				case uTestFrActive:
-					sf.sendUFrame(uTestFrConfirm)
+					sendUFrame(uTestFrConfirm)
 				case uTestFrConfirm:
 					testFrAliveSendSince = willNotTimeout
 				default:
@@ -354,33 +378,6 @@ func seqNoCount(nextAckNo, nextSeqNo uint16) uint16 {
 		nextSeqNo += 32768
 	}
 	return nextSeqNo - nextAckNo
-}
-
-func (sf *SrvSession) sendSFrame(rcvSN uint16) {
-	sf.Debug("TX sFrame %v", sAPCI{rcvSN})
-	sf.sendRaw <- newSFrame(rcvSN)
-}
-
-func (sf *SrvSession) sendUFrame(which byte) {
-	sf.Debug("TX uFrame %v", uAPCI{which})
-	sf.sendRaw <- newUFrame(which)
-}
-
-func (sf *SrvSession) sendIFrame(asdu1 []byte) {
-	seqNo := sf.seqNoSend
-
-	iframe, err := newIFrame(seqNo, sf.seqNoRcv, asdu1)
-	if err != nil {
-		return
-	}
-	sf.ackNoRcv = sf.seqNoRcv
-	sf.seqNoSend = (seqNo + 1) & 32767
-
-	//sf.push(seqPending{seqNo & 32767, time.Now()})
-	sf.pending = append(sf.pending, seqPending{seqNo & 32767, time.Now()})
-
-	sf.Debug("TX iFrame %v", iAPCI{seqNo, sf.seqNoRcv})
-	sf.sendRaw <- iframe
 }
 
 func (sf *SrvSession) updateAckNoOut(ackNo uint16) (ok bool) {
