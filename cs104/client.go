@@ -47,8 +47,10 @@ type Client struct {
 	cancelFunc context.CancelFunc
 
 	// channel
-	recvChan chan []byte // 接收到的数据包
-	sendChan chan []byte // 要发送的数据包
+	in      chan []byte // for received asdu
+	out     chan []byte // for send asdu
+	rawRcv  chan []byte // for recvLoop raw cs104 frame
+	rawSend chan []byte // for sendLoop raw cs104 frame
 
 	// I帧的发送与接收序号
 	sendSN uint16 // 发送序号
@@ -105,165 +107,165 @@ func NewClient(conf *Config, params *asdu.Params, handler ClientHandler) (c *Cli
 }
 
 // Connect is
-func (c *Client) Connect(addr string) error {
-	c.state = Running
-	conn, err := net.DialTimeout("tcp", addr, c.conf.ConnectTimeout0)
+func (sf *Client) Connect(addr string) error {
+	sf.state = Running
+	conn, err := net.DialTimeout("tcp", addr, sf.conf.ConnectTimeout0)
 	if err != nil {
-		c.state = Waiting
+		sf.state = Waiting
 		return fmt.Errorf("Failed to dial %s, error: %v", addr, err)
 	}
-	c.conn = conn
-	c.Debug("Connected to %s!", addr)
+	sf.conn = conn
+	sf.Debug("Connected to %s!", addr)
 
 	// initialization
-	c.sendSN = 0
-	c.recvSN = 0
-	c.ackSN = 0
-	c.t2Flag = false
-	c.recvCnt = 0
-	c.testCnt = 0
-	c.isServerActive = false
-	c.recvChan = make(chan []byte, APDUSizeMax)
-	c.sendChan = make(chan []byte, APDUSizeMax)
-	c.sendBuf = &sendBuf{
-		buf:  make([]sendFr, c.conf.SendUnAckLimitK),
+	sf.sendSN = 0
+	sf.recvSN = 0
+	sf.ackSN = 0
+	sf.t2Flag = false
+	sf.recvCnt = 0
+	sf.testCnt = 0
+	sf.isServerActive = false
+	sf.rawRcv = make(chan []byte, APDUSizeMax)
+	sf.rawSend = make(chan []byte, APDUSizeMax)
+	sf.sendBuf = &sendBuf{
+		buf:  make([]sendFr, sf.conf.SendUnAckLimitK),
 		head: 0,
 		tail: 0,
 	}
-	c.t3Time = time.Now()
+	sf.t3Time = time.Now()
 
-	c.ctx, c.cancelFunc = context.WithCancel(context.Background())
-	c.wg.Add(3)
-	go c.recvLoop()
-	go c.sendLoop()
-	go c.handleLoop()
-	c.SendStopDt() // 发送stopDt激活指令
-	time.Sleep(c.conf.SendUnAckTimeout1 / 2)
-	c.SendStartDt() // 发送startDt激活指令
+	sf.ctx, sf.cancelFunc = context.WithCancel(context.Background())
+	sf.wg.Add(3)
+	go sf.recvLoop()
+	go sf.sendLoop()
+	go sf.handleLoop()
+	sf.SendStopDt() // 发送stopDt激活指令
+	time.Sleep(sf.conf.SendUnAckTimeout1 / 2)
+	sf.SendStartDt() // 发送startDt激活指令
 
 	defer func() {
-		c.cancelFunc()
-		c.wg.Wait()
-		c.conn.Close()
-		c.Debug("Connection to %s Ended!", addr)
-		if c.state != Closing { // 非人为关闭情况下,主动重连
-			c.Connect(addr)
+		sf.cancelFunc()
+		sf.wg.Wait()
+		sf.conn.Close()
+		sf.Debug("Connection to %s Ended!", addr)
+		if sf.state != Closing { // 非人为关闭情况下,主动重连
+			sf.Connect(addr)
 		}
-		c.state = Waiting
+		sf.state = Waiting
 	}()
 
 	for {
 		// TODO: need sleep?
 		time.Sleep(time.Second)
-		if time.Since(c.t3Time) >= c.conf.IdleTimeout3 {
-			c.t3Time = time.Now()
-			c.SendTestDt()
+		if time.Since(sf.t3Time) >= sf.conf.IdleTimeout3 {
+			sf.t3Time = time.Now()
+			sf.SendTestDt()
 		}
 
-		if c.uFlag {
-			if time.Since(c.uTime) >= c.conf.SendUnAckTimeout1 {
-				c.Error("SendUnAckTimeout1 of uFrame expires, timeout:%v", time.Since(c.uTime))
+		if sf.uFlag {
+			if time.Since(sf.uTime) >= sf.conf.SendUnAckTimeout1 {
+				sf.Error("SendUnAckTimeout1 of uFrame expires, timeout:%v", time.Since(sf.uTime))
 				return nil
 			}
 		}
-		if c.t2Flag {
-			if time.Since(c.t2Time) >= c.conf.RecvUnAckTimeout2 || c.recvCnt >= c.conf.RecvUnAckLimitW {
-				c.recvCnt = 0
-				c.t2Flag = false
-				c.sendSFrame()
+		if sf.t2Flag {
+			if time.Since(sf.t2Time) >= sf.conf.RecvUnAckTimeout2 || sf.recvCnt >= sf.conf.RecvUnAckLimitW {
+				sf.recvCnt = 0
+				sf.t2Flag = false
+				sf.sendSFrame()
 			}
 		}
 
-		if c.sendBuf.head != c.sendBuf.tail {
-			if time.Since(c.sendBuf.buf[c.sendBuf.head].t) >= c.conf.SendUnAckTimeout1 {
-				c.Error("SendUnAckTimeout1 of iFrame expires, timeout:%v", time.Since(c.sendBuf.buf[c.sendBuf.head].t))
+		if sf.sendBuf.head != sf.sendBuf.tail {
+			if time.Since(sf.sendBuf.buf[sf.sendBuf.head].t) >= sf.conf.SendUnAckTimeout1 {
+				sf.Error("SendUnAckTimeout1 of iFrame expires, timeout:%v", time.Since(sf.sendBuf.buf[sf.sendBuf.head].t))
 				return nil
 			}
-			c.ackSN = c.sendBuf.buf[c.sendBuf.head].sn - 1
+			sf.ackSN = sf.sendBuf.buf[sf.sendBuf.head].sn - 1
 		} else {
-			c.ackSN = c.sendSN
+			sf.ackSN = sf.sendSN
 		}
 
 		select {
-		case <-c.ctx.Done():
+		case <-sf.ctx.Done():
 			return fmt.Errorf("ctx done")
 		default:
 		}
 	}
 }
 
-func (c *Client) handleLoop() {
-	c.Debug("HandleLoop Started")
+func (sf *Client) handleLoop() {
+	sf.Debug("HandleLoop Started")
 	defer func() {
-		c.wg.Done()
-		c.Debug("HandleLoop Ended")
+		sf.wg.Done()
+		sf.Debug("HandleLoop Ended")
 	}()
 
 	for {
 		select {
-		case <-c.ctx.Done():
+		case <-sf.ctx.Done():
 			return
-		case apdu := <-c.recvChan:
+		case apdu := <-sf.rawRcv:
 			apci, rawAsdu := parse(apdu)
-			c.t3Time = time.Now()
+			sf.t3Time = time.Now()
 			switch apci := apci.(type) {
 			case uAPCI:
-				c.Debug(apci.String())
-				c.uFlag = false
+				sf.Debug(apci.String())
+				sf.uFlag = false
 				switch apci.function {
 				// case uStartDtActive:
 				case uStartDtConfirm:
-					c.isServerActive = true
+					sf.isServerActive = true
 					// 激活之后进行时钟同步?
-					_ = c.ClockSynchronizationCmd(asdu.CauseOfTransmission{Cause: asdu.Activation}, 0xffff, time.Now())
+					_ = sf.ClockSynchronizationCmd(asdu.CauseOfTransmission{Cause: asdu.Activation}, 0xffff, time.Now())
 				case uTestFrActive:
-					c.SendTestCon()
+					sf.SendTestCon()
 				// case uTestFrConfirm:
 				// case uStopDtActive:
 				case uStopDtConfirm:
 				}
 			case sAPCI:
-				c.Debug(apci.String())
-				if err := c.checkRecvSN(apci.rcvSN); err != nil {
-					c.Error("Check SFrame recvSN error:%v", err)
-					c.cancelFunc()
+				sf.Debug(apci.String())
+				if err := sf.checkRecvSN(apci.rcvSN); err != nil {
+					sf.Error("Check SFrame recvSN error:%v", err)
+					sf.cancelFunc()
 					return
 				}
 			case iAPCI:
-				c.Debug(apci.String())
+				sf.Debug(apci.String())
 
 				// 接收到I帧后开始RecvUnAckTimeout2计时
-				c.recvCnt++
-				if !c.t2Flag {
-					c.t2Flag = true
-					c.t2Time = time.Now()
+				sf.recvCnt++
+				if !sf.t2Flag {
+					sf.t2Flag = true
+					sf.t2Time = time.Now()
 				} else {
-					c.t2Time = time.Now()
+					sf.t2Time = time.Now()
 				}
 
 				// 判断接收到的I帧发送序号是否等于客户端的I帧接收序号,第一帧时同为0
-				if apci.sendSN != c.recvSN {
-					c.Error("IFrame sendSN error, close connection!")
-					c.cancelFunc()
+				if apci.sendSN != sf.recvSN {
+					sf.Error("IFrame sendSN error, close connection!")
+					sf.cancelFunc()
 					return
 				}
 
 				// 判断接收到的I帧接收序号与客户端的I帧发送情况是否匹配
-				if err := c.checkRecvSN(apci.rcvSN); err != nil {
-					c.Error("Check IFrame recvSN error:%v", err)
-					c.cancelFunc()
+				if err := sf.checkRecvSN(apci.rcvSN); err != nil {
+					sf.Error("Check IFrame recvSN error:%v", err)
+					sf.cancelFunc()
 					return
 				}
 
-				c.recvSN = (c.recvSN + 1) % 32768
+				sf.recvSN = (sf.recvSN + 1) % 32768
 
-				asduPack := asdu.NewEmptyASDU(c.param)
+				asduPack := asdu.NewEmptyASDU(sf.param)
 				if err := asduPack.UnmarshalBinary(rawAsdu); err != nil {
-					c.Warn("asdu UnmarshalBinary failed,%+v", err)
+					sf.Warn("asdu UnmarshalBinary failed,%+v", err)
 					continue
 				}
-				if err := c.handleIFrame(asduPack); err != nil {
-					c.Warn("Falied handling I frame, error: %v", err)
+				if err := sf.handleIFrame(asduPack); err != nil {
+					sf.Warn("Falied handling I frame, error: %v", err)
 				}
 			}
 		}
@@ -271,36 +273,36 @@ func (c *Client) handleLoop() {
 }
 
 // 判断接收到的I帧接收序号与客户端的I帧发送情况是否匹配
-func (c *Client) checkRecvSN(recvSN uint16) error {
-	c.sendBuf.mutex.Lock()
-	defer c.sendBuf.mutex.Unlock()
-	if c.sendBuf.head == c.sendBuf.tail { // sendBuf为空,没有未确认的已发送I帧
-		if recvSN == c.sendSN {
+func (sf *Client) checkRecvSN(recvSN uint16) error {
+	sf.sendBuf.mutex.Lock()
+	defer sf.sendBuf.mutex.Unlock()
+	if sf.sendBuf.head == sf.sendBuf.tail { // sendBuf为空,没有未确认的已发送I帧
+		if recvSN == sf.sendSN {
 			return nil
 		}
 	} else { // sendBuf不为空,有未被确认的以发送帧
-		head, tail := c.sendBuf.buf[c.sendBuf.head].sn, c.sendBuf.buf[c.sendBuf.tail].sn
+		head, tail := sf.sendBuf.buf[sf.sendBuf.head].sn, sf.sendBuf.buf[sf.sendBuf.tail].sn
 		if recvSN == tail { // S帧确认了所有已发送的I帧
-			c.sendBuf.head, c.sendBuf.tail = 0, 0
+			sf.sendBuf.head, sf.sendBuf.tail = 0, 0
 			return nil
 		}
 		if head < tail { // 客户端I帧发送序号未溢出
 			if recvSN >= head && recvSN <= tail {
 				for recvSN >= head {
-					c.sendBuf.head++
-					if c.sendBuf.head == c.sendBuf.tail {
-						c.sendBuf.head, c.sendBuf.tail = 0, 0
+					sf.sendBuf.head++
+					if sf.sendBuf.head == sf.sendBuf.tail {
+						sf.sendBuf.head, sf.sendBuf.tail = 0, 0
 						return nil
 					}
-					head = c.sendBuf.buf[c.sendBuf.head].sn
+					head = sf.sendBuf.buf[sf.sendBuf.head].sn
 				}
 				return nil
 			}
 		} else { //客户端I帧发送序号溢出
 			if recvSN >= head && recvSN <= 32767 { // 发送和接收序号最大为15位,2^15-1
 				for recvSN >= head {
-					c.sendBuf.head++
-					head = c.sendBuf.buf[c.sendBuf.head].sn
+					sf.sendBuf.head++
+					head = sf.sendBuf.buf[sf.sendBuf.head].sn
 					if head == 0 {
 						return nil
 					}
@@ -308,13 +310,13 @@ func (c *Client) checkRecvSN(recvSN uint16) error {
 				return nil
 			} else if recvSN <= tail {
 				for head != 0 {
-					c.sendBuf.head++
-					head = c.sendBuf.buf[c.sendBuf.head].sn
+					sf.sendBuf.head++
+					head = sf.sendBuf.buf[sf.sendBuf.head].sn
 				}
 				for recvSN >= head {
-					c.sendBuf.head++
-					if c.sendBuf.head == c.sendBuf.tail {
-						c.sendBuf.head, c.sendBuf.tail = 0, 0
+					sf.sendBuf.head++
+					if sf.sendBuf.head == sf.sendBuf.tail {
+						sf.sendBuf.head, sf.sendBuf.tail = 0, 0
 						return nil
 					}
 				}
@@ -326,31 +328,31 @@ func (c *Client) checkRecvSN(recvSN uint16) error {
 	return fmt.Errorf("wrong sequence number, close connection")
 }
 
-func (c *Client) recvLoop() {
-	c.Debug("recvLoop started")
+func (sf *Client) recvLoop() {
+	sf.Debug("recvLoop started")
 	defer func() {
-		c.cancelFunc()
-		c.wg.Done()
-		c.Debug("recvLoop stopped")
+		sf.cancelFunc()
+		sf.wg.Done()
+		sf.Debug("recvLoop stopped")
 	}()
 
 	for {
 		rawData := make([]byte, APDUSizeMax)
 		for rdCnt, length := 0, 1; rdCnt < length; {
-			byteCount, err := io.ReadFull(c.conn, rawData[rdCnt:length])
+			byteCount, err := io.ReadFull(sf.conn, rawData[rdCnt:length])
 			if err != nil {
 				// See: https://github.com/golang/go/issues/4373
 				if err != io.EOF && err != io.ErrClosedPipe ||
 					strings.Contains(err.Error(), "use of closed network connection") {
-					c.Error("receive failed, %v", err)
+					sf.Error("receive failed, %v", err)
 					return
 				}
 				if e, ok := err.(net.Error); ok && !e.Temporary() {
-					c.Error("receive failed, %v", err)
+					sf.Error("receive failed, %v", err)
 					return
 				}
 				if rdCnt == 0 && err == io.EOF {
-					c.Error("remote connect closed, %v", err)
+					sf.Error("remote connect closed, %v", err)
 					return
 				}
 			}
@@ -377,38 +379,38 @@ func (c *Client) recvLoop() {
 				}
 				if rdCnt == length {
 					apdu := rawData[:length]
-					c.Debug("RX Raw[% x]", apdu)
-					c.recvChan <- apdu
+					sf.Debug("RX Raw[% x]", apdu)
+					sf.rawRcv <- apdu
 				}
 			}
 		}
 	}
 }
 
-func (c *Client) sendLoop() {
-	c.Debug("sendLoop started")
+func (sf *Client) sendLoop() {
+	sf.Debug("sendLoop started")
 	defer func() {
-		c.cancelFunc()
-		c.wg.Done()
-		c.Debug("sendLoop stopped")
+		sf.cancelFunc()
+		sf.wg.Done()
+		sf.Debug("sendLoop stopped")
 	}()
 	for {
 		select {
-		case <-c.ctx.Done():
+		case <-sf.ctx.Done():
 			return
-		case apdu := <-c.sendChan:
-			c.Debug("TX Raw[% x]", apdu)
+		case apdu := <-sf.rawSend:
+			sf.Debug("TX Raw[% x]", apdu)
 			for wrCnt := 0; len(apdu) > wrCnt; {
-				byteCount, err := c.conn.Write(apdu[wrCnt:])
+				byteCount, err := sf.conn.Write(apdu[wrCnt:])
 				if err != nil {
 					// See: https://github.com/golang/go/issues/4373
 					if err != io.EOF && err != io.ErrClosedPipe ||
 						strings.Contains(err.Error(), "use of closed network connection") {
-						c.Error("send failed, %v", err)
+						sf.Error("rawSend failed, %v", err)
 						return
 					}
 					if e, ok := err.(net.Error); !ok || !e.Temporary() {
-						c.Error("send failed, %v", err)
+						sf.Error("rawSend failed, %v", err)
 						return
 					}
 					// temporary error may be recoverable
@@ -419,45 +421,45 @@ func (c *Client) sendLoop() {
 	}
 }
 
-func (c *Client) sendIFrame(asdu []byte) error {
-	iFrame, err := newIFrame(c.sendSN, c.recvSN, asdu)
+func (sf *Client) sendSFrame() {
+	sf.Debug("TX sFrame %v", sAPCI{sf.recvSN})
+	sf.rawSend <- newSFrame(sf.recvSN)
+}
+func (sf *Client) sendUFrame(which byte) {
+	sf.Debug("TX uFrame %v", uAPCI{which})
+	sf.rawSend <- newUFrame(which)
+}
+
+func (sf *Client) sendIFrame(asdu []byte) error {
+	iFrame, err := newIFrame(sf.sendSN, sf.recvSN, asdu)
 	if err != nil {
 		return err
 	}
-	c.sendChan <- iFrame
-	c.Debug("TX iFrame %v", iAPCI{c.sendSN, c.recvSN})
-	c.sendSN = (c.sendSN + 1) % 32768
+	sf.rawSend <- iFrame
+	sf.Debug("TX iFrame %v", iAPCI{sf.sendSN, sf.recvSN})
+	sf.sendSN = (sf.sendSN + 1) % 32768
 
-	c.sendBuf.mutex.Lock()
-	defer c.sendBuf.mutex.Unlock()
-	c.sendBuf.buf[c.sendBuf.tail].t = time.Now()
-	c.sendBuf.buf[c.sendBuf.tail].sn = c.sendSN
-	c.sendBuf.tail++
+	sf.sendBuf.mutex.Lock()
+	defer sf.sendBuf.mutex.Unlock()
+	sf.sendBuf.buf[sf.sendBuf.tail].t = time.Now()
+	sf.sendBuf.buf[sf.sendBuf.tail].sn = sf.sendSN
+	sf.sendBuf.tail++
 	return nil
-}
-func (c *Client) sendSFrame() {
-	c.Debug("TX sFrame %v", sAPCI{c.recvSN})
-	c.sendChan <- newSFrame(c.recvSN)
-}
-func (c *Client) sendUFrame(b byte) {
-	c.Debug("TX uFrame %v", uAPCI{b})
-	c.sendChan <- newUFrame(b)
 }
 
 // 接收到I帧后根据TYPEID进行不同的处理,分别调用对应的接口函数
-func (c *Client) handleIFrame(a *asdu.ASDU) error {
-
+func (sf *Client) handleIFrame(a *asdu.ASDU) error {
 	defer func() {
 		if err := recover(); err != nil {
-			c.Critical("Client handler %+v", err)
+			sf.Critical("Client handler %+v", err)
 		}
 	}()
 
-	c.Debug("ASDU %+v", a)
+	sf.Debug("ASDU %+v", a)
 
 	// check common addr
 	if a.CommonAddr == asdu.InvalidCommonAddr {
-		return a.SendReplyMirror(c, asdu.UnknownCA)
+		return a.SendReplyMirror(sf, asdu.UnknownCA)
 	}
 
 	if a.Identifier.Coa.Cause == asdu.UnknownTypeID ||
@@ -478,10 +480,10 @@ func (c *Client) handleIFrame(a *asdu.ASDU) error {
 			a.Identifier.Coa.Cause == asdu.InterrogatedByStation ||
 			(a.Identifier.Coa.Cause >= asdu.InterrogatedByGroup1 &&
 				a.Identifier.Coa.Cause <= asdu.InterrogatedByGroup16)) {
-			return a.SendReplyMirror(c, asdu.UnknownCOT)
+			return a.SendReplyMirror(sf, asdu.UnknownCOT)
 		}
 		info := a.GetSinglePoint()
-		c.handler.Handle01_02_1e(c, a, info)
+		sf.handler.Handle01_02_1e(sf, a, info)
 	case asdu.M_DP_NA_1, asdu.M_DP_TA_1, asdu.M_DP_TB_1: // 遥信 双点信息 3,4,31
 		// check cot
 		if !(a.Identifier.Coa.Cause == asdu.Background ||
@@ -492,10 +494,10 @@ func (c *Client) handleIFrame(a *asdu.ASDU) error {
 			a.Identifier.Coa.Cause == asdu.InterrogatedByStation ||
 			(a.Identifier.Coa.Cause >= asdu.InterrogatedByGroup1 &&
 				a.Identifier.Coa.Cause <= asdu.InterrogatedByGroup16)) {
-			return a.SendReplyMirror(c, asdu.UnknownCOT)
+			return a.SendReplyMirror(sf, asdu.UnknownCOT)
 		}
 		info := a.GetDoublePoint()
-		c.handler.Handle03_04_1f(c, a, info)
+		sf.handler.Handle03_04_1f(sf, a, info)
 	case asdu.M_ST_NA_1, asdu.M_ST_TB_1: // 遥信 步调节信息 5,32
 		// check cot
 		if !(a.Identifier.Coa.Cause == asdu.Background ||
@@ -506,10 +508,10 @@ func (c *Client) handleIFrame(a *asdu.ASDU) error {
 			a.Identifier.Coa.Cause == asdu.InterrogatedByStation ||
 			(a.Identifier.Coa.Cause >= asdu.InterrogatedByGroup1 &&
 				a.Identifier.Coa.Cause <= asdu.InterrogatedByGroup16)) {
-			return a.SendReplyMirror(c, asdu.UnknownCOT)
+			return a.SendReplyMirror(sf, asdu.UnknownCOT)
 		}
 		info := a.GetStepPosition()
-		c.handler.Handle05_20(c, a, info)
+		sf.handler.Handle05_20(sf, a, info)
 	case asdu.M_BO_NA_1, asdu.M_BO_TA_1, asdu.M_BO_TB_1: // 遥信 比特串信息 07,08,33								// 比特串,07
 		// check cot
 		if !(a.Identifier.Coa.Cause == asdu.Background ||
@@ -518,10 +520,10 @@ func (c *Client) handleIFrame(a *asdu.ASDU) error {
 			a.Identifier.Coa.Cause == asdu.InterrogatedByStation ||
 			(a.Identifier.Coa.Cause >= asdu.InterrogatedByGroup1 &&
 				a.Identifier.Coa.Cause <= asdu.InterrogatedByGroup16)) {
-			return a.SendReplyMirror(c, asdu.UnknownCOT)
+			return a.SendReplyMirror(sf, asdu.UnknownCOT)
 		}
 		info := a.GetBitString32()
-		c.handler.Handle07_08_21(c, a, info)
+		sf.handler.Handle07_08_21(sf, a, info)
 	case asdu.M_ME_NA_1, asdu.M_ME_TA_1, asdu.M_ME_TD_1, asdu.M_ME_ND_1: // 遥测 归一化测量值 09,10,21,34
 		// check cot
 		if !(a.Identifier.Coa.Cause == asdu.Periodic ||
@@ -529,10 +531,10 @@ func (c *Client) handleIFrame(a *asdu.ASDU) error {
 			a.Identifier.Coa.Cause == asdu.Spontaneous ||
 			a.Identifier.Coa.Cause == asdu.Request ||
 			a.Identifier.Coa.Cause == asdu.InterrogatedByStation) {
-			return a.SendReplyMirror(c, asdu.UnknownCOT)
+			return a.SendReplyMirror(sf, asdu.UnknownCOT)
 		}
 		value := a.GetMeasuredValueNormal()
-		c.handler.Handle09_0a_15_22(c, a, value)
+		sf.handler.Handle09_0a_15_22(sf, a, value)
 	case asdu.M_ME_NB_1, asdu.M_ME_TB_1, asdu.M_ME_TE_1: //遥测 标度化值 11,12,35
 		// check cot
 		if !(a.Identifier.Coa.Cause == asdu.Periodic ||
@@ -542,10 +544,10 @@ func (c *Client) handleIFrame(a *asdu.ASDU) error {
 			a.Identifier.Coa.Cause == asdu.InterrogatedByStation ||
 			(a.Identifier.Coa.Cause >= asdu.InterrogatedByGroup1 &&
 				a.Identifier.Coa.Cause <= asdu.InterrogatedByGroup16)) {
-			return a.SendReplyMirror(c, asdu.UnknownCOT)
+			return a.SendReplyMirror(sf, asdu.UnknownCOT)
 		}
 		value := a.GetMeasuredValueScaled()
-		c.handler.Handle0b_0c_23(c, a, value)
+		sf.handler.Handle0b_0c_23(sf, a, value)
 	case asdu.M_ME_NC_1, asdu.M_ME_TC_1, asdu.M_ME_TF_1: // 遥信 短浮点数 13,14,16
 		// check cot
 		if !(a.Identifier.Coa.Cause == asdu.Periodic ||
@@ -555,83 +557,83 @@ func (c *Client) handleIFrame(a *asdu.ASDU) error {
 			a.Identifier.Coa.Cause == asdu.InterrogatedByStation ||
 			(a.Identifier.Coa.Cause >= asdu.InterrogatedByGroup1 &&
 				a.Identifier.Coa.Cause <= asdu.InterrogatedByGroup16)) {
-			return a.SendReplyMirror(c, asdu.UnknownCOT)
+			return a.SendReplyMirror(sf, asdu.UnknownCOT)
 		}
 		value := a.GetMeasuredValueFloat()
-		c.handler.Handle0d_0e_10(c, a, value)
+		sf.handler.Handle0d_0e_10(sf, a, value)
 	case asdu.M_EI_NA_1: // 站初始化结束 70
 		// check cause of transmission
 		if !(a.Identifier.Coa.Cause == asdu.Initialized) {
-			return a.SendReplyMirror(c, asdu.UnknownCOT)
+			return a.SendReplyMirror(sf, asdu.UnknownCOT)
 		}
 		ioa, coi := a.GetEndOfInitialization()
 		if ioa != asdu.InfoObjAddrIrrelevant {
-			return a.SendReplyMirror(c, asdu.UnknownIOA)
+			return a.SendReplyMirror(sf, asdu.UnknownIOA)
 		}
-		c.handler.Handle46(c, coi)
+		sf.handler.Handle46(sf, coi)
 	case asdu.C_IC_NA_1: // 总召唤 100
 		// check cot
 		if !(a.Identifier.Coa.Cause == asdu.ActivationCon ||
 			a.Identifier.Coa.Cause == asdu.DeactivationCon ||
 			a.Identifier.Coa.Cause == asdu.ActivationTerm) {
-			return a.SendReplyMirror(c, asdu.UnknownCOT)
+			return a.SendReplyMirror(sf, asdu.UnknownCOT)
 		}
 		// get ioa and qoi
 		ioa, qua := a.GetInterrogationCmd()
 		// check ioa
 		if ioa != asdu.InfoObjAddrIrrelevant {
-			return a.SendReplyMirror(c, asdu.UnknownIOA)
+			return a.SendReplyMirror(sf, asdu.UnknownIOA)
 		}
-		c.handler.Handle64(c, a, qua)
+		sf.handler.Handle64(sf, a, qua)
 	case asdu.C_CI_NA_1: // 计数量召唤 101
 		// check cot
 		if !(a.Identifier.Coa.Cause == asdu.ActivationCon ||
 			a.Identifier.Coa.Cause == asdu.DeactivationCon ||
 			a.Identifier.Coa.Cause == asdu.ActivationTerm) {
-			return a.SendReplyMirror(c, asdu.UnknownCOT)
+			return a.SendReplyMirror(sf, asdu.UnknownCOT)
 		}
 		// get ioa and qoi
 		ioa, qua := a.GetCounterInterrogationCmd()
 		// check ioa
 		if ioa != asdu.InfoObjAddrIrrelevant {
-			return a.SendReplyMirror(c, asdu.UnknownIOA)
+			return a.SendReplyMirror(sf, asdu.UnknownIOA)
 		}
-		c.handler.Handle65(c, a, qua)
+		sf.handler.Handle65(sf, a, qua)
 	case asdu.C_CS_NA_1: // 时钟同步 103
 		// check cot
 		if !(a.Identifier.Coa.Cause == asdu.ActivationCon ||
 			a.Identifier.Coa.Cause == asdu.ActivationTerm) {
-			return a.SendReplyMirror(c, asdu.UnknownCOT)
+			return a.SendReplyMirror(sf, asdu.UnknownCOT)
 		}
 		ioa, t := a.GetClockSynchronizationCmd()
 		// check ioa
 		if ioa != asdu.InfoObjAddrIrrelevant {
-			return a.SendReplyMirror(c, asdu.UnknownIOA)
+			return a.SendReplyMirror(sf, asdu.UnknownIOA)
 		}
-		c.handler.Handle67(c, a, t)
+		sf.handler.Handle67(sf, a, t)
 	case asdu.C_RP_NA_1: // 复位进程 105
 		// check cot
 		if !(a.Identifier.Coa.Cause == asdu.ActivationCon) {
-			return a.SendReplyMirror(c, asdu.UnknownCOT)
+			return a.SendReplyMirror(sf, asdu.UnknownCOT)
 		}
 		ioa, qua := a.GetResetProcessCmd()
 		// check ioa
 		if ioa != asdu.InfoObjAddrIrrelevant {
-			return a.SendReplyMirror(c, asdu.UnknownIOA)
+			return a.SendReplyMirror(sf, asdu.UnknownIOA)
 		}
-		c.handler.Handle69(c, a, qua)
+		sf.handler.Handle69(sf, a, qua)
 	// case asdu.C_TS_TA_1:										// 测试命令 107
 	// 	// check cot
 	// 	if !( a.Identifier.Coa.Cause == asdu.ActivationCon) {
-	// 	  	return a.SendReplyMirror(c, asdu.UnknownCOT)
+	// 	  	return a.SendReplyMirror(sf, asdu.UnknownCOT)
 	// 	}
-	// 	c.handler.Handle6b(c, a, true)
+	// 	sf.handler.Handle6b(sf, a, true)
 	default:
-		return a.SendReplyMirror(c, asdu.UnknownTypeID)
+		return a.SendReplyMirror(sf, asdu.UnknownTypeID)
 	}
 
-	// if err := c.handler.ASDUHandler(c, a); err != nil {
-	// 	return a.SendReplyMirror(c, asdu.UnknownTypeID)
+	// if err := sf.handler.ASDUHandler(sf, a); err != nil {
+	// 	return a.SendReplyMirror(sf, asdu.UnknownTypeID)
 	// }
 	return nil
 }
@@ -681,65 +683,72 @@ type ClientHandler interface {
 	Handle6b(asdu.Connect, *asdu.ASDU, bool)
 }
 
-func (c *Client) SendStartDt() {
-	if !c.uFlag {
-		c.uFlag = true
-		c.uTime = time.Now()
+func (sf *Client) SendStartDt() {
+	if !sf.uFlag {
+		sf.uFlag = true
+		sf.uTime = time.Now()
 	}
-	c.sendUFrame(uStartDtActive)
+	sf.sendUFrame(uStartDtActive)
 }
-func (c *Client) SendStopDt() {
-	if !c.uFlag {
-		c.uFlag = true
-		c.uTime = time.Now()
+func (sf *Client) SendStopDt() {
+	if !sf.uFlag {
+		sf.uFlag = true
+		sf.uTime = time.Now()
 	}
-	c.sendUFrame(uStopDtActive)
+	sf.sendUFrame(uStopDtActive)
 }
-func (c *Client) SendTestDt() {
-	if !c.uFlag {
-		c.uFlag = true
-		c.uTime = time.Now()
+func (sf *Client) SendTestDt() {
+	if !sf.uFlag {
+		sf.uFlag = true
+		sf.uTime = time.Now()
 	}
-	c.sendUFrame(uTestFrActive)
+	sf.sendUFrame(uTestFrActive)
 }
-func (c *Client) SendTestCon() {
-	c.sendUFrame(uTestFrConfirm)
+func (sf *Client) SendTestCon() {
+	sf.sendUFrame(uTestFrConfirm)
+}
+
+// Params returns params of client
+func (sf *Client) Params() *asdu.Params {
+	return sf.param
 }
 
 // Send send asdu
-func (c *Client) Send(a *asdu.ASDU) error {
-	if !c.isServerActive {
+func (sf *Client) Send(a *asdu.ASDU) error {
+	if !sf.isServerActive {
 		return fmt.Errorf("ErrorUnactive")
 	}
 	data, err := a.MarshalBinary()
 	if err != nil {
 		return err
 	}
-	return c.sendIFrame(data)
-}
+	//select {
+	//case sf.out <- data:
+	//default:
+	//	return ErrBufferFulled
+	//}
+	//return nil
 
-// Params returns params of client
-func (c *Client) Params() *asdu.Params {
-	return c.param
+	return sf.sendIFrame(data)
 }
 
 // UnderlyingConn returns underlying conn of client
-func (c *Client) UnderlyingConn() net.Conn {
-	return c.conn
+func (sf *Client) UnderlyingConn() net.Conn {
+	return sf.conn
 }
 
-func (c *Client) GetState() states {
-	return c.state
+func (sf *Client) GetState() states {
+	return sf.state
 }
 
-func (c *Client) Disconnect() {
-	c.state = Closing
-	c.cancelFunc()
+func (sf *Client) Disconnect() {
+	sf.state = Closing
+	sf.cancelFunc()
 }
 
 //InterrogationCmd wrap asdu.InterrogationCmd
-func (c *Client) InterrogationCmd(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, qoi asdu.QualifierOfInterrogation) error {
-	return asdu.InterrogationCmd(c, coa, ca, qoi)
+func (sf *Client) InterrogationCmd(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, qoi asdu.QualifierOfInterrogation) error {
+	return asdu.InterrogationCmd(sf, coa, ca, qoi)
 }
 
 // CounterInterrogationCmd wrap asdu.CounterInterrogationCmd
@@ -763,11 +772,11 @@ func (sf *Client) TestCommand(coa asdu.CauseOfTransmission, ca asdu.CommonAddr) 
 }
 
 // TestCommandCP56Time2a send test command [C_TS_TA_1]，测试命令, 只有单个信息对象(SQ = 0)
-func (c *Client) TestCommandCP56Time2a(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, t time.Time) error {
-	if err := c.Params().Valid(); err != nil {
+func (sf *Client) TestCommandCP56Time2a(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, t time.Time) error {
+	if err := sf.Params().Valid(); err != nil {
 		return err
 	}
-	u := asdu.NewASDU(c.Params(), asdu.Identifier{
+	u := asdu.NewASDU(sf.Params(), asdu.Identifier{
 		asdu.C_TS_TA_1,
 		asdu.VariableStruct{IsSequence: false, Number: 1},
 		coa,
@@ -777,9 +786,9 @@ func (c *Client) TestCommandCP56Time2a(coa asdu.CauseOfTransmission, ca asdu.Com
 	if err := u.AppendInfoObjAddr(asdu.InfoObjAddrIrrelevant); err != nil {
 		return err
 	}
-	u.AppendBytes(byte(c.testCnt&0xff), byte(c.testCnt>>8))
+	u.AppendBytes(byte(sf.testCnt&0xff), byte(sf.testCnt>>8))
 	u.AppendBytes(asdu.CP56Time2a(t, u.InfoObjTimeZone)...)
-	return c.Send(u)
+	return sf.Send(u)
 }
 
 // // GetTestCommand ...
