@@ -18,17 +18,17 @@ func newConn(want []byte, t *testing.T) *conn {
 	return &conn{ParamsWide, want, t}
 }
 
-func (this *conn) Params() *Params          { return this.p }
-func (this *conn) UnderlyingConn() net.Conn { return nil }
+func (sf *conn) Params() *Params          { return sf.p }
+func (sf *conn) UnderlyingConn() net.Conn { return nil }
 
 // Send
-func (this *conn) Send(u *ASDU) error {
+func (sf *conn) Send(u *ASDU) error {
 	data, err := u.MarshalBinary()
 	if err != nil {
 		return err
 	}
-	if !reflect.DeepEqual(this.want, data) {
-		this.t.Errorf("Send() out = % x, want % x", data, this.want)
+	if !reflect.DeepEqual(sf.want, data) {
+		sf.t.Errorf("Send() out = % x, want % x", data, sf.want)
 	}
 	return nil
 }
@@ -549,12 +549,12 @@ func TestASDU_GetSingleCmd(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			this := &ASDU{
+			sf := &ASDU{
 				Params:     tt.fields.Params,
 				Identifier: tt.fields.Identifier,
 				infoObj:    tt.fields.infoObj,
 			}
-			got := this.GetSingleCmd()
+			got := sf.GetSingleCmd()
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ASDU.GetSingleCmd() = %v, want %v", got, tt.want)
 			}
@@ -601,12 +601,12 @@ func TestASDU_GetDoubleCmd(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			this := &ASDU{
+			sf := &ASDU{
 				Params:     tt.fields.Params,
 				Identifier: tt.fields.Identifier,
 				infoObj:    tt.fields.infoObj,
 			}
-			got := this.GetDoubleCmd()
+			got := sf.GetDoubleCmd()
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ASDU.GetDoubleCmd() = %v, want %v", got, tt.want)
 			}
@@ -652,12 +652,12 @@ func TestASDU_GetStepCmd(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			this := &ASDU{
+			sf := &ASDU{
 				Params:     tt.fields.Params,
 				Identifier: tt.fields.Identifier,
 				infoObj:    tt.fields.infoObj,
 			}
-			got := this.GetStepCmd()
+			got := sf.GetStepCmd()
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ASDU.GetStepCmd() = %v, want %v", got, tt.want)
 			}
@@ -703,12 +703,12 @@ func TestASDU_GetSetpointNormalCmd(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			this := &ASDU{
+			sf := &ASDU{
 				Params:     tt.fields.Params,
 				Identifier: tt.fields.Identifier,
 				infoObj:    tt.fields.infoObj,
 			}
-			got := this.GetSetpointNormalCmd()
+			got := sf.GetSetpointNormalCmd()
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ASDU.GetSetpointNormalCmd() = %v, want %v", got, tt.want)
 			}
@@ -754,12 +754,12 @@ func TestASDU_GetSetpointCmdScaled(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			this := &ASDU{
+			sf := &ASDU{
 				Params:     tt.fields.Params,
 				Identifier: tt.fields.Identifier,
 				infoObj:    tt.fields.infoObj,
 			}
-			got := this.GetSetpointCmdScaled()
+			got := sf.GetSetpointCmdScaled()
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ASDU.GetSetpointCmdScaled() = %v, want %v", got, tt.want)
 			}
@@ -807,12 +807,12 @@ func TestASDU_GetSetpointFloatCmd(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			this := &ASDU{
+			sf := &ASDU{
 				Params:     tt.fields.Params,
 				Identifier: tt.fields.Identifier,
 				infoObj:    tt.fields.infoObj,
 			}
-			got := this.GetSetpointFloatCmd()
+			got := sf.GetSetpointFloatCmd()
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ASDU.GetSetpointFloatCmd() = %v, want %v", got, tt.want)
 			}
@@ -856,12 +856,12 @@ func TestASDU_GetBitsString32Cmd(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			this := &ASDU{
+			sf := &ASDU{
 				Params:     tt.fields.Params,
 				Identifier: tt.fields.Identifier,
 				infoObj:    tt.fields.infoObj,
 			}
-			got := this.GetBitsString32Cmd()
+			got := sf.GetBitsString32Cmd()
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ASDU.GetBitsString32Cmd() = %v, want %v", got, tt.want)
 			}

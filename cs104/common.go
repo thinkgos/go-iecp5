@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// defined default value
+// DefaultReconnectInterval defined default value
 const DefaultReconnectInterval = 1 * time.Minute
 
 type seqPending struct {
