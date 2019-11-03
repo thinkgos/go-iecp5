@@ -25,6 +25,7 @@ func main() {
 	if err != nil {
 		fmt.Printf("Failed to connect. error:%v\n", err)
 	}
+
 	for {
 		time.Sleep(time.Second * 100)
 	}

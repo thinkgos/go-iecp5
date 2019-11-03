@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
-	"fmt"
 	"io"
 	"math/rand"
 	"net"
@@ -23,7 +22,7 @@ type Client struct {
 	conf    Config
 	param   asdu.Params
 	conn    net.Conn
-	handler ClientHandler // 接口
+	handler ClientHandlerInterface
 
 	// channel
 	rcvASDU  chan []byte // for received asdu
@@ -64,7 +63,7 @@ type Client struct {
 }
 
 // NewClient returns an IEC104 master
-func NewClient(conf *Config, params *asdu.Params, handler ClientHandler) (*Client, error) {
+func NewClient(conf *Config, params *asdu.Params, handler ClientHandlerInterface) (*Client, error) {
 	if handler == nil {
 		return nil, errors.New("invalid handler")
 	}
@@ -82,7 +81,7 @@ func NewClient(conf *Config, params *asdu.Params, handler ClientHandler) (*Clien
 		sendASDU: make(chan []byte, 1024),
 		rcvRaw:   make(chan []byte, 1024),
 		sendRaw:  make(chan []byte, 1024), // may not block!
-		Clog:     clog.NewWithPrefix("IEC104 client =>"),
+		Clog:     clog.NewWithPrefix("cs104 client =>"),
 
 		autoReconnect:     true,
 		reconnectInterval: DefaultReconnectInterval,
@@ -471,7 +470,7 @@ func (sf *Client) handlerLoop() {
 				sf.Warn("asdu UnmarshalBinary failed,%+v", err)
 				continue
 			}
-			if err := sf.handleIFrame(asduPack); err != nil {
+			if err := sf.clientHandler(asduPack); err != nil {
 				sf.Warn("Falied handling I frame, error: %v", err)
 			}
 		}
@@ -543,239 +542,110 @@ func (sf *Client) IsConnected() bool {
 }
 
 // 接收到I帧后根据TYPEID进行不同的处理,分别调用对应的接口函数
-func (sf *Client) handleIFrame(a *asdu.ASDU) error {
+func (sf *Client) clientHandler(asduPack *asdu.ASDU) error {
 	defer func() {
 		if err := recover(); err != nil {
-			sf.Critical("Client handler %+v", err)
+			sf.Critical("server handler %+v", err)
 		}
 	}()
 
-	sf.Debug("ASDU %+v", a)
+	sf.Debug("ASDU %+v", asduPack)
 
-	// check common addr
-	if a.CommonAddr == asdu.InvalidCommonAddr {
-		return a.SendReplyMirror(sf, asdu.UnknownCA)
+	switch asduPack.Identifier.Type {
+	case asdu.C_IC_NA_1: // InterrogationCmd
+		if !(asduPack.Identifier.Coa.Cause == asdu.Activation ||
+			asduPack.Identifier.Coa.Cause == asdu.Deactivation) {
+			return asduPack.SendReplyMirror(sf, asdu.UnknownCOT)
+		}
+		if asduPack.CommonAddr == asdu.InvalidCommonAddr {
+			return asduPack.SendReplyMirror(sf, asdu.UnknownCA)
+		}
+		ioa, qoi := asduPack.GetInterrogationCmd()
+		if ioa != asdu.InfoObjAddrIrrelevant {
+			return asduPack.SendReplyMirror(sf, asdu.UnknownIOA)
+		}
+		return sf.handler.InterrogationHandler(sf, asduPack, qoi)
+
+	case asdu.C_CI_NA_1: // CounterInterrogationCmd
+		if asduPack.Identifier.Coa.Cause != asdu.Activation {
+			return asduPack.SendReplyMirror(sf, asdu.UnknownCOT)
+		}
+		if asduPack.CommonAddr == asdu.InvalidCommonAddr {
+			return asduPack.SendReplyMirror(sf, asdu.UnknownCA)
+		}
+		ioa, qcc := asduPack.GetCounterInterrogationCmd()
+		if ioa != asdu.InfoObjAddrIrrelevant {
+			return asduPack.SendReplyMirror(sf, asdu.UnknownIOA)
+		}
+		return sf.handler.CounterInterrogationHandler(sf, asduPack, qcc)
+
+	case asdu.C_RD_NA_1: // ReadCmd
+		if asduPack.Identifier.Coa.Cause != asdu.Request {
+			return asduPack.SendReplyMirror(sf, asdu.UnknownCOT)
+		}
+		if asduPack.CommonAddr == asdu.InvalidCommonAddr {
+			return asduPack.SendReplyMirror(sf, asdu.UnknownCA)
+		}
+		return sf.handler.ReadHandler(sf, asduPack, asduPack.GetReadCmd())
+
+	case asdu.C_CS_NA_1: // ClockSynchronizationCmd
+		if asduPack.Identifier.Coa.Cause != asdu.Activation {
+			return asduPack.SendReplyMirror(sf, asdu.UnknownCOT)
+		}
+		if asduPack.CommonAddr == asdu.InvalidCommonAddr {
+			return asduPack.SendReplyMirror(sf, asdu.UnknownCA)
+		}
+
+		ioa, tm := asduPack.GetClockSynchronizationCmd()
+		if ioa != asdu.InfoObjAddrIrrelevant {
+			return asduPack.SendReplyMirror(sf, asdu.UnknownIOA)
+		}
+		return sf.handler.ClockSyncHandler(sf, asduPack, tm)
+
+	case asdu.C_TS_NA_1: // TestCommand
+		if asduPack.Identifier.Coa.Cause != asdu.Activation {
+			return asduPack.SendReplyMirror(sf, asdu.UnknownCOT)
+		}
+		if asduPack.CommonAddr == asdu.InvalidCommonAddr {
+			return asduPack.SendReplyMirror(sf, asdu.UnknownCA)
+		}
+		ioa, _ := asduPack.GetTestCommand()
+		if ioa != asdu.InfoObjAddrIrrelevant {
+			return asduPack.SendReplyMirror(sf, asdu.UnknownIOA)
+		}
+		return asduPack.SendReplyMirror(sf, asdu.ActivationCon)
+
+	case asdu.C_RP_NA_1: // ResetProcessCmd
+		if asduPack.Identifier.Coa.Cause != asdu.Activation {
+			return asduPack.SendReplyMirror(sf, asdu.UnknownCOT)
+		}
+		if asduPack.CommonAddr == asdu.InvalidCommonAddr {
+			return asduPack.SendReplyMirror(sf, asdu.UnknownCA)
+		}
+		ioa, qrp := asduPack.GetResetProcessCmd()
+		if ioa != asdu.InfoObjAddrIrrelevant {
+			return asduPack.SendReplyMirror(sf, asdu.UnknownIOA)
+		}
+		return sf.handler.ResetProcessHandler(sf, asduPack, qrp)
+	case asdu.C_CD_NA_1: // DelayAcquireCommand
+		if !(asduPack.Identifier.Coa.Cause == asdu.Activation ||
+			asduPack.Identifier.Coa.Cause == asdu.Spontaneous) {
+			return asduPack.SendReplyMirror(sf, asdu.UnknownCOT)
+		}
+		if asduPack.CommonAddr == asdu.InvalidCommonAddr {
+			return asduPack.SendReplyMirror(sf, asdu.UnknownCA)
+		}
+		ioa, msec := asduPack.GetDelayAcquireCommand()
+		if ioa != asdu.InfoObjAddrIrrelevant {
+			return asduPack.SendReplyMirror(sf, asdu.UnknownIOA)
+		}
+		return sf.handler.DelayAcquisitionHandler(sf, asduPack, msec)
 	}
 
-	if a.Identifier.Coa.Cause == asdu.UnknownTypeID ||
-		a.Identifier.Coa.Cause == asdu.UnknownCOT ||
-		a.Identifier.Coa.Cause == asdu.UnknownCA ||
-		a.Identifier.Coa.Cause == asdu.UnknownIOA {
-		return fmt.Errorf("GOT COT %v", a.Identifier.Coa.Cause)
+	if err := sf.handler.ASDUHandler(sf, asduPack); err != nil {
+		return asduPack.SendReplyMirror(sf, asdu.UnknownTypeID)
 	}
-
-	switch a.Identifier.Type {
-	case asdu.M_SP_NA_1, asdu.M_SP_TA_1, asdu.M_SP_TB_1: // 遥信 单点信息 01 02 30
-		// check cot
-		if !(a.Identifier.Coa.Cause == asdu.Background ||
-			a.Identifier.Coa.Cause == asdu.Spontaneous ||
-			a.Identifier.Coa.Cause == asdu.Request ||
-			a.Identifier.Coa.Cause == asdu.ReturnInfoRemote ||
-			a.Identifier.Coa.Cause == asdu.ReturnInfoLocal ||
-			a.Identifier.Coa.Cause == asdu.InterrogatedByStation ||
-			(a.Identifier.Coa.Cause >= asdu.InterrogatedByGroup1 &&
-				a.Identifier.Coa.Cause <= asdu.InterrogatedByGroup16)) {
-			return a.SendReplyMirror(sf, asdu.UnknownCOT)
-		}
-		info := a.GetSinglePoint()
-		sf.handler.Handle01_02_1e(sf, a, info)
-	case asdu.M_DP_NA_1, asdu.M_DP_TA_1, asdu.M_DP_TB_1: // 遥信 双点信息 3,4,31
-		// check cot
-		if !(a.Identifier.Coa.Cause == asdu.Background ||
-			a.Identifier.Coa.Cause == asdu.Spontaneous ||
-			a.Identifier.Coa.Cause == asdu.Request ||
-			a.Identifier.Coa.Cause == asdu.ReturnInfoRemote ||
-			a.Identifier.Coa.Cause == asdu.ReturnInfoLocal ||
-			a.Identifier.Coa.Cause == asdu.InterrogatedByStation ||
-			(a.Identifier.Coa.Cause >= asdu.InterrogatedByGroup1 &&
-				a.Identifier.Coa.Cause <= asdu.InterrogatedByGroup16)) {
-			return a.SendReplyMirror(sf, asdu.UnknownCOT)
-		}
-		info := a.GetDoublePoint()
-		sf.handler.Handle03_04_1f(sf, a, info)
-	case asdu.M_ST_NA_1, asdu.M_ST_TB_1: // 遥信 步调节信息 5,32
-		// check cot
-		if !(a.Identifier.Coa.Cause == asdu.Background ||
-			a.Identifier.Coa.Cause == asdu.Spontaneous ||
-			a.Identifier.Coa.Cause == asdu.Request ||
-			a.Identifier.Coa.Cause == asdu.ReturnInfoRemote ||
-			a.Identifier.Coa.Cause == asdu.ReturnInfoLocal ||
-			a.Identifier.Coa.Cause == asdu.InterrogatedByStation ||
-			(a.Identifier.Coa.Cause >= asdu.InterrogatedByGroup1 &&
-				a.Identifier.Coa.Cause <= asdu.InterrogatedByGroup16)) {
-			return a.SendReplyMirror(sf, asdu.UnknownCOT)
-		}
-		info := a.GetStepPosition()
-		sf.handler.Handle05_20(sf, a, info)
-	case asdu.M_BO_NA_1, asdu.M_BO_TA_1, asdu.M_BO_TB_1: // 遥信 比特串信息 07,08,33								// 比特串,07
-		// check cot
-		if !(a.Identifier.Coa.Cause == asdu.Background ||
-			a.Identifier.Coa.Cause == asdu.Spontaneous ||
-			a.Identifier.Coa.Cause == asdu.Request ||
-			a.Identifier.Coa.Cause == asdu.InterrogatedByStation ||
-			(a.Identifier.Coa.Cause >= asdu.InterrogatedByGroup1 &&
-				a.Identifier.Coa.Cause <= asdu.InterrogatedByGroup16)) {
-			return a.SendReplyMirror(sf, asdu.UnknownCOT)
-		}
-		info := a.GetBitString32()
-		sf.handler.Handle07_08_21(sf, a, info)
-	case asdu.M_ME_NA_1, asdu.M_ME_TA_1, asdu.M_ME_TD_1, asdu.M_ME_ND_1: // 遥测 归一化测量值 09,10,21,34
-		// check cot
-		if !(a.Identifier.Coa.Cause == asdu.Periodic ||
-			a.Identifier.Coa.Cause == asdu.Background ||
-			a.Identifier.Coa.Cause == asdu.Spontaneous ||
-			a.Identifier.Coa.Cause == asdu.Request ||
-			a.Identifier.Coa.Cause == asdu.InterrogatedByStation) {
-			return a.SendReplyMirror(sf, asdu.UnknownCOT)
-		}
-		value := a.GetMeasuredValueNormal()
-		sf.handler.Handle09_0a_15_22(sf, a, value)
-	case asdu.M_ME_NB_1, asdu.M_ME_TB_1, asdu.M_ME_TE_1: //遥测 标度化值 11,12,35
-		// check cot
-		if !(a.Identifier.Coa.Cause == asdu.Periodic ||
-			a.Identifier.Coa.Cause == asdu.Background ||
-			a.Identifier.Coa.Cause == asdu.Spontaneous ||
-			a.Identifier.Coa.Cause == asdu.Request ||
-			a.Identifier.Coa.Cause == asdu.InterrogatedByStation ||
-			(a.Identifier.Coa.Cause >= asdu.InterrogatedByGroup1 &&
-				a.Identifier.Coa.Cause <= asdu.InterrogatedByGroup16)) {
-			return a.SendReplyMirror(sf, asdu.UnknownCOT)
-		}
-		value := a.GetMeasuredValueScaled()
-		sf.handler.Handle0b_0c_23(sf, a, value)
-	case asdu.M_ME_NC_1, asdu.M_ME_TC_1, asdu.M_ME_TF_1: // 遥信 短浮点数 13,14,16
-		// check cot
-		if !(a.Identifier.Coa.Cause == asdu.Periodic ||
-			a.Identifier.Coa.Cause == asdu.Background ||
-			a.Identifier.Coa.Cause == asdu.Spontaneous ||
-			a.Identifier.Coa.Cause == asdu.Request ||
-			a.Identifier.Coa.Cause == asdu.InterrogatedByStation ||
-			(a.Identifier.Coa.Cause >= asdu.InterrogatedByGroup1 &&
-				a.Identifier.Coa.Cause <= asdu.InterrogatedByGroup16)) {
-			return a.SendReplyMirror(sf, asdu.UnknownCOT)
-		}
-		value := a.GetMeasuredValueFloat()
-		sf.handler.Handle0d_0e_10(sf, a, value)
-	case asdu.M_EI_NA_1: // 站初始化结束 70
-		// check cause of transmission
-		if !(a.Identifier.Coa.Cause == asdu.Initialized) {
-			return a.SendReplyMirror(sf, asdu.UnknownCOT)
-		}
-		ioa, coi := a.GetEndOfInitialization()
-		if ioa != asdu.InfoObjAddrIrrelevant {
-			return a.SendReplyMirror(sf, asdu.UnknownIOA)
-		}
-		sf.handler.Handle46(sf, coi)
-	case asdu.C_IC_NA_1: // 总召唤 100
-		// check cot
-		if !(a.Identifier.Coa.Cause == asdu.ActivationCon ||
-			a.Identifier.Coa.Cause == asdu.DeactivationCon ||
-			a.Identifier.Coa.Cause == asdu.ActivationTerm) {
-			return a.SendReplyMirror(sf, asdu.UnknownCOT)
-		}
-		// get ioa and qoi
-		ioa, qua := a.GetInterrogationCmd()
-		// check ioa
-		if ioa != asdu.InfoObjAddrIrrelevant {
-			return a.SendReplyMirror(sf, asdu.UnknownIOA)
-		}
-		sf.handler.Handle64(sf, a, qua)
-	case asdu.C_CI_NA_1: // 计数量召唤 101
-		// check cot
-		if !(a.Identifier.Coa.Cause == asdu.ActivationCon ||
-			a.Identifier.Coa.Cause == asdu.DeactivationCon ||
-			a.Identifier.Coa.Cause == asdu.ActivationTerm) {
-			return a.SendReplyMirror(sf, asdu.UnknownCOT)
-		}
-		// get ioa and qoi
-		ioa, qua := a.GetCounterInterrogationCmd()
-		// check ioa
-		if ioa != asdu.InfoObjAddrIrrelevant {
-			return a.SendReplyMirror(sf, asdu.UnknownIOA)
-		}
-		sf.handler.Handle65(sf, a, qua)
-	case asdu.C_CS_NA_1: // 时钟同步 103
-		// check cot
-		if !(a.Identifier.Coa.Cause == asdu.ActivationCon ||
-			a.Identifier.Coa.Cause == asdu.ActivationTerm) {
-			return a.SendReplyMirror(sf, asdu.UnknownCOT)
-		}
-		ioa, t := a.GetClockSynchronizationCmd()
-		// check ioa
-		if ioa != asdu.InfoObjAddrIrrelevant {
-			return a.SendReplyMirror(sf, asdu.UnknownIOA)
-		}
-		sf.handler.Handle67(sf, a, t)
-	case asdu.C_RP_NA_1: // 复位进程 105
-		// check cot
-		if !(a.Identifier.Coa.Cause == asdu.ActivationCon) {
-			return a.SendReplyMirror(sf, asdu.UnknownCOT)
-		}
-		ioa, qua := a.GetResetProcessCmd()
-		// check ioa
-		if ioa != asdu.InfoObjAddrIrrelevant {
-			return a.SendReplyMirror(sf, asdu.UnknownIOA)
-		}
-		sf.handler.Handle69(sf, a, qua)
-	// case asdu.C_TS_TA_1:										// 测试命令 107
-	// 	// check cot
-	// 	if !( a.Identifier.Coa.Cause == asdu.ActivationCon) {
-	// 	  	return a.SendReplyMirror(sf, asdu.UnknownCOT)
-	// 	}
-	// 	sf.handler.Handle6b(sf, a, true)
-	default:
-		return a.SendReplyMirror(sf, asdu.UnknownTypeID)
-	}
-
-	// if err := sf.handler.ASDUHandler(sf, a); err != nil {
-	// 	return a.SendReplyMirror(sf, asdu.UnknownTypeID)
-	// }
 	return nil
-}
-
-// ClientHandler is
-type ClientHandler interface {
-	// 01:[M_SP_NA_1] 不带时标单点信息
-	// 02:[M_SP_TA_1] 带时标CP24Time2a的单点信息,只有(SQ = 0)单个信息元素集合
-	// 1e:[M_SP_TB_1] 带时标CP56Time2a的单点信息,只有(SQ = 0)单个信息元素集合
-	Handle01_02_1e(asdu.Connect, *asdu.ASDU, []asdu.SinglePointInfo)
-	// 03:[M_DP_NA_1].双点信息
-	// 04:[M_DP_TA_1] .带CP24Time2a双点信息,只有(SQ = 0)单个信息元素集合
-	// 1f:[M_DP_TB_1].带CP56Time2a的双点信息,只有(SQ = 0)单个信息元素集合
-	Handle03_04_1f(asdu.Connect, *asdu.ASDU, []asdu.DoublePointInfo)
-	// 07:[M_BO_NA_1] 比特位串
-	// 08:[M_BO_TA_1] 带时标CP24Time2a比特位串，只有(SQ = 0)单个信息元素集合
-	// 21:[M_BO_TB_1] 带时标CP56Time2a比特位串，只有(SQ = 0)单个信息元素集
-	Handle05_20(asdu.Connect, *asdu.ASDU, []asdu.StepPositionInfo)
-	// 07:[M_BO_NA_1] 比特位串
-	// 08:[M_BO_TA_1] 带时标CP24Time2a比特位串，只有(SQ = 0)单个信息元素集合
-	// 21:[M_BO_TB_1] 带时标CP56Time2a比特位串，只有(SQ = 0)单个信息元素集
-	Handle07_08_21(asdu.Connect, *asdu.ASDU, []asdu.BitString32Info)
-	// 09:[M_ME_NA_1] 测量值,规一化值
-	// 0a:[M_ME_TA_1] 带时标CP24Time2a的测量值,规一化值,只有(SQ = 0)单个信息元素集合
-	// 15:[M_ME_ND_1] 不带品质的测量值,规一化值
-	// 22:[M_ME_TD_1] 带时标CP57Time2a的测量值,规一化值,只有(SQ = 0)单个信息元素集合
-	Handle09_0a_15_22(asdu.Connect, *asdu.ASDU, []asdu.MeasuredValueNormalInfo)
-	// 0b:[M_ME_NB_1].测量值,标度化值
-	// 0c:[M_ME_TB_1].带时标CP24Time2a的测量值,标度化值,只有(SQ = 0)单个信息元素集合
-	// 23:[M_ME_TE_1].带时标CP56Time2a的测量值,标度化值,只有(SQ = 0)单个信息元素集合
-	Handle0b_0c_23(asdu.Connect, *asdu.ASDU, []asdu.MeasuredValueScaledInfo)
-	// 0d:[M_ME_TF_1] 测量值,短浮点数
-	// 0e:[M_ME_TC_1].带时标CP24Time2a的测量值,短浮点数,只有(SQ = 0)单个信息元素集合
-	// 10:[M_ME_TF_1].带时标CP56Time2a的测量值,短浮点数,只有(SQ = 0)单个信息元素集合
-	Handle0d_0e_10(asdu.Connect, *asdu.ASDU, []asdu.MeasuredValueFloatInfo)
-	// 46:[M_EI_NA_1] 站初始化结束
-	Handle46(asdu.Connect, asdu.CauseOfInitial)
-	// 64:[C_IC_NA_1] 总召唤
-	Handle64(asdu.Connect, *asdu.ASDU, asdu.QualifierOfInterrogation)
-	// 65:[C_CI_NA_1] 计数量召唤
-	Handle65(asdu.Connect, *asdu.ASDU, asdu.QualifierCountCall)
-	// 67:[C_CS_NA_1] 时钟同步
-	Handle67(asdu.Connect, *asdu.ASDU, time.Time)
-	// 69:[C_RP_NA_1] 复位进程
-	Handle69(asdu.Connect, *asdu.ASDU, asdu.QualifierOfResetProcessCmd)
-	// 6B:[C_TS_TA_1] 测试命令
-	Handle6b(asdu.Connect, *asdu.ASDU, bool)
 }
 
 // Params returns params of client
