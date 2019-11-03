@@ -50,9 +50,10 @@ type Client struct {
 	// 其他
 	*clog.Clog
 
-	wg     sync.WaitGroup
-	ctx    context.Context
-	cancel context.CancelFunc
+	wg          sync.WaitGroup
+	ctx         context.Context
+	cancel      context.CancelFunc
+	closeCancel context.CancelFunc
 
 	server            *url.URL      // 连接的服务器端
 	autoReconnect     bool          // 是否启动重连
@@ -157,7 +158,7 @@ func (sf *Client) running() {
 		sf.rwMux.Unlock()
 		return
 	}
-	ctx, sf.cancel = context.WithCancel(context.Background())
+	ctx, sf.closeCancel = context.WithCancel(context.Background())
 	sf.rwMux.Unlock()
 	defer sf.setConnectStatus(initial)
 
@@ -810,8 +811,8 @@ func (sf *Client) UnderlyingConn() net.Conn {
 // Close close all
 func (sf *Client) Close() error {
 	sf.rwMux.Lock()
-	if sf.cancel != nil {
-		sf.cancel()
+	if sf.closeCancel != nil {
+		sf.closeCancel()
 	}
 	sf.rwMux.Unlock()
 	return nil

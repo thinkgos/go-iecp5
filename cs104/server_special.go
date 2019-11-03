@@ -42,7 +42,7 @@ type serverSpec struct {
 	onConnect         func(c ServerSpecial) error
 	onConnectionLost  func(c ServerSpecial)
 
-	cancel context.CancelFunc
+	closeCancel context.CancelFunc
 }
 
 // NewServerSpecial new special server
@@ -144,7 +144,7 @@ func (sf *serverSpec) running() {
 		sf.rwMux.Unlock()
 		return
 	}
-	ctx, sf.cancel = context.WithCancel(context.Background())
+	ctx, sf.closeCancel = context.WithCancel(context.Background())
 	sf.rwMux.Unlock()
 	defer sf.setConnectStatus(initial)
 
@@ -190,8 +190,8 @@ func (sf *serverSpec) IsClosed() bool {
 
 func (sf *serverSpec) Close() error {
 	sf.rwMux.Lock()
-	if sf.cancel != nil {
-		sf.cancel()
+	if sf.closeCancel != nil {
+		sf.closeCancel()
 	}
 	sf.rwMux.Unlock()
 	return nil
