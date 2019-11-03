@@ -399,7 +399,7 @@ func (sf *SrvSession) updateAckNoOut(ackNo uint16) (ok bool) {
 			break
 		}
 	}
-	//sf.confirmReception(ackNo)
+
 	sf.ackNoSend = ackNo
 	return true
 }
