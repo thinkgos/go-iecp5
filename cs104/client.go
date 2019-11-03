@@ -331,58 +331,56 @@ func (c *Client) recvLoop(ctx context.Context) {
 	c.Debug("RecvLoop Started")
 	defer func() {
 		c.wg.Done()
-		c.Debug("RecvLoop Ended")
+		c.Debug("RecvLoop stop")
 	}()
 
-	apdu := make([]byte, APDUSizeMax)
-	for head, tail := 0, 1; head < tail; {
-		rdCnt, err := io.ReadFull(c.conn, apdu[head:tail])
-		if err != nil {
-			// See: https://github.com/golang/go/issues/4373
-			if err != io.EOF && err != io.ErrClosedPipe ||
-				strings.Contains(err.Error(), "use of closed network connection") {
-				c.Error("receive failed, %v", err)
-				return
+	for {
+		rawData := make([]byte, APDUSizeMax)
+		for rdCnt, length := 0, 1; rdCnt < length; {
+			byteCount, err := io.ReadFull(c.conn, rawData[rdCnt:length])
+			if err != nil {
+				// See: https://github.com/golang/go/issues/4373
+				if err != io.EOF && err != io.ErrClosedPipe ||
+					strings.Contains(err.Error(), "use of closed network connection") {
+					c.Error("receive failed, %v", err)
+					return
+				}
+				if e, ok := err.(net.Error); ok && !e.Temporary() {
+					c.Error("receive failed, %v", err)
+					return
+				}
+				if rdCnt == 0 && err == io.EOF {
+					c.Error("remote connect closed, %v", err)
+					return
+				}
 			}
-			if e, ok := err.(net.Error); ok && !e.Temporary() {
-				c.Error("receive failed, %v", err)
-				return
-			}
-			if rdCnt == 0 && err == io.EOF {
-				c.Error("remote connect closed, %v", err)
-				return
-			}
-		}
 
-		switch head {
-		case 0:
-			if apdu[head] == startFrame {
-				head += rdCnt
-				tail += rdCnt
+			rdCnt += byteCount
+			if rdCnt == 0 {
+				continue
+			} else if rdCnt == 1 {
+				if rawData[0] != startFrame {
+					rdCnt = 0
+					continue
+				}
+			} else {
+				if rawData[0] != startFrame {
+					rdCnt = 0
+					length = 2
+					continue
+				}
+				length = int(rawData[1]) + 2
+				if length < APCICtlFiledSize+2 || length > APDUSizeMax {
+					rdCnt = 0
+					length = 2
+					continue
+				}
+				if rdCnt == length {
+					apdu := rawData[:length]
+					c.Debug("RX Raw[% x]", apdu)
+					c.recvChan <- apdu
+				}
 			}
-		case 1:
-			tail += int(apdu[head])
-			head += rdCnt
-			if tail < APCICtlFiledSize+2 || tail > APDUSizeMax {
-				head = 0
-				tail = 1
-				apdu = make([]byte, APDUSizeMax)
-			}
-		default:
-			head += rdCnt
-			if tail == head {
-				c.Debug("RX [% x]", apdu[:tail])
-				c.recvChan <- apdu[:tail]
-				head = 0
-				tail = 1
-				apdu = make([]byte, APDUSizeMax)
-			}
-		}
-
-		select {
-		case <-ctx.Done():
-			return
-		default:
 		}
 	}
 }
