@@ -249,40 +249,40 @@ const (
 	_TypeIDName9 = "F_FR_NA_1F_SR_NA_1F_SC_NA_1F_LS_NA_1F_AF_NA_1F_SG_NA_1F_DR_TA_1F_SC_NB_1"
 )
 
-func (this TypeID) String() string {
+func (sf TypeID) String() string {
 	var s string
 	switch {
-	case 1 <= this && this <= 21:
-		this--
-		s = _TypeIDName0[this*9 : 9*(this+1)]
-	case 30 <= this && this <= 41:
-		this -= 30
-		s = _TypeIDName1[this*9 : 9*(this+1)]
-	case 45 <= this && this <= 51:
-		this -= 45
-		s = _TypeIDName2[this*9 : 9*(this+1)]
-	case 58 <= this && this <= 64:
-		this -= 58
-		s = _TypeIDName3[this*9 : 9*(this+1)]
-	case this == 70:
+	case 1 <= sf && sf <= 21:
+		sf--
+		s = _TypeIDName0[sf*9 : 9*(sf+1)]
+	case 30 <= sf && sf <= 41:
+		sf -= 30
+		s = _TypeIDName1[sf*9 : 9*(sf+1)]
+	case 45 <= sf && sf <= 51:
+		sf -= 45
+		s = _TypeIDName2[sf*9 : 9*(sf+1)]
+	case 58 <= sf && sf <= 64:
+		sf -= 58
+		s = _TypeIDName3[sf*9 : 9*(sf+1)]
+	case sf == 70:
 		s = _TypeIDName4
-	case 81 <= this && this <= 87:
-		this -= 81
-		s = _TypeIDName5[this*9 : 9*(this+1)]
-	case 90 <= this && this <= 95:
-		this -= 90
-		s = _TypeIDName6[this*9 : 9*(this+1)]
-	case 100 <= this && this <= 107:
-		this -= 100
-		s = _TypeIDName7[this*9 : 9*(this+1)]
-	case 110 <= this && this <= 113:
-		this -= 110
-		s = _TypeIDName8[this*9 : 9*(this+1)]
-	case 120 <= this && this <= 127:
-		this -= 120
-		s = _TypeIDName9[this*9 : 9*(this+1)]
+	case 81 <= sf && sf <= 87:
+		sf -= 81
+		s = _TypeIDName5[sf*9 : 9*(sf+1)]
+	case 90 <= sf && sf <= 95:
+		sf -= 90
+		s = _TypeIDName6[sf*9 : 9*(sf+1)]
+	case 100 <= sf && sf <= 107:
+		sf -= 100
+		s = _TypeIDName7[sf*9 : 9*(sf+1)]
+	case 110 <= sf && sf <= 113:
+		sf -= 110
+		s = _TypeIDName8[sf*9 : 9*(sf+1)]
+	case 120 <= sf && sf <= 127:
+		sf -= 120
+		s = _TypeIDName9[sf*9 : 9*(sf+1)]
 	default:
-		s = strconv.FormatInt(int64(this), 10)
+		s = strconv.FormatInt(int64(sf), 10)
 	}
 	return "TID<" + s + ">"
 }
@@ -307,19 +307,19 @@ func ParseVariableStruct(b byte) VariableStruct {
 }
 
 // Value encode variable structure to byte
-func (this VariableStruct) Value() byte {
-	if this.IsSequence {
-		return this.Number | 0x80
+func (sf VariableStruct) Value() byte {
+	if sf.IsSequence {
+		return sf.Number | 0x80
 	}
-	return this.Number
+	return sf.Number
 }
 
 // String 返回 variable structure 的格式
-func (this VariableStruct) String() string {
-	if this.IsSequence {
-		return fmt.Sprintf("VSQ<sq,%d>", this.Number)
+func (sf VariableStruct) String() string {
+	if sf.IsSequence {
+		return fmt.Sprintf("VSQ<sq,%d>", sf.Number)
 	}
-	return fmt.Sprintf("VSQ<%d>", this.Number)
+	return fmt.Sprintf("VSQ<%d>", sf.Number)
 }
 
 // CauseOfTransmission is the cause of transmission.
@@ -479,26 +479,26 @@ func ParseCauseOfTransmission(b byte) CauseOfTransmission {
 }
 
 // Value encode cause of transmission to byte
-func (this CauseOfTransmission) Value() byte {
-	v := this.Cause
-	if this.IsNegative {
+func (sf CauseOfTransmission) Value() byte {
+	v := sf.Cause
+	if sf.IsNegative {
 		v |= 0x40
 	}
-	if this.IsTest {
+	if sf.IsTest {
 		v |= 0x80
 	}
 	return byte(v)
 }
 
 // String 返回Cause的字符串,包含相应应用的",neg" and ",test"
-func (this CauseOfTransmission) String() string {
-	s := "COT<" + causeSemantics[this.Cause]
+func (sf CauseOfTransmission) String() string {
+	s := "COT<" + causeSemantics[sf.Cause]
 	switch {
-	case this.IsNegative && this.IsTest:
+	case sf.IsNegative && sf.IsTest:
 		s += ",neg,test"
-	case this.IsNegative:
+	case sf.IsNegative:
 		s += ",neg"
-	case this.IsTest:
+	case sf.IsTest:
 		s += ",test"
 	}
 	return s + ">"

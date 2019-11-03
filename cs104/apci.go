@@ -35,8 +35,8 @@ type iAPCI struct {
 	sendSN, rcvSN uint16
 }
 
-func (this iAPCI) String() string {
-	return fmt.Sprintf("I[sendNO: %d, recvNO: %d]", this.sendSN, this.rcvSN)
+func (sf iAPCI) String() string {
+	return fmt.Sprintf("I[sendNO: %d, recvNO: %d]", sf.sendSN, sf.rcvSN)
 }
 
 // S帧 只含apci S帧用于主要用确认帧的正确传输,协议称是监视. supervisory
@@ -44,8 +44,8 @@ type sAPCI struct {
 	rcvSN uint16
 }
 
-func (this sAPCI) String() string {
-	return fmt.Sprintf("S[recvNO: %d]", this.rcvSN)
+func (sf sAPCI) String() string {
+	return fmt.Sprintf("S[recvNO: %d]", sf.rcvSN)
 }
 
 //U帧 只含apci 未编号控制信息 unnumbered
@@ -53,9 +53,9 @@ type uAPCI struct {
 	function byte // bit8 测试确认
 }
 
-func (this uAPCI) String() string {
+func (sf uAPCI) String() string {
 	var s string
-	switch this.function {
+	switch sf.function {
 	case uStartDtActive:
 		s = "StartDtActive"
 	case uStartDtConfirm:

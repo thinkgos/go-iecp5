@@ -90,24 +90,24 @@ func NewServerSpecial(conf *Config, params *asdu.Params, handler ServerHandlerIn
 }
 
 // SetReconnectInterval set tcp  reconnect the host interval when connect failed after try
-func (this *serverSpec) SetReconnectInterval(t time.Duration) {
-	this.reconnectInterval = t
+func (sf *serverSpec) SetReconnectInterval(t time.Duration) {
+	sf.reconnectInterval = t
 }
 
-func (this *serverSpec) EnableAutoReconnect(b bool) {
-	this.autoReconnect = b
+func (sf *serverSpec) EnableAutoReconnect(b bool) {
+	sf.autoReconnect = b
 }
 
 // SetTLSConfig set tls config
-func (this *serverSpec) SetTLSConfig(t *tls.Config) {
-	this.TLSConfig = t
+func (sf *serverSpec) SetTLSConfig(t *tls.Config) {
+	sf.TLSConfig = t
 }
 
 // AddRemoteServer adds a broker URI to the list of brokers to be used.
 // The format should be scheme://host:port
 // Default values for hostname is "127.0.0.1", for schema is "tcp://".
 // An example broker URI would look like: tcp://foobar.com:1204
-func (this *serverSpec) AddRemoteServer(server string) error {
+func (sf *serverSpec) AddRemoteServer(server string) error {
 	if len(server) > 0 && server[0] == ':' {
 		server = "127.0.0.1" + server
 	}
@@ -118,32 +118,32 @@ func (this *serverSpec) AddRemoteServer(server string) error {
 	if err != nil {
 		return err
 	}
-	this.server = remoteURL
+	sf.server = remoteURL
 	return nil
 }
 
 // Start start the server,and return quickly,if it nil,the server will disconnected background,other failed
-func (this *serverSpec) Start() error {
-	if this.server == nil {
+func (sf *serverSpec) Start() error {
+	if sf.server == nil {
 		return errors.New("empty remote server")
 	}
 
-	go this.running()
+	go sf.running()
 	return nil
 }
 
 // 增加重连间隔
-func (this *serverSpec) running() {
+func (sf *serverSpec) running() {
 	var ctx context.Context
 
-	this.rwMux.Lock()
-	if !atomic.CompareAndSwapUint32(&this.status, initial, disconnected) {
-		this.rwMux.Unlock()
+	sf.rwMux.Lock()
+	if !atomic.CompareAndSwapUint32(&sf.status, initial, disconnected) {
+		sf.rwMux.Unlock()
 		return
 	}
-	ctx, this.cancel = context.WithCancel(context.Background())
-	this.rwMux.Unlock()
-	defer this.setConnectStatus(initial)
+	ctx, sf.cancel = context.WithCancel(context.Background())
+	sf.rwMux.Unlock()
+	defer sf.setConnectStatus(initial)
 
 	for {
 		select {
@@ -152,25 +152,25 @@ func (this *serverSpec) running() {
 		default:
 		}
 
-		this.Debug("connecting server %+v", this.server)
-		conn, err := openConnection(this.server, this.TLSConfig, this.Config.ConnectTimeout0)
+		sf.Debug("connecting server %+v", sf.server)
+		conn, err := openConnection(sf.server, sf.TLSConfig, sf.Config.ConnectTimeout0)
 		if err != nil {
-			this.Error("connect failed, %v", err)
-			if !this.autoReconnect {
+			sf.Error("connect failed, %v", err)
+			if !sf.autoReconnect {
 				return
 			}
-			time.Sleep(this.reconnectInterval)
+			time.Sleep(sf.reconnectInterval)
 			continue
 		}
-		this.Debug("connect success")
-		this.conn = conn
-		if err = this.onConnect(this); err != nil {
-			time.Sleep(this.reconnectInterval)
+		sf.Debug("connect success")
+		sf.conn = conn
+		if err = sf.onConnect(sf); err != nil {
+			time.Sleep(sf.reconnectInterval)
 			continue
 		}
-		this.run(ctx)
-		this.onConnectionLost(this)
-		this.Debug("disconnected server %+v", this.server)
+		sf.run(ctx)
+		sf.onConnectionLost(sf)
+		sf.Debug("disconnected server %+v", sf.server)
 		select {
 		case <-ctx.Done():
 			return
@@ -182,29 +182,29 @@ func (this *serverSpec) running() {
 }
 
 // SetOnConnectHandler set on connect handler
-func (this *serverSpec) SetOnConnectHandler(f OnConnectHandler) {
+func (sf *serverSpec) SetOnConnectHandler(f OnConnectHandler) {
 	if f != nil {
-		this.onConnect = f
+		sf.onConnect = f
 	}
 }
 
 // SetConnectionLostHandler set connection lost handler
-func (this *serverSpec) SetConnectionLostHandler(f ConnectionLostHandler) {
+func (sf *serverSpec) SetConnectionLostHandler(f ConnectionLostHandler) {
 	if f != nil {
-		this.onConnectionLost = f
+		sf.onConnectionLost = f
 	}
 }
 
-func (this *serverSpec) IsClosed() bool {
-	return this.connectStatus() == initial
+func (sf *serverSpec) IsClosed() bool {
+	return sf.connectStatus() == initial
 }
 
-func (this *serverSpec) Close() error {
-	this.rwMux.Lock()
-	if this.cancel != nil {
-		this.cancel()
+func (sf *serverSpec) Close() error {
+	sf.rwMux.Lock()
+	if sf.cancel != nil {
+		sf.cancel()
 	}
-	this.rwMux.Unlock()
+	sf.rwMux.Unlock()
 	return nil
 }
 

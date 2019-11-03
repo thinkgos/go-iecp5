@@ -74,44 +74,44 @@ type Config struct {
 }
 
 // Valid applies the default (defined by IEC) for each unspecified value.
-func (this *Config) Valid() error {
-	if this == nil {
+func (sf *Config) Valid() error {
+	if sf == nil {
 		return errors.New("invalid pointer")
 	}
 
-	if this.ConnectTimeout0 == 0 {
-		this.ConnectTimeout0 = 30 * time.Second
-	} else if this.ConnectTimeout0 < ConnectTimeout0Min || this.ConnectTimeout0 > ConnectTimeout0Max {
+	if sf.ConnectTimeout0 == 0 {
+		sf.ConnectTimeout0 = 30 * time.Second
+	} else if sf.ConnectTimeout0 < ConnectTimeout0Min || sf.ConnectTimeout0 > ConnectTimeout0Max {
 		return errors.New(`ConnectTimeout0 "t₀" not in [1, 255]s`)
 	}
 
-	if this.SendUnAckLimitK == 0 {
-		this.SendUnAckLimitK = 12
-	} else if this.SendUnAckLimitK < SendUnAckLimitKMin || this.SendUnAckLimitK > SendUnAckLimitKMax {
+	if sf.SendUnAckLimitK == 0 {
+		sf.SendUnAckLimitK = 12
+	} else if sf.SendUnAckLimitK < SendUnAckLimitKMin || sf.SendUnAckLimitK > SendUnAckLimitKMax {
 		return errors.New(`SendUnAckLimitK "k" not in [1, 32767]`)
 	}
 
-	if this.SendUnAckTimeout1 == 0 {
-		this.SendUnAckTimeout1 = 15 * time.Second
-	} else if this.SendUnAckTimeout1 < SendUnAckTimeout1Min || this.SendUnAckTimeout1 > SendUnAckTimeout1Max {
+	if sf.SendUnAckTimeout1 == 0 {
+		sf.SendUnAckTimeout1 = 15 * time.Second
+	} else if sf.SendUnAckTimeout1 < SendUnAckTimeout1Min || sf.SendUnAckTimeout1 > SendUnAckTimeout1Max {
 		return errors.New(`SendUnAckTimeout1 "t₁" not in [1, 255]s`)
 	}
 
-	if this.RecvUnAckLimitW == 0 {
-		this.RecvUnAckLimitW = 8
-	} else if this.RecvUnAckLimitW < RecvUnAckLimitWMin || this.RecvUnAckLimitW > RecvUnAckLimitWMax {
+	if sf.RecvUnAckLimitW == 0 {
+		sf.RecvUnAckLimitW = 8
+	} else if sf.RecvUnAckLimitW < RecvUnAckLimitWMin || sf.RecvUnAckLimitW > RecvUnAckLimitWMax {
 		return errors.New(`RecvUnAckLimitW "w" not in [1, 32767]`)
 	}
 
-	if this.RecvUnAckTimeout2 == 0 {
-		this.RecvUnAckTimeout2 = 10 * time.Second
-	} else if this.RecvUnAckTimeout2 < RecvUnAckTimeout2Min || this.RecvUnAckTimeout2 > RecvUnAckTimeout2Max {
+	if sf.RecvUnAckTimeout2 == 0 {
+		sf.RecvUnAckTimeout2 = 10 * time.Second
+	} else if sf.RecvUnAckTimeout2 < RecvUnAckTimeout2Min || sf.RecvUnAckTimeout2 > RecvUnAckTimeout2Max {
 		return errors.New(`RecvUnAckTimeout2 "t₂" not in [1, 255]s`)
 	}
 
-	if this.IdleTimeout3 == 0 {
-		this.IdleTimeout3 = 20 * time.Second
-	} else if this.IdleTimeout3 < IdleTimeout3Min || this.IdleTimeout3 > IdleTimeout3Max {
+	if sf.IdleTimeout3 == 0 {
+		sf.IdleTimeout3 = 20 * time.Second
+	} else if sf.IdleTimeout3 < IdleTimeout3Min || sf.IdleTimeout3 > IdleTimeout3Max {
 		return errors.New(`IdleTimeout3 "t₃" not in [1 second, 48 hours]`)
 	}
 

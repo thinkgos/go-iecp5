@@ -55,30 +55,30 @@ type Params struct {
 }
 
 // Valid returns the validation result of params.
-func (this Params) Valid() error {
-	if (this.CauseSize < 1 || this.CauseSize > 2) ||
-		(this.CommonAddrSize < 1 || this.CommonAddrSize > 2) ||
-		(this.InfoObjAddrSize < 1 || this.InfoObjAddrSize > 3) ||
-		(this.InfoObjTimeZone == nil) {
+func (sf Params) Valid() error {
+	if (sf.CauseSize < 1 || sf.CauseSize > 2) ||
+		(sf.CommonAddrSize < 1 || sf.CommonAddrSize > 2) ||
+		(sf.InfoObjAddrSize < 1 || sf.InfoObjAddrSize > 3) ||
+		(sf.InfoObjTimeZone == nil) {
 		return ErrParam
 	}
 	return nil
 }
 
 // ValidCommonAddr returns the validation result of a station common address.
-func (this Params) ValidCommonAddr(addr CommonAddr) error {
+func (sf Params) ValidCommonAddr(addr CommonAddr) error {
 	if addr == InvalidCommonAddr {
 		return ErrCommonAddrZero
 	}
-	if bits.Len(uint(addr)) > this.CommonAddrSize*8 {
+	if bits.Len(uint(addr)) > sf.CommonAddrSize*8 {
 		return ErrCommonAddrFit
 	}
 	return nil
 }
 
 // IdentifierSize return the application service data unit identifies size
-func (this Params) IdentifierSize() int {
-	return 2 + int(this.CauseSize) + int(this.CommonAddrSize)
+func (sf Params) IdentifierSize() int {
+	return 2 + int(sf.CauseSize) + int(sf.CommonAddrSize)
 }
 
 // Identifier the application service data unit identifies.
@@ -130,18 +130,18 @@ func NewASDU(p *Params, identifier Identifier) *ASDU {
 }
 
 // Clone deep clone asdu
-func (this *ASDU) Clone() *ASDU {
-	r := NewASDU(this.Params, this.Identifier)
-	r.infoObj = append(r.infoObj, this.infoObj...)
+func (sf *ASDU) Clone() *ASDU {
+	r := NewASDU(sf.Params, sf.Identifier)
+	r.infoObj = append(r.infoObj, sf.infoObj...)
 	return r
 }
 
 // SetVariableNumber See companion standard 101, subclass 7.2.2.
-func (this *ASDU) SetVariableNumber(n int) error {
+func (sf *ASDU) SetVariableNumber(n int) error {
 	if n >= 128 {
 		return ErrInfoObjIndexFit
 	}
-	this.Variable.Number = byte(n)
+	sf.Variable.Number = byte(n)
 	return nil
 }
 
@@ -156,19 +156,19 @@ func (this *ASDU) SetVariableNumber(n int) error {
 //}
 
 // Reply returns a new "responding" ASDU which addresses "initiating" addr with a copy of Info.
-func (this *ASDU) Reply(c Cause, addr CommonAddr) *ASDU {
-	this.CommonAddr = addr
-	r := NewASDU(this.Params, this.Identifier)
+func (sf *ASDU) Reply(c Cause, addr CommonAddr) *ASDU {
+	sf.CommonAddr = addr
+	r := NewASDU(sf.Params, sf.Identifier)
 	r.Coa.Cause = c
-	r.infoObj = append(r.infoObj, this.infoObj...)
+	r.infoObj = append(r.infoObj, sf.infoObj...)
 	return r
 }
 
 // SendReplyMirror send a reply of the mirror request but cause different
-func (this *ASDU) SendReplyMirror(c Connect, cause Cause) error {
-	r := NewASDU(this.Params, this.Identifier)
+func (sf *ASDU) SendReplyMirror(c Connect, cause Cause) error {
+	r := NewASDU(sf.Params, sf.Identifier)
 	r.Coa.Cause = cause
-	r.infoObj = append(r.infoObj, this.infoObj...)
+	r.infoObj = append(r.infoObj, sf.infoObj...)
 	return c.Send(r)
 }
 
@@ -223,104 +223,104 @@ func (this *ASDU) SendReplyMirror(c Connect, cause Cause) error {
 //}
 
 // MarshalBinary honors the encoding.BinaryMarshaler interface.
-func (this *ASDU) MarshalBinary() (data []byte, err error) {
+func (sf *ASDU) MarshalBinary() (data []byte, err error) {
 	switch {
-	case this.Coa.Cause == Unused:
+	case sf.Coa.Cause == Unused:
 		return nil, ErrCauseZero
-	case !(this.CauseSize == 1 || this.CauseSize == 2):
+	case !(sf.CauseSize == 1 || sf.CauseSize == 2):
 		return nil, ErrParam
-	case this.CauseSize == 1 && this.OrigAddr != 0:
+	case sf.CauseSize == 1 && sf.OrigAddr != 0:
 		return nil, ErrOriginAddrFit
-	case this.CommonAddr == InvalidCommonAddr:
+	case sf.CommonAddr == InvalidCommonAddr:
 		return nil, ErrCommonAddrZero
-	case !(this.CommonAddrSize == 1 || this.CommonAddrSize == 2):
+	case !(sf.CommonAddrSize == 1 || sf.CommonAddrSize == 2):
 		return nil, ErrParam
-	case this.CommonAddrSize == 1 && this.CommonAddr != GlobalCommonAddr && this.CommonAddr >= 255:
+	case sf.CommonAddrSize == 1 && sf.CommonAddr != GlobalCommonAddr && sf.CommonAddr >= 255:
 		return nil, ErrParam
 	}
 
-	raw := this.bootstrap[:(this.IdentifierSize() + len(this.infoObj))]
-	raw[0] = byte(this.Type)
-	raw[1] = this.Variable.Value()
-	raw[2] = byte(this.Coa.Value())
+	raw := sf.bootstrap[:(sf.IdentifierSize() + len(sf.infoObj))]
+	raw[0] = byte(sf.Type)
+	raw[1] = sf.Variable.Value()
+	raw[2] = byte(sf.Coa.Value())
 	offset := 3
-	if this.CauseSize == 2 {
-		raw[offset] = byte(this.OrigAddr)
+	if sf.CauseSize == 2 {
+		raw[offset] = byte(sf.OrigAddr)
 		offset++
 	}
-	if this.CommonAddrSize == 1 {
-		if this.CommonAddr == GlobalCommonAddr {
+	if sf.CommonAddrSize == 1 {
+		if sf.CommonAddr == GlobalCommonAddr {
 			raw[offset] = 255
 		} else {
-			raw[offset] = byte(this.CommonAddr)
+			raw[offset] = byte(sf.CommonAddr)
 		}
 	} else { // 2
-		raw[offset] = byte(this.CommonAddr)
+		raw[offset] = byte(sf.CommonAddr)
 		offset++
-		raw[offset] = byte(this.CommonAddr >> 8)
+		raw[offset] = byte(sf.CommonAddr >> 8)
 	}
 	return raw, nil
 }
 
 // UnmarshalBinary honors the encoding.BinaryUnmarshaler interface.
 // ASDUParams must be set in advance. All other fields are initialized.
-func (this *ASDU) UnmarshalBinary(rawAsdu []byte) error {
-	if !(this.CauseSize == 1 || this.CauseSize == 2) ||
-		!(this.CommonAddrSize == 1 || this.CommonAddrSize == 2) {
+func (sf *ASDU) UnmarshalBinary(rawAsdu []byte) error {
+	if !(sf.CauseSize == 1 || sf.CauseSize == 2) ||
+		!(sf.CommonAddrSize == 1 || sf.CommonAddrSize == 2) {
 		return ErrParam
 	}
 
 	// rawAsdu unit identifier size check
-	lenDUI := this.IdentifierSize()
+	lenDUI := sf.IdentifierSize()
 	if lenDUI > len(rawAsdu) {
 		return io.EOF
 	}
 
 	// parse rawAsdu unit identifier
-	this.Type = TypeID(rawAsdu[0])
-	this.Variable = ParseVariableStruct(rawAsdu[1])
-	this.Coa = ParseCauseOfTransmission(rawAsdu[2])
-	if this.CauseSize == 1 {
-		this.OrigAddr = 0
+	sf.Type = TypeID(rawAsdu[0])
+	sf.Variable = ParseVariableStruct(rawAsdu[1])
+	sf.Coa = ParseCauseOfTransmission(rawAsdu[2])
+	if sf.CauseSize == 1 {
+		sf.OrigAddr = 0
 	} else {
-		this.OrigAddr = OriginAddr(rawAsdu[3])
+		sf.OrigAddr = OriginAddr(rawAsdu[3])
 	}
-	if this.CommonAddrSize == 1 {
-		this.CommonAddr = CommonAddr(rawAsdu[lenDUI-1])
-		if this.CommonAddr == 255 { // map 8-bit variant to 16-bit equivalent
-			this.CommonAddr = GlobalCommonAddr
+	if sf.CommonAddrSize == 1 {
+		sf.CommonAddr = CommonAddr(rawAsdu[lenDUI-1])
+		if sf.CommonAddr == 255 { // map 8-bit variant to 16-bit equivalent
+			sf.CommonAddr = GlobalCommonAddr
 		}
 	} else { // 2
-		this.CommonAddr = CommonAddr(rawAsdu[lenDUI-2]) | CommonAddr(rawAsdu[lenDUI-1])<<8
+		sf.CommonAddr = CommonAddr(rawAsdu[lenDUI-2]) | CommonAddr(rawAsdu[lenDUI-1])<<8
 	}
 	// information object
-	this.infoObj = append(this.bootstrap[lenDUI:lenDUI], rawAsdu[lenDUI:]...)
-	return this.fixInfoObjSize()
+	sf.infoObj = append(sf.bootstrap[lenDUI:lenDUI], rawAsdu[lenDUI:]...)
+	return sf.fixInfoObjSize()
 }
 
 // fixInfoObjSize fix information object size
-func (this *ASDU) fixInfoObjSize() error {
+func (sf *ASDU) fixInfoObjSize() error {
 	// fixed element size
-	objSize, err := GetInfoObjSize(this.Type)
+	objSize, err := GetInfoObjSize(sf.Type)
 	if err != nil {
 		return err
 	}
 
 	var size int
 	// read the variable structure qualifier
-	if this.Variable.IsSequence {
-		size = this.InfoObjAddrSize + int(this.Variable.Number)*objSize
+	if sf.Variable.IsSequence {
+		size = sf.InfoObjAddrSize + int(sf.Variable.Number)*objSize
 	} else {
-		size = int(this.Variable.Number) * (this.InfoObjAddrSize + objSize)
+		size = int(sf.Variable.Number) * (sf.InfoObjAddrSize + objSize)
 	}
 
 	switch {
 	case size == 0:
 		return ErrInfoObjIndexFit
-	case size > len(this.infoObj):
+	case size > len(sf.infoObj):
 		return io.EOF
-	case size < len(this.infoObj): // not explicitly prohibited
-		this.infoObj = this.infoObj[:size]
+	case size < len(sf.infoObj): // not explicitly prohibited
+		sf.infoObj = sf.infoObj[:size]
 	}
 
 	return nil

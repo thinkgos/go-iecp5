@@ -25,8 +25,8 @@ const (
 )
 
 // Value single point to byte
-func (this SinglePoint) Value() byte {
-	return byte(this & 0x01)
+func (sf SinglePoint) Value() byte {
+	return byte(sf & 0x01)
 }
 
 // DoublePoint is a measured value of a determination aware switch.
@@ -42,8 +42,8 @@ const (
 )
 
 // Value double point to byte
-func (this DoublePoint) Value() byte {
-	return byte(this & 0x03)
+func (sf DoublePoint) Value() byte {
+	return byte(sf & 0x03)
 }
 
 // QualityDescriptor Quality descriptor flags attribute measured values.
@@ -111,9 +111,9 @@ type StepPosition struct {
 }
 
 // Value returns step position value.
-func (this StepPosition) Value() byte {
-	p := this.Val & 0x7f
-	if this.HasTransient {
+func (sf StepPosition) Value() byte {
+	p := sf.Val & 0x7f
+	if sf.HasTransient {
 		p |= 0x80
 	}
 	return byte(p)
@@ -136,8 +136,8 @@ func ParseStepPosition(b byte) StepPosition {
 type Normalize int16
 
 // Float64 returns the value in [-1, 1 − 2⁻¹⁵].
-func (this Normalize) Float64() float64 {
-	return float64(this) / 32768
+func (sf Normalize) Float64() float64 {
+	return float64(sf) / 32768
 }
 
 // BinaryCounterReading is binary counter reading
@@ -268,11 +268,11 @@ func ParseCauseOfInitial(b byte) CauseOfInitial {
 }
 
 // Value CauseOfInitial to byte
-func (this CauseOfInitial) Value() byte {
-	if this.IsLocalChange {
-		return byte(this.Cause | 0x80)
+func (sf CauseOfInitial) Value() byte {
+	if sf.IsLocalChange {
+		return byte(sf.Cause | 0x80)
 	}
-	return byte(this.Cause)
+	return byte(sf.Cause)
 }
 
 // QualifierOfInterrogation Qualifier Of Interrogation
@@ -347,8 +347,8 @@ func ParseQualifierCountCall(b byte) QualifierCountCall {
 }
 
 // Value QualifierCountCall to byte
-func (this QualifierCountCall) Value() byte {
-	return byte(this.Request&0x3f) | byte(this.Freeze&0xc0)
+func (sf QualifierCountCall) Value() byte {
+	return byte(sf.Request&0x3f) | byte(sf.Freeze&0xc0)
 }
 
 // QPMCategory 测量参数类别
@@ -362,7 +362,7 @@ const (
 	QPMLowLimit                     // 3: low limit for transmission of measured values
 	QPMHighLimit                    // 4: high limit for transmission of measured values
 
-	// 5‥31: reserved for standard definitions of this companion standard (compatible range)
+	// 5‥31: reserved for standard definitions of sf companion standard (compatible range)
 	// 32‥63: reserved for special use (private range)
 
 	QPMChangeFlag      QPMCategory = 0x40 // bit6 marks local parameter change  当地参数改变
@@ -390,12 +390,12 @@ func ParseQualifierOfParamMV(b byte) QualifierOfParameterMV {
 }
 
 // Value QualifierOfParameterMV to byte
-func (this QualifierOfParameterMV) Value() byte {
-	v := byte(this.Category) & 0x3f
-	if this.IsChange {
+func (sf QualifierOfParameterMV) Value() byte {
+	v := byte(sf.Category) & 0x3f
+	if sf.IsChange {
 		v |= 0x40
 	}
-	if this.IsInOperation {
+	if sf.IsInOperation {
 		v |= 0x80
 	}
 	return v
@@ -414,7 +414,7 @@ const (
 	QPADeActObjectParameter
 	// 激活/停止激活所寻址的持续循环或周期传输的信息对象
 	QPADeActObjectTransmission
-	// 4‥127: reserved for standard definitions of this companion standard (compatible range)
+	// 4‥127: reserved for standard definitions of sf companion standard (compatible range)
 	// 128‥255: reserved for special use (private range)
 )
 
@@ -436,7 +436,7 @@ const (
 	// 3: persistent output
 	// 持续输出
 	QOCPersistentOutput
-	//	4‥8: reserved for standard definitions of this companion standard
+	//	4‥8: reserved for standard definitions of sf companion standard
 	//	9‥15: reserved for the selection of other predefined functions
 	//	16‥31: reserved for special use (private range)
 )
@@ -459,9 +459,9 @@ func ParseQualifierOfCommand(b byte) QualifierOfCommand {
 }
 
 // Value QualifierOfCommand to byte
-func (this QualifierOfCommand) Value() byte {
-	v := (byte(this.Qual) & 0x1f) << 2
-	if this.InSelect {
+func (sf QualifierOfCommand) Value() byte {
+	v := (byte(sf.Qual) & 0x1f) << 2
+	if sf.InSelect {
 		v |= 0x80
 	}
 	return v
@@ -490,7 +490,7 @@ TODO: file 文件相关未定义
 // QOSQual is the qualifier of a set-point command qual.
 // See companion standard 101, subclass 7.2.6.39.
 //	0: default
-//	0‥63: reserved for standard definitions of this companion standard (compatible range)
+//	0‥63: reserved for standard definitions of sf companion standard (compatible range)
 //	64‥127: reserved for special use (private range)
 type QOSQual uint
 
@@ -511,9 +511,9 @@ func ParseQualifierOfSetpointCmd(b byte) QualifierOfSetpointCmd {
 }
 
 // Value QualifierOfSetpointCmd to byte
-func (this QualifierOfSetpointCmd) Value() byte {
-	v := byte(this.Qual) & 0x7f
-	if this.InSelect {
+func (sf QualifierOfSetpointCmd) Value() byte {
+	v := byte(sf.Qual) & 0x7f
+	if sf.InSelect {
 		v |= 0x80
 	}
 	return v
