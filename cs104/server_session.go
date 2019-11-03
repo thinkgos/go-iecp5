@@ -26,10 +26,10 @@ type SrvSession struct {
 	conn    net.Conn
 	handler ServerHandlerInterface
 
-	in   chan []byte // for received asdu
-	out  chan []byte // for send asdu
-	recv chan []byte // for recvLoop raw cs104 frame
-	send chan []byte // for sendLoop raw cs104 frame
+	in      chan []byte // for received asdu
+	out     chan []byte // for send asdu
+	rawRcv  chan []byte // for recvLoop raw cs104 frame
+	rawSend chan []byte // for sendLoop raw cs104 frame
 
 	// see subclass 5.1 — Protection against loss and duplication of messages
 	seqNoOut uint16 // sequence number of next outbound I-frame
@@ -50,7 +50,7 @@ type SrvSession struct {
 	ctx        context.Context
 }
 
-// RecvLoop feeds t.recv.
+// RecvLoop feeds t.rawRcv.
 func (sf *SrvSession) recvLoop() {
 	sf.Debug("recvLoop started!")
 	defer func() {
@@ -105,7 +105,7 @@ func (sf *SrvSession) recvLoop() {
 				if rdCnt == length {
 					apdu := rawData[:length]
 					sf.Debug("RX Raw[% x]", apdu)
-					sf.recv <- apdu
+					sf.rawRcv <- apdu
 				}
 			}
 		}
@@ -125,7 +125,7 @@ func (sf *SrvSession) sendLoop() {
 		select {
 		case <-sf.ctx.Done():
 			return
-		case apdu := <-sf.send:
+		case apdu := <-sf.rawSend:
 			sf.Debug("TX Raw[% x]", apdu)
 			for wrCnt := 0; len(apdu) > wrCnt; {
 				byteCount, err := sf.conn.Write(apdu[wrCnt:])
@@ -133,11 +133,11 @@ func (sf *SrvSession) sendLoop() {
 					// See: https://github.com/golang/go/issues/4373
 					if err != io.EOF && err != io.ErrClosedPipe ||
 						strings.Contains(err.Error(), "use of closed network connection") {
-						sf.Error("send failed, %v", err)
+						sf.Error("rawSend failed, %v", err)
 						return
 					}
 					if e, ok := err.(net.Error); !ok || !e.Temporary() {
-						sf.Error("send failed, %v", err)
+						sf.Error("rawSend failed, %v", err)
 						return
 					}
 					// temporary error may be recoverable
@@ -230,7 +230,7 @@ func (sf *SrvSession) run(ctx context.Context) {
 				idleTimeout3Sine = testFrAliveSendSince
 			}
 
-		case apdu := <-sf.recv:
+		case apdu := <-sf.rawRcv:
 			idleTimeout3Sine = time.Now() // 每收到一个i帧,S帧,U帧, 重置空闲定时器, t3
 			apci, asduVal := parse(apdu)
 			switch head := apci.(type) {
@@ -338,8 +338,8 @@ func (sf *SrvSession) cleanUp() {
 loop:
 	for {
 		select {
-		case <-sf.send:
-		case <-sf.recv:
+		case <-sf.rawSend:
+		case <-sf.rawRcv:
 		case <-sf.in:
 		case <-sf.out:
 		default:
@@ -358,12 +358,12 @@ func seqNoCount(nextAckNo, nextSeqNo uint16) uint16 {
 
 func (sf *SrvSession) sendSFrame(rcvSN uint16) {
 	sf.Debug("TX sFrame %v", sAPCI{rcvSN})
-	sf.send <- newSFrame(rcvSN)
+	sf.rawSend <- newSFrame(rcvSN)
 }
 
 func (sf *SrvSession) sendUFrame(which byte) {
 	sf.Debug("TX uFrame %v", uAPCI{which})
-	sf.send <- newUFrame(which)
+	sf.rawSend <- newUFrame(which)
 }
 
 func (sf *SrvSession) sendIFrame(asdu1 []byte) {
@@ -380,7 +380,7 @@ func (sf *SrvSession) sendIFrame(asdu1 []byte) {
 	sf.pending = append(sf.pending, seqPending{seqNo & 32767, time.Now()})
 
 	sf.Debug("TX iFrame %v", iAPCI{seqNo, sf.seqNoIn})
-	sf.send <- iframe
+	sf.rawSend <- iframe
 }
 
 func (sf *SrvSession) updateAckNoOut(ackNo uint16) (ok bool) {

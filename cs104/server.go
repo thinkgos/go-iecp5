@@ -85,8 +85,8 @@ func (sf *Server) ListenAndServer(addr string) {
 				conn:    conn,
 				in:      make(chan []byte, 1024),
 				out:     make(chan []byte, 1024),
-				recv:    make(chan []byte, 1024),
-				send:    make(chan []byte, 1024), // may not block!
+				rawRcv:  make(chan []byte, 1024),
+				rawSend: make(chan []byte, 1024), // may not block!
 
 				Clog: sf.Clog,
 			}
