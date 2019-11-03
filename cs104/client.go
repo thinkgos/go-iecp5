@@ -2,9 +2,12 @@ package cs104
 
 import (
 	"context"
+	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"net"
+	"net/url"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -42,26 +45,34 @@ type Client struct {
 	// 连接状态
 	status uint32
 	rwMux  sync.RWMutex
-	// 测试命令计数
-	testCnt uint16
 
 	// 其他
 	*clog.Clog
 
-	wg         sync.WaitGroup
-	ctx        context.Context
-	cancelFunc context.CancelFunc
+	wg     sync.WaitGroup
+	ctx    context.Context
+	cancel context.CancelFunc
+
+	server            *url.URL      // 连接的服务器端
+	autoReconnect     bool          // 是否启动重连
+	reconnectInterval time.Duration // 重连间隔时间
+	TLSConfig         *tls.Config   // tls配置
+	onConnect         func(c *Client) error
+	onConnectionLost  func(c *Client)
 }
 
 // NewClient returns an IEC104 master
-func NewClient(conf *Config, params *asdu.Params, handler ClientHandler) (c *Client, err error) {
-	if err = conf.Valid(); err != nil {
-		return
+func NewClient(conf *Config, params *asdu.Params, handler ClientHandler) (*Client, error) {
+	if handler == nil {
+		return nil, errors.New("invalid handler")
 	}
-	if err = params.Valid(); err != nil {
-		return
+	if err := conf.Valid(); err != nil {
+		return nil, err
 	}
-	c = &Client{
+	if err := params.Valid(); err != nil {
+		return nil, err
+	}
+	return &Client{
 		conf:     *conf,
 		param:    *params,
 		handler:  handler,
@@ -71,8 +82,7 @@ func NewClient(conf *Config, params *asdu.Params, handler ClientHandler) (c *Cli
 		sendRaw:  make(chan []byte, 1024), // may not block!
 		status:   initial,
 		Clog:     clog.NewWithPrefix("IEC104 client =>"),
-	}
-	return
+	}, nil
 }
 
 // Connect is
@@ -83,8 +93,7 @@ func (sf *Client) Connect(addr string) error {
 	}
 	sf.Debug("Connected to %s!", addr)
 	sf.conn = conn
-	sf.ctx, sf.cancelFunc = context.WithCancel(context.Background())
-	// initialization
+	sf.ctx, sf.cancel = context.WithCancel(context.Background())
 	sf.run()
 	return nil
 }
@@ -92,7 +101,7 @@ func (sf *Client) Connect(addr string) error {
 func (sf *Client) recvLoop() {
 	sf.Debug("recvLoop started")
 	defer func() {
-		sf.cancelFunc()
+		sf.cancel()
 		sf.wg.Done()
 		sf.Debug("recvLoop stopped")
 	}()
@@ -151,7 +160,7 @@ func (sf *Client) recvLoop() {
 func (sf *Client) sendLoop() {
 	sf.Debug("sendLoop started")
 	defer func() {
-		sf.cancelFunc()
+		sf.cancel()
 		sf.wg.Done()
 		sf.Debug("sendLoop stopped")
 	}()
@@ -668,15 +677,6 @@ type ClientHandler interface {
 	Handle6b(asdu.Connect, *asdu.ASDU, bool)
 }
 
-func (sf *Client) SendStartDt() {
-	sf.startDtActiveSendSince.Store(time.Now())
-	sf.sendUFrame(uStartDtActive)
-}
-func (sf *Client) SendStopDt() {
-	sf.stopDtActiveSendSince.Store(time.Now())
-	sf.sendUFrame(uStopDtActive)
-}
-
 // Params returns params of client
 func (sf *Client) Params() *asdu.Params {
 	return &sf.param
@@ -707,13 +707,26 @@ func (sf *Client) UnderlyingConn() net.Conn {
 	return sf.conn
 }
 
+// Close close all
 func (sf *Client) Close() error {
 	sf.rwMux.Lock()
-	if sf.cancelFunc != nil {
-		sf.cancelFunc()
+	if sf.cancel != nil {
+		sf.cancel()
 	}
 	sf.rwMux.Unlock()
 	return nil
+}
+
+// SendStartDt start data transmission on this connection
+func (sf *Client) SendStartDt() {
+	sf.startDtActiveSendSince.Store(time.Now())
+	sf.sendUFrame(uStartDtActive)
+}
+
+// SendStopDt stop data transmission on this connection
+func (sf *Client) SendStopDt() {
+	sf.stopDtActiveSendSince.Store(time.Now())
+	sf.sendUFrame(uStopDtActive)
 }
 
 //InterrogationCmd wrap asdu.InterrogationCmd
@@ -756,15 +769,7 @@ func (sf *Client) TestCommandCP56Time2a(coa asdu.CauseOfTransmission, ca asdu.Co
 	if err := u.AppendInfoObjAddr(asdu.InfoObjAddrIrrelevant); err != nil {
 		return err
 	}
-	u.AppendBytes(byte(sf.testCnt&0xff), byte(sf.testCnt>>8))
+	u.AppendBytes(byte(asdu.FBPTestWord&0xff), byte(asdu.FBPTestWord>>8))
 	u.AppendBytes(asdu.CP56Time2a(t, u.InfoObjTimeZone)...)
 	return sf.Send(u)
 }
-
-// // GetTestCommand ...
-// func GetTestCommand(a *asdu.ASDU) (ioa asdu.InfoObjAddr, tsc uint16, t time.Time) {
-// 	ioa = a.DecodeInfoObjAddr()
-// 	tsc = a.infoObj[0] + (a.infoObj[1] << 8)
-// 	t = asdu.ParseCP56Time2a(a.infoObj, a.InfoObjTimeZone)
-// 	return
-// }
