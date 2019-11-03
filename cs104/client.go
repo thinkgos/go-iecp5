@@ -43,6 +43,7 @@ type Client struct {
 	handler ClientHandler // 接口
 
 	conn       net.Conn
+	ctx        context.Context
 	cancelFunc context.CancelFunc
 
 	// channel
@@ -99,7 +100,6 @@ func NewClient(conf *Config, params *asdu.Params, handler ClientHandler) (c *Cli
 		Clog:    clog.NewWithPrefix("IEC104 client =>"),
 	}
 	err = nil
-	c.LogMode(false)
 
 	return
 }
@@ -132,18 +132,17 @@ func (c *Client) Connect(addr string) error {
 	}
 	c.t3Time = time.Now()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	c.cancelFunc = cancel
+	c.ctx, c.cancelFunc = context.WithCancel(context.Background())
 	c.wg.Add(3)
-	go c.recvLoop(ctx)
-	go c.sendLoop(ctx)
-	go c.handleLoop(ctx, cancel)
+	go c.recvLoop()
+	go c.sendLoop()
+	go c.handleLoop()
 	c.SendStopDt() // 发送stopDt激活指令
 	time.Sleep(c.conf.SendUnAckTimeout1 / 2)
 	c.SendStartDt() // 发送startDt激活指令
 
 	defer func() {
-		cancel()
+		c.cancelFunc()
 		c.wg.Wait()
 		c.conn.Close()
 		c.Debug("Connection to %s Ended!", addr)
@@ -186,14 +185,14 @@ func (c *Client) Connect(addr string) error {
 		}
 
 		select {
-		case <-ctx.Done():
+		case <-c.ctx.Done():
 			return fmt.Errorf("ctx done")
 		default:
 		}
 	}
 }
 
-func (c *Client) handleLoop(ctx context.Context, cancel context.CancelFunc) {
+func (c *Client) handleLoop() {
 	c.Debug("HandleLoop Started")
 	defer func() {
 		c.wg.Done()
@@ -202,7 +201,7 @@ func (c *Client) handleLoop(ctx context.Context, cancel context.CancelFunc) {
 
 	for {
 		select {
-		case <-ctx.Done():
+		case <-c.ctx.Done():
 			return
 		case apdu := <-c.recvChan:
 			apci, rawAsdu := parse(apdu)
@@ -227,7 +226,7 @@ func (c *Client) handleLoop(ctx context.Context, cancel context.CancelFunc) {
 				c.Debug(apci.String())
 				if err := c.checkRecvSN(apci.rcvSN); err != nil {
 					c.Error("Check SFrame recvSN error:%v", err)
-					cancel()
+					c.cancelFunc()
 					return
 				}
 			case iAPCI:
@@ -245,14 +244,14 @@ func (c *Client) handleLoop(ctx context.Context, cancel context.CancelFunc) {
 				// 判断接收到的I帧发送序号是否等于客户端的I帧接收序号,第一帧时同为0
 				if apci.sendSN != c.recvSN {
 					c.Error("IFrame sendSN error, close connection!")
-					cancel()
+					c.cancelFunc()
 					return
 				}
 
 				// 判断接收到的I帧接收序号与客户端的I帧发送情况是否匹配
 				if err := c.checkRecvSN(apci.rcvSN); err != nil {
 					c.Error("Check IFrame recvSN error:%v", err)
-					cancel()
+					c.cancelFunc()
 					return
 				}
 
@@ -327,11 +326,12 @@ func (c *Client) checkRecvSN(recvSN uint16) error {
 	return fmt.Errorf("wrong sequence number, close connection")
 }
 
-func (c *Client) recvLoop(ctx context.Context) {
-	c.Debug("RecvLoop Started")
+func (c *Client) recvLoop() {
+	c.Debug("recvLoop started")
 	defer func() {
+		c.cancelFunc()
 		c.wg.Done()
-		c.Debug("RecvLoop stop")
+		c.Debug("recvLoop stopped")
 	}()
 
 	for {
@@ -385,18 +385,19 @@ func (c *Client) recvLoop(ctx context.Context) {
 	}
 }
 
-func (c *Client) sendLoop(ctx context.Context) {
-	c.Debug("SendLoop Started")
+func (c *Client) sendLoop() {
+	c.Debug("sendLoop started")
 	defer func() {
-		c.Debug("SendLoop Ended")
+		c.cancelFunc()
 		c.wg.Done()
+		c.Debug("sendLoop stopped")
 	}()
 	for {
 		select {
-		case <-ctx.Done():
+		case <-c.ctx.Done():
 			return
 		case apdu := <-c.sendChan:
-			c.Debug("TX [% X]", apdu)
+			c.Debug("TX Raw[% x]", apdu)
 			for wrCnt := 0; len(apdu) > wrCnt; {
 				byteCount, err := c.conn.Write(apdu[wrCnt:])
 				if err != nil {

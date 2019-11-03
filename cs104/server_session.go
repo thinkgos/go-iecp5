@@ -52,11 +52,11 @@ type SrvSession struct {
 
 // RecvLoop feeds t.recv.
 func (this *SrvSession) recvLoop() {
-	this.Debug("recvLoop start!")
+	this.Debug("recvLoop started!")
 	defer func() {
 		this.cancelFunc()
 		this.wg.Done()
-		this.Debug("recvLoop stop!")
+		this.Debug("recvLoop stopped!")
 	}()
 
 	for {
@@ -114,11 +114,11 @@ func (this *SrvSession) recvLoop() {
 
 // sendLoop drains t.sendTime.
 func (this *SrvSession) sendLoop() {
-	this.Debug("sendLoop start!")
+	this.Debug("sendLoop started!")
 	defer func() {
 		this.cancelFunc()
 		this.wg.Done()
-		this.Debug("sendLoop stop!")
+		this.Debug("sendLoop stopped!")
 	}()
 
 	for {
@@ -150,7 +150,7 @@ func (this *SrvSession) sendLoop() {
 
 // run is the big fat state machine.
 func (this *SrvSession) run(ctx context.Context) {
-	this.Debug("run start!")
+	this.Debug("run started!")
 	// before any thing make sure init
 	this.cleanUp()
 
@@ -180,7 +180,7 @@ func (this *SrvSession) run(ctx context.Context) {
 		checkTicker.Stop()
 		this.conn.Close() // 连锁引发cancel
 		this.wg.Wait()
-		this.Debug("run stop!")
+		this.Debug("run stopped!")
 	}()
 
 	for {
@@ -292,10 +292,10 @@ func (this *SrvSession) run(ctx context.Context) {
 
 // handlerLoop handler iFrame asdu
 func (this *SrvSession) handlerLoop() {
-	this.Debug("handlerLoop start")
+	this.Debug("handlerLoop started")
 	defer func() {
 		this.wg.Done()
-		this.Debug("handlerLoop stop")
+		this.Debug("handlerLoop stopped")
 	}()
 
 	for {
