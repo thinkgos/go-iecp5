@@ -92,7 +92,9 @@ func (this *SrvSession) recvLoop() {
 				}
 			} else {
 				if rawData[0] != startFrame {
-					break
+					rdCnt = 0
+					length = 2
+					continue
 				}
 				length = int(rawData[1]) + 2
 				if length < APCICtlFiledSize+2 || length > APDUSizeMax {
