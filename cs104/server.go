@@ -79,14 +79,14 @@ func (sf *Server) ListenAndServer(addr string) {
 		sf.wg.Add(1)
 		go func() {
 			sess := &SrvSession{
-				Config:  sf.conf,
-				params:  sf.params,
-				handler: sf.handler,
-				conn:    conn,
-				in:      make(chan []byte, 1024),
-				out:     make(chan []byte, 1024),
-				rawRcv:  make(chan []byte, 1024),
-				rawSend: make(chan []byte, 1024), // may not block!
+				Config:   sf.conf,
+				params:   sf.params,
+				handler:  sf.handler,
+				conn:     conn,
+				rcvASDU:  make(chan []byte, 1024),
+				sendASDU: make(chan []byte, 1024),
+				rcvRaw:   make(chan []byte, 1024),
+				sendRaw:  make(chan []byte, 1024), // may not block!
 
 				Clog: sf.Clog,
 			}
