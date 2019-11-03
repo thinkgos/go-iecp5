@@ -16,15 +16,7 @@ import (
 )
 
 // defined default value
-const (
-	DefaultReconnectInterval = 1 * time.Minute
-)
-
-// OnConnectHandler when connected it will be call
-type OnConnectHandler func(c ServerSpecial) error
-
-// ConnectionLostHandler when Connection lost it will be call
-type ConnectionLostHandler func(c ServerSpecial)
+const DefaultReconnectInterval = 1 * time.Minute
 
 // ServerSpecial server special interface
 type ServerSpecial interface {
@@ -37,8 +29,8 @@ type ServerSpecial interface {
 
 	SetTLSConfig(t *tls.Config)
 	AddRemoteServer(server string) error
-	SetOnConnectHandler(f OnConnectHandler)
-	SetConnectionLostHandler(f ConnectionLostHandler)
+	SetOnConnectHandler(f func(c ServerSpecial) error)
+	SetConnectionLostHandler(f func(c ServerSpecial))
 
 	LogMode(enable bool)
 	SetLogProvider(p clog.LogProvider)
@@ -51,8 +43,8 @@ type serverSpec struct {
 	autoReconnect     bool          // 是否启动重连
 	reconnectInterval time.Duration // 重连间隔时间
 	TLSConfig         *tls.Config
-	onConnect         OnConnectHandler
-	onConnectionLost  ConnectionLostHandler
+	onConnect         func(c ServerSpecial) error
+	onConnectionLost  func(c ServerSpecial)
 
 	cancel context.CancelFunc
 }
@@ -182,14 +174,14 @@ func (sf *serverSpec) running() {
 }
 
 // SetOnConnectHandler set on connect handler
-func (sf *serverSpec) SetOnConnectHandler(f OnConnectHandler) {
+func (sf *serverSpec) SetOnConnectHandler(f func(c ServerSpecial) error) {
 	if f != nil {
 		sf.onConnect = f
 	}
 }
 
 // SetConnectionLostHandler set connection lost handler
-func (sf *serverSpec) SetConnectionLostHandler(f ConnectionLostHandler) {
+func (sf *serverSpec) SetConnectionLostHandler(f func(c ServerSpecial)) {
 	if f != nil {
 		sf.onConnectionLost = f
 	}
