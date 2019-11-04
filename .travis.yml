@@ -9,7 +9,7 @@ install:
   - go get -t -v .
 
 script:
-  - go test -v -benchmem -test.bench=".*" -coverprofile=coverage.txt -covermode=atomic ./asdu ./cs104
+  - go test -v -benchmem -test.bench=".*" -coverprofile=coverage.txt -covermode=atomic ./...
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
