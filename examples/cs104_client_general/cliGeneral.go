@@ -21,6 +21,9 @@ func main() {
 	if err = client.AddRemoteServer("127.0.0.1:2404"); err != nil {
 		panic(err)
 	}
+	client.SetOnConnectHandler(func(c *cs104.Client) {
+		c.SendStartDt() // 发送startDt激活指令
+	})
 	err = client.Start()
 	if err != nil {
 		fmt.Printf("Failed to connect. error:%v\n", err)

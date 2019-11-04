@@ -242,7 +242,7 @@ func (sf *ASDU) MarshalBinary() (data []byte, err error) {
 	raw := sf.bootstrap[:(sf.IdentifierSize() + len(sf.infoObj))]
 	raw[0] = byte(sf.Type)
 	raw[1] = sf.Variable.Value()
-	raw[2] = byte(sf.Coa.Value())
+	raw[2] = sf.Coa.Value()
 	offset := 3
 	if sf.CauseSize == 2 {
 		raw[offset] = byte(sf.OrigAddr)

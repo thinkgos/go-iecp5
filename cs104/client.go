@@ -17,6 +17,11 @@ import (
 	"github.com/thinkgos/go-iecp5/clog"
 )
 
+const (
+	inactive = iota
+	active
+)
+
 // Client is an IEC104 master
 type Client struct {
 	conf    Config
@@ -43,8 +48,9 @@ type Client struct {
 	stopDtActiveSendSince  atomic.Value // 当发起stopDtActive时,等待确认回复的超时
 
 	// 连接状态
-	status uint32
-	rwMux  sync.RWMutex
+	status   uint32
+	rwMux    sync.RWMutex
+	isActive uint32
 
 	// 其他
 	*clog.Clog
@@ -58,7 +64,7 @@ type Client struct {
 	autoReconnect     bool          // 是否启动重连
 	reconnectInterval time.Duration // 重连间隔时间
 	TLSConfig         *tls.Config   // tls配置
-	onConnect         func(c *Client) error
+	onConnect         func(c *Client)
 	onConnectionLost  func(c *Client)
 }
 
@@ -85,7 +91,7 @@ func NewClient(conf *Config, params *asdu.Params, handler ClientHandlerInterface
 
 		autoReconnect:     true,
 		reconnectInterval: DefaultReconnectInterval,
-		onConnect:         func(*Client) error { return nil },
+		onConnect:         func(*Client) {},
 		onConnectionLost:  func(*Client) {},
 	}, nil
 }
@@ -125,7 +131,7 @@ func (sf *Client) AddRemoteServer(server string) error {
 }
 
 // SetOnConnectHandler set on connect handler
-func (sf *Client) SetOnConnectHandler(f func(c *Client) error) {
+func (sf *Client) SetOnConnectHandler(f func(c *Client)) {
 	if f != nil {
 		sf.onConnect = f
 	}
@@ -180,12 +186,8 @@ func (sf *Client) running() {
 		}
 		sf.Debug("connect success")
 		sf.conn = conn
-		if err = sf.onConnect(sf); err != nil {
-			time.Sleep(sf.reconnectInterval)
-			continue
-		}
 		sf.run(ctx)
-		sf.onConnectionLost(sf)
+
 		sf.Debug("disconnected server %+v", sf.server)
 		select {
 		case <-ctx.Done():
@@ -303,8 +305,6 @@ func (sf *Client) run(ctx context.Context) {
 	go sf.sendLoop()
 	go sf.handlerLoop()
 
-	// default: STOPDT, when connected establish and not enable "data transfer" yet
-	var isActive = false
 	var checkTicker = time.NewTicker(timeoutResolution)
 
 	// transmission timestamps for timeout calculation
@@ -338,16 +338,19 @@ func (sf *Client) run(ctx context.Context) {
 	}
 
 	defer func() {
+		// default: STOPDT, when connected establish and not enable "data transfer" yet
+		atomic.StoreUint32(&sf.isActive, inactive)
 		sf.setConnectStatus(disconnected)
 		checkTicker.Stop()
 		_ = sf.conn.Close() // 连锁引发cancel
 		sf.wg.Wait()
+		sf.onConnectionLost(sf)
 		sf.Debug("run stopped!")
 	}()
 
-	sf.SendStartDt() // 发送startDt激活指令
+	sf.onConnect(sf)
 	for {
-		if isActive && seqNoCount(sf.ackNoSend, sf.seqNoSend) <= sf.conf.SendUnAckLimitK {
+		if atomic.LoadUint32(&sf.isActive) == active && seqNoCount(sf.ackNoSend, sf.seqNoSend) <= sf.conf.SendUnAckLimitK {
 			select {
 			case o := <-sf.sendASDU:
 				sendIFrame(o)
@@ -406,7 +409,7 @@ func (sf *Client) run(ctx context.Context) {
 
 			case iAPCI:
 				sf.Debug("RX iFrame %v", head)
-				if !isActive {
+				if atomic.LoadUint32(&sf.isActive) == inactive {
 					sf.Warn("station not active")
 					break // not active, discard apdu
 				}
@@ -431,15 +434,15 @@ func (sf *Client) run(ctx context.Context) {
 				switch head.function {
 				//case uStartDtActive:
 				//	sf.sendUFrame(uStartDtConfirm)
-				//	isActive = true
+				//	atomic.StoreUint32(&sf.isActive, active)
 				case uStartDtConfirm:
-					isActive = true
+					atomic.StoreUint32(&sf.isActive, active)
 					sf.startDtActiveSendSince.Store(willNotTimeout)
 				//case uStopDtActive:
 				//	sf.sendUFrame(uStopDtConfirm)
-				//	isActive = false
+				//	atomic.StoreUint32(&sf.isActive, inactive)
 				case uStopDtConfirm:
-					isActive = false
+					atomic.StoreUint32(&sf.isActive, inactive)
 					sf.stopDtActiveSendSince.Store(willNotTimeout)
 				case uTestFrActive:
 					sf.sendUFrame(uTestFrConfirm)
@@ -659,9 +662,9 @@ func (sf *Client) Send(a *asdu.ASDU) error {
 	if !sf.IsConnected() {
 		return ErrUseClosedConnection
 	}
-	//if !sf.isServerActive {
-	//	return fmt.Errorf("ErrorUnactive")
-	//}
+	if atomic.LoadUint32(&sf.isActive) == inactive {
+		return ErrNotActive
+	}
 	data, err := a.MarshalBinary()
 	if err != nil {
 		return err
