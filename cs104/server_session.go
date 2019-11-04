@@ -21,7 +21,7 @@ const (
 
 // SrvSession the cs104 server session
 type SrvSession struct {
-	*Config
+	config  *Config
 	params  *asdu.Params
 	conn    net.Conn
 	handler ServerHandlerInterface
@@ -208,7 +208,7 @@ func (sf *SrvSession) run(ctx context.Context) {
 	}()
 
 	for {
-		if isActive && seqNoCount(sf.ackNoSend, sf.seqNoSend) <= sf.SendUnAckLimitK {
+		if isActive && seqNoCount(sf.ackNoSend, sf.seqNoSend) <= sf.config.SendUnAckLimitK {
 			select {
 			case o := <-sf.sendASDU:
 				sendIFrame(o)
@@ -224,7 +224,7 @@ func (sf *SrvSession) run(ctx context.Context) {
 			return
 		case now := <-checkTicker.C:
 			// check all timeouts
-			if now.Sub(testFrAliveSendSince) >= sf.SendUnAckTimeout1 {
+			if now.Sub(testFrAliveSendSince) >= sf.config.SendUnAckTimeout1 {
 				// now.Sub(startDtActiveSendSince) >= t.SendUnAckTimeout1 ||
 				// now.Sub(stopDtActiveSendSince) >= t.SendUnAckTimeout1 ||
 				sf.Error("test frame alive confirm timeout t₁")
@@ -233,7 +233,7 @@ func (sf *SrvSession) run(ctx context.Context) {
 			// check oldest unacknowledged outbound
 			if sf.ackNoSend != sf.seqNoSend &&
 				//now.Sub(sf.peek()) >= sf.SendUnAckTimeout1 {
-				now.Sub(sf.pending[0].sendTime) >= sf.SendUnAckTimeout1 {
+				now.Sub(sf.pending[0].sendTime) >= sf.config.SendUnAckTimeout1 {
 				sf.ackNoSend++
 				sf.Error("fatal transmission timeout t₁")
 				return
@@ -241,14 +241,14 @@ func (sf *SrvSession) run(ctx context.Context) {
 
 			// 确定最早发送的i-Frame是否超时,超时则回复sFrame
 			if sf.ackNoRcv != sf.seqNoRcv &&
-				(now.Sub(unAckRcvSince) >= sf.RecvUnAckTimeout2 ||
+				(now.Sub(unAckRcvSince) >= sf.config.RecvUnAckTimeout2 ||
 					now.Sub(idleTimeout3Sine) >= timeoutResolution) {
 				sendSFrame(sf.seqNoRcv)
 				sf.ackNoRcv = sf.seqNoRcv
 			}
 
 			// 空闲时间到，发送TestFrActive帧,保活
-			if now.Sub(idleTimeout3Sine) >= sf.IdleTimeout3 {
+			if now.Sub(idleTimeout3Sine) >= sf.config.IdleTimeout3 {
 				sendUFrame(uTestFrActive)
 				testFrAliveSendSince = time.Now()
 				idleTimeout3Sine = testFrAliveSendSince
@@ -282,7 +282,7 @@ func (sf *SrvSession) run(ctx context.Context) {
 				}
 
 				sf.seqNoRcv = (sf.seqNoRcv + 1) & 32767
-				if seqNoCount(sf.ackNoRcv, sf.seqNoRcv) >= sf.RecvUnAckLimitW {
+				if seqNoCount(sf.ackNoRcv, sf.seqNoRcv) >= sf.config.RecvUnAckLimitW {
 					sendSFrame(sf.seqNoRcv)
 					sf.ackNoRcv = sf.seqNoRcv
 				}

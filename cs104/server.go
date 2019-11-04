@@ -19,8 +19,8 @@ const timeoutResolution = 100 * time.Millisecond
 
 // Server the common server
 type Server struct {
-	conf      *Config
-	params    *asdu.Params
+	config    Config
+	params    asdu.Params
 	handler   ServerHandlerInterface
 	TLSConfig *tls.Config
 	mux       sync.Mutex
@@ -43,8 +43,8 @@ func NewServer(conf *Config, params *asdu.Params, handler ServerHandlerInterface
 	}
 
 	return &Server{
-		conf:     conf,
-		params:   params,
+		config:   *conf,
+		params:   *params,
 		handler:  handler,
 		sessions: make(map[*SrvSession]struct{}),
 		Clog:     clog.NewWithPrefix("cs104 server =>"),
@@ -79,8 +79,8 @@ func (sf *Server) ListenAndServer(addr string) {
 		sf.wg.Add(1)
 		go func() {
 			sess := &SrvSession{
-				Config:   sf.conf,
-				params:   sf.params,
+				config:   &sf.config,
+				params:   &sf.params,
 				handler:  sf.handler,
 				conn:     conn,
 				rcvASDU:  make(chan []byte, 1024),
@@ -127,7 +127,7 @@ func (sf *Server) Send(a *asdu.ASDU) error {
 }
 
 // Params imp interface Connect
-func (sf *Server) Params() *asdu.Params { return sf.params }
+func (sf *Server) Params() *asdu.Params { return &sf.params }
 
 // UnderlyingConn imp interface Connect
 func (sf *Server) UnderlyingConn() net.Conn { return nil }

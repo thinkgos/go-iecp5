@@ -47,11 +47,13 @@ type serverSpec struct {
 }
 
 // NewServerSpecial new special server
-func NewServerSpecial(conf *Config, params *asdu.Params, handler ServerHandlerInterface) (ServerSpecial, error) {
+func NewServerSpecial(conf *Config, pm *asdu.Params, handler ServerHandlerInterface) (ServerSpecial, error) {
 	if handler == nil {
 		return nil, errors.New("invalid handler")
 	}
-	if err := conf.Valid(); err != nil {
+	config := *conf
+	params := *pm
+	if err := config.Valid(); err != nil {
 		return nil, err
 	}
 	if err := params.Valid(); err != nil {
@@ -60,8 +62,8 @@ func NewServerSpecial(conf *Config, params *asdu.Params, handler ServerHandlerIn
 
 	return &serverSpec{
 		SrvSession: SrvSession{
-			Config:  conf,
-			params:  params,
+			config:  &config,
+			params:  &params,
 			handler: handler,
 
 			rcvASDU:  make(chan []byte, 1024),
@@ -157,7 +159,7 @@ func (sf *serverSpec) running() {
 		}
 
 		sf.Debug("connecting server %+v", sf.server)
-		conn, err := openConnection(sf.server, sf.TLSConfig, sf.Config.ConnectTimeout0)
+		conn, err := openConnection(sf.server, sf.TLSConfig, sf.config.ConnectTimeout0)
 		if err != nil {
 			sf.Error("connect failed, %v", err)
 			if !sf.autoReconnect {
