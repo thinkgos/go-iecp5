@@ -711,6 +711,11 @@ func (sf *Client) CounterInterrogationCmd(coa asdu.CauseOfTransmission, ca asdu.
 	return asdu.CounterInterrogationCmd(sf, coa, ca, qcc)
 }
 
+// ReadCmd wrap asdu.ReadCmd
+func (sf *Client) ReadCmd(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, ioa asdu.InfoObjAddr) error {
+	return asdu.ReadCmd(sf, coa, ca, ioa)
+}
+
 // ClockSynchronizationCmd wrap asdu.ClockSynchronizationCmd
 func (sf *Client) ClockSynchronizationCmd(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, t time.Time) error {
 	return asdu.ClockSynchronizationCmd(sf, coa, ca, t)
@@ -721,27 +726,12 @@ func (sf *Client) ResetProcessCmd(coa asdu.CauseOfTransmission, ca asdu.CommonAd
 	return asdu.ResetProcessCmd(sf, coa, ca, qrp)
 }
 
+// DelayAcquireCommand wrap asdu.DelayAcquireCommand
+func (sf *Client) DelayAcquireCommand(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, msec uint16) error {
+	return asdu.DelayAcquireCommand(sf, coa, ca, msec)
+}
+
 // TestCommand  wrap asdu.TestCommand
 func (sf *Client) TestCommand(coa asdu.CauseOfTransmission, ca asdu.CommonAddr) error {
 	return asdu.TestCommand(sf, coa, ca)
-}
-
-// TestCommandCP56Time2a send test command [C_TS_TA_1]，测试命令, 只有单个信息对象(SQ = 0)
-func (sf *Client) TestCommandCP56Time2a(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, t time.Time) error {
-	if err := sf.Params().Valid(); err != nil {
-		return err
-	}
-	u := asdu.NewASDU(sf.Params(), asdu.Identifier{
-		asdu.C_TS_TA_1,
-		asdu.VariableStruct{IsSequence: false, Number: 1},
-		coa,
-		0,
-		ca,
-	})
-	if err := u.AppendInfoObjAddr(asdu.InfoObjAddrIrrelevant); err != nil {
-		return err
-	}
-	u.AppendBytes(byte(asdu.FBPTestWord&0xff), byte(asdu.FBPTestWord>>8))
-	u.AppendBytes(asdu.CP56Time2a(t, u.InfoObjTimeZone)...)
-	return sf.Send(u)
 }

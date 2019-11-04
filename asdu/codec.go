@@ -19,6 +19,19 @@ func (sf *ASDU) DecodeByte() byte {
 	return v
 }
 
+// AppendUint16 append some uint16 to info object
+func (sf *ASDU) AppendUint16(b uint16) *ASDU {
+	sf.infoObj = append(sf.infoObj, byte(b&0xff), byte((b>>8)&0xff))
+	return sf
+}
+
+// DecodeUint16 decode a uint16 then the pass it
+func (sf *ASDU) DecodeUint16() uint16 {
+	v := binary.LittleEndian.Uint16(sf.infoObj)
+	sf.infoObj = sf.infoObj[2:]
+	return v
+}
+
 // AppendInfoObjAddr append information object address to information object
 func (sf *ASDU) AppendInfoObjAddr(addr InfoObjAddr) error {
 	switch sf.InfoObjAddrSize {
@@ -158,7 +171,7 @@ func (sf *ASDU) AppendCP56Time2a(t time.Time, loc *time.Location) *ASDU {
 
 // DecodeCP56Time2a decode info object byte to CP56Time2a
 func (sf *ASDU) DecodeCP56Time2a() time.Time {
-	t := ParseCP56Time2a(sf.infoObj, sf.Params.InfoObjTimeZone)
+	t := ParseCP56Time2a(sf.infoObj, sf.InfoObjTimeZone)
 	sf.infoObj = sf.infoObj[7:]
 	return t
 }

@@ -1,7 +1,6 @@
 package asdu
 
 import (
-	"encoding/binary"
 	"time"
 )
 
@@ -223,7 +222,36 @@ func DelayAcquireCommand(c Connect, coa CauseOfTransmission, ca CommonAddr, msec
 	if err := u.AppendInfoObjAddr(InfoObjAddrIrrelevant); err != nil {
 		return err
 	}
-	u.AppendBytes(CP16Time2a(msec)...)
+	u.AppendCP16Time2a(msec)
+	return c.Send(u)
+}
+
+// TestCommandCP56Time2a send test command [C_TS_TA_1]，测试命令, 只有单个信息对象(SQ = 0)
+// 传送原因(coa)用于
+// 控制方向：
+// <6> := 激活
+// 监视方向：
+// <7> := 激活确认
+// <44> := 未知的类型标识
+// <45> := 未知的传送原因
+// <46> := 未知的应用服务数据单元公共地址
+// <47> := 未知的信息对象地址
+func TestCommandCP56Time2a(c Connect, coa CauseOfTransmission, ca CommonAddr, t time.Time) error {
+	if err := c.Params().Valid(); err != nil {
+		return err
+	}
+	u := NewASDU(c.Params(), Identifier{
+		C_TS_TA_1,
+		VariableStruct{IsSequence: false, Number: 1},
+		coa,
+		0,
+		ca,
+	})
+	if err := u.AppendInfoObjAddr(InfoObjAddrIrrelevant); err != nil {
+		return err
+	}
+	u.AppendUint16(FBPTestWord)
+	u.AppendCP56Time2a(t, u.InfoObjTimeZone)
 	return c.Send(u)
 }
 
@@ -244,12 +272,13 @@ func (sf *ASDU) GetReadCmd() InfoObjAddr {
 
 // GetClockSynchronizationCmd [C_CS_NA_1] 获得时钟同步命令信息体(信息对象地址,时间)
 func (sf *ASDU) GetClockSynchronizationCmd() (InfoObjAddr, time.Time) {
-	return sf.DecodeInfoObjAddr(), ParseCP56Time2a(sf.infoObj, sf.InfoObjTimeZone)
+
+	return sf.DecodeInfoObjAddr(), sf.DecodeCP56Time2a()
 }
 
 // GetTestCommand [C_TS_NA_1]，获得测试命令信息体(信息对象地址,是否是测试字)
 func (sf *ASDU) GetTestCommand() (InfoObjAddr, bool) {
-	return sf.DecodeInfoObjAddr(), binary.LittleEndian.Uint16(sf.infoObj) == FBPTestWord
+	return sf.DecodeInfoObjAddr(), sf.DecodeUint16() == FBPTestWord
 }
 
 // GetResetProcessCmd [C_RP_NA_1] 获得复位进程命令信息体(信息对象地址,复位进程命令限定词)
@@ -259,5 +288,10 @@ func (sf *ASDU) GetResetProcessCmd() (InfoObjAddr, QualifierOfResetProcessCmd) {
 
 // GetDelayAcquireCommand [C_CD_NA_1] 获取延时获取命令信息体(信息对象地址,延时毫秒数)
 func (sf *ASDU) GetDelayAcquireCommand() (InfoObjAddr, uint16) {
-	return sf.DecodeInfoObjAddr(), binary.LittleEndian.Uint16(sf.infoObj)
+	return sf.DecodeInfoObjAddr(), sf.DecodeUint16()
+}
+
+// GetTestCommandCP56Time2a [C_TS_TA_1]，获得测试命令信息体(信息对象地址,是否是测试字)
+func (sf *ASDU) GetTestCommandCP56Time2a() (InfoObjAddr, bool, time.Time) {
+	return sf.DecodeInfoObjAddr(), sf.DecodeUint16() == FBPTestWord, sf.DecodeCP56Time2a()
 }
