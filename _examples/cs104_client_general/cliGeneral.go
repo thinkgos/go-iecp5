@@ -34,23 +34,28 @@ func main() {
 	}
 
 }
-func (myClient) InterrogationHandler(asdu.Connect, *asdu.ASDU, asdu.QualifierOfInterrogation) error {
+func (myClient) InterrogationHandler(asdu.Connect, *asdu.ASDU) error {
 	return nil
 }
 
-func (myClient) CounterInterrogationHandler(asdu.Connect, *asdu.ASDU, asdu.QualifierCountCall) error {
+func (myClient) CounterInterrogationHandler(asdu.Connect, *asdu.ASDU) error {
 	return nil
 }
-func (myClient) ReadHandler(asdu.Connect, *asdu.ASDU, asdu.InfoObjAddr) error {
+func (myClient) ReadHandler(asdu.Connect, *asdu.ASDU) error {
 	return nil
 }
-func (myClient) ClockSyncHandler(asdu.Connect, *asdu.ASDU, time.Time) error {
+
+func (myClient) TestCommandHandler(asdu.Connect, *asdu.ASDU) error {
 	return nil
 }
-func (myClient) ResetProcessHandler(asdu.Connect, *asdu.ASDU, asdu.QualifierOfResetProcessCmd) error {
+
+func (myClient) ClockSyncHandler(asdu.Connect, *asdu.ASDU) error {
 	return nil
 }
-func (myClient) DelayAcquisitionHandler(asdu.Connect, *asdu.ASDU, uint16) error {
+func (myClient) ResetProcessHandler(asdu.Connect, *asdu.ASDU) error {
+	return nil
+}
+func (myClient) DelayAcquisitionHandler(asdu.Connect, *asdu.ASDU) error {
 	return nil
 }
 func (myClient) ASDUHandler(asdu.Connect, *asdu.ASDU) error {
