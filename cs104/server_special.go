@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"math/rand"
+	"net"
 	"net/url"
 	"strings"
 	"sync/atomic"
@@ -25,7 +26,7 @@ type ServerSpecial interface {
 
 	SetTLSConfig(t *tls.Config)
 	AddRemoteServer(server string) error
-	SetOnConnectHandler(f func(c ServerSpecial) error)
+	SetOnConnectHandler(f func(con net.Conn))
 	SetConnectionLostHandler(f func(c ServerSpecial))
 
 	LogMode(enable bool)
@@ -39,7 +40,7 @@ type serverSpec struct {
 	autoReconnect     bool          // 是否启动重连
 	reconnectInterval time.Duration // 重连间隔时间
 	TLSConfig         *tls.Config
-	onConnect         func(c ServerSpecial) error
+	onConnect         func(conn net.Conn)
 	onConnectionLost  func(c ServerSpecial)
 
 	closeCancel context.CancelFunc
@@ -72,7 +73,7 @@ func NewServerSpecial(conf *Config, params *asdu.Params, handler ServerHandlerIn
 		},
 		autoReconnect:     true,
 		reconnectInterval: DefaultReconnectInterval,
-		onConnect:         func(ServerSpecial) error { return nil },
+		onConnect:         func(conn net.Conn) {},
 		onConnectionLost:  func(ServerSpecial) {},
 	}, nil
 }
@@ -93,7 +94,7 @@ func (sf *serverSpec) SetTLSConfig(t *tls.Config) {
 }
 
 // SetOnConnectHandler set on connect handler
-func (sf *serverSpec) SetOnConnectHandler(f func(c ServerSpecial) error) {
+func (sf *serverSpec) SetOnConnectHandler(f func(conn net.Conn)) {
 	if f != nil {
 		sf.onConnect = f
 	}
@@ -167,10 +168,7 @@ func (sf *serverSpec) running() {
 		}
 		sf.Debug("connect success")
 		sf.conn = conn
-		if err = sf.onConnect(sf); err != nil {
-			time.Sleep(sf.reconnectInterval)
-			continue
-		}
+		sf.onConnect(conn)
 		sf.run(ctx)
 		sf.onConnectionLost(sf)
 		sf.Debug("disconnected server %+v", sf.server)
