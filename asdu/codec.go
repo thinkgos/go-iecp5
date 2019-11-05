@@ -110,8 +110,8 @@ func (sf *ASDU) AppendFloat32(f float32) *ASDU {
 	return sf
 }
 
-// DecodeFloat decode info object byte to a float32 value
-func (sf *ASDU) DecodeFloat() float32 {
+// DecodeFloat32 decode info object byte to a float32 value
+func (sf *ASDU) DecodeFloat32() float32 {
 	f := math.Float32frombits(binary.LittleEndian.Uint32(sf.infoObj))
 	sf.infoObj = sf.infoObj[4:]
 	return f

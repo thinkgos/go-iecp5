@@ -1344,7 +1344,7 @@ func (sf *ASDU) GetMeasuredValueFloat() []MeasuredValueFloatInfo {
 			infoObjAddr++
 		}
 
-		value := sf.DecodeFloat()
+		value := sf.DecodeFloat32()
 		qua := sf.DecodeByte() & 0xf1
 
 		var t time.Time

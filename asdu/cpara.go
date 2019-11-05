@@ -201,7 +201,7 @@ func (sf *ASDU) GetParameterScaled() ParameterScaledInfo {
 func (sf *ASDU) GetParameterFloat() ParameterFloatInfo {
 	return ParameterFloatInfo{
 		sf.DecodeInfoObjAddr(),
-		sf.DecodeFloat(),
+		sf.DecodeFloat32(),
 		ParseQualifierOfParamMV(sf.infoObj[0]),
 	}
 }

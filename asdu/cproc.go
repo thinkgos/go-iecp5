@@ -485,7 +485,7 @@ func (sf *ASDU) GetSetpointFloatCmd() SetpointCommandFloatInfo {
 	var cmd SetpointCommandFloatInfo
 
 	cmd.Ioa = sf.DecodeInfoObjAddr()
-	cmd.Value = sf.DecodeFloat()
+	cmd.Value = sf.DecodeFloat32()
 	cmd.Qos = ParseQualifierOfSetpointCmd(sf.DecodeByte())
 
 	switch sf.Type {
