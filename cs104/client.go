@@ -238,14 +238,12 @@ func (sf *Client) recvLoop() {
 				}
 			} else {
 				if rawData[0] != startFrame {
-					rdCnt = 0
-					length = 2
+					rdCnt, length = 0, 2
 					continue
 				}
 				length = int(rawData[1]) + 2
 				if length < APCICtlFiledSize+2 || length > APDUSizeMax {
-					rdCnt = 0
-					length = 2
+					rdCnt, length = 0, 2
 					continue
 				}
 				if rdCnt == length {
