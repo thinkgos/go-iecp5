@@ -24,10 +24,12 @@ type ServerSpecial interface {
 	Start() error
 	Close() error
 
-	SetTLSConfig(t *tls.Config)
+	SetConfig(cfg Config) ServerSpecial
+	SetParams(p *asdu.Params) ServerSpecial
+	SetTLSConfig(t *tls.Config) ServerSpecial
 	AddRemoteServer(server string) error
-	SetOnConnectHandler(f func(con net.Conn))
-	SetConnectionLostHandler(f func(c ServerSpecial))
+	SetOnConnectHandler(f func(con net.Conn)) ServerSpecial
+	SetConnectionLostHandler(f func(c ServerSpecial)) ServerSpecial
 
 	LogMode(enable bool)
 	SetLogProvider(p clog.LogProvider)
@@ -46,24 +48,16 @@ type serverSpec struct {
 	closeCancel context.CancelFunc
 }
 
-// NewServerSpecial new special server
-func NewServerSpecial(conf *Config, pm *asdu.Params, handler ServerHandlerInterface) (ServerSpecial, error) {
-	if handler == nil {
-		return nil, errors.New("invalid handler")
-	}
-	config := *conf
-	params := *pm
-	if err := config.Valid(); err != nil {
-		return nil, err
-	}
-	if err := params.Valid(); err != nil {
-		return nil, err
-	}
+// NewServerSpecial new special server, default config and default asdu.ParamsWide params
+func NewServerSpecial(handler ServerHandlerInterface) ServerSpecial {
+	config := Config{}
+	_ = config.Valid()
+	param := *asdu.ParamsWide
 
 	return &serverSpec{
 		SrvSession: SrvSession{
 			config:  &config,
-			params:  &params,
+			params:  &param,
 			handler: handler,
 
 			rcvASDU:  make(chan []byte, 1024),
@@ -77,29 +71,50 @@ func NewServerSpecial(conf *Config, pm *asdu.Params, handler ServerHandlerInterf
 		reconnectInterval: DefaultReconnectInterval,
 		onConnect:         func(conn net.Conn) {},
 		onConnectionLost:  func(ServerSpecial) {},
-	}, nil
+	}
+}
+
+// SetConfig set config
+func (sf *serverSpec) SetConfig(cfg Config) ServerSpecial {
+	if err := cfg.Valid(); err != nil {
+		panic(err)
+	}
+	sf.config = &cfg
+
+	return sf
+}
+
+// SetParams set asdu params
+func (sf *serverSpec) SetParams(p *asdu.Params) ServerSpecial {
+	if err := p.Valid(); err != nil {
+		panic(err)
+	}
+	param := *p
+	sf.params = &param
+
+	return sf
 }
 
 // SetReconnectInterval set tcp  reconnect the host interval when connect failed after try
-func (sf *serverSpec) SetReconnectInterval(t time.Duration) *serverSpec {
+func (sf *serverSpec) SetReconnectInterval(t time.Duration) ServerSpecial {
 	sf.reconnectInterval = t
 	return sf
 }
 
 // SetAutoReconnect enable auto reconnect
-func (sf *serverSpec) SetAutoReconnect(b bool) *serverSpec {
+func (sf *serverSpec) SetAutoReconnect(b bool) ServerSpecial {
 	sf.autoReconnect = b
 	return sf
 }
 
 // SetTLSConfig set tls config
-func (sf *serverSpec) SetTLSConfig(t *tls.Config) *serverSpec {
+func (sf *serverSpec) SetTLSConfig(t *tls.Config) ServerSpecial {
 	sf.TLSConfig = t
 	return sf
 }
 
 // SetOnConnectHandler set on connect handler
-func (sf *serverSpec) SetOnConnectHandler(f func(conn net.Conn)) *serverSpec {
+func (sf *serverSpec) SetOnConnectHandler(f func(conn net.Conn)) ServerSpecial {
 	if f != nil {
 		sf.onConnect = f
 	}
@@ -107,7 +122,7 @@ func (sf *serverSpec) SetOnConnectHandler(f func(conn net.Conn)) *serverSpec {
 }
 
 // SetConnectionLostHandler set connection lost handler
-func (sf *serverSpec) SetConnectionLostHandler(f func(c ServerSpecial)) *serverSpec {
+func (sf *serverSpec) SetConnectionLostHandler(f func(c ServerSpecial)) ServerSpecial {
 	if f != nil {
 		sf.onConnectionLost = f
 	}

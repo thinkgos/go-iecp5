@@ -9,10 +9,7 @@ import (
 )
 
 func main() {
-	srv, err := cs104.NewServer(&cs104.Config{}, asdu.ParamsWide, &mysrv{})
-	if err != nil {
-		panic(err)
-	}
+	srv := cs104.NewServer(&mysrv{})
 	srv.LogMode(true)
 	// go func() {
 	// 	time.Sleep(time.Second * 20)

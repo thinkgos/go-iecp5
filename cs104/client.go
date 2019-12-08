@@ -68,20 +68,14 @@ type Client struct {
 	onConnectionLost  func(c *Client)
 }
 
-// NewClient returns an IEC104 master
-func NewClient(conf *Config, params *asdu.Params, handler ClientHandlerInterface) (*Client, error) {
-	if handler == nil {
-		return nil, errors.New("invalid handler")
-	}
-	if err := conf.Valid(); err != nil {
-		return nil, err
-	}
-	if err := params.Valid(); err != nil {
-		return nil, err
-	}
+// NewClient returns an IEC104 master,default config and default asdu.ParamsWide params
+func NewClient(handler ClientHandlerInterface) *Client {
+	conf := Config{}
+	_ = conf.Valid()
+
 	return &Client{
-		conf:     *conf,
-		param:    *params,
+		conf:     conf,
+		param:    *asdu.ParamsWide,
 		handler:  handler,
 		rcvASDU:  make(chan []byte, 1024),
 		sendASDU: make(chan []byte, 1024),
@@ -93,7 +87,27 @@ func NewClient(conf *Config, params *asdu.Params, handler ClientHandlerInterface
 		reconnectInterval: DefaultReconnectInterval,
 		onConnect:         func(*Client) {},
 		onConnectionLost:  func(*Client) {},
-	}, nil
+	}
+}
+
+// SetConfig set config
+func (sf *Client) SetConfig(cfg Config) *Client {
+	if err := cfg.Valid(); err != nil {
+		panic(err)
+	}
+	sf.conf = cfg
+
+	return sf
+}
+
+// SetParams set asdu params
+func (sf *Client) SetParams(p *asdu.Params) *Client {
+	if err := p.Valid(); err != nil {
+		panic(err)
+	}
+	sf.param = *p
+
+	return sf
 }
 
 // SetReconnectInterval set tcp  reconnect the host interval when connect failed after try

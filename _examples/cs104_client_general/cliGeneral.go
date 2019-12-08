@@ -11,12 +11,12 @@ import (
 type myClient struct{}
 
 func main() {
+	var err error
+
 	mycli := &myClient{}
 
-	client, err := cs104.NewClient(&cs104.Config{}, asdu.ParamsWide, mycli)
-	if err != nil {
-		fmt.Printf("Failed to creat cs104 client. error:%v\n", err)
-	}
+	client := cs104.NewClient(mycli)
+
 	client.LogMode(true)
 	if err = client.AddRemoteServer("127.0.0.1:2404"); err != nil {
 		panic(err)

@@ -3,7 +3,6 @@ package cs104
 import (
 	"context"
 	"crypto/tls"
-	"errors"
 	"net"
 	"sync"
 	"time"
@@ -30,25 +29,38 @@ type Server struct {
 	wg sync.WaitGroup
 }
 
-// NewServer new a server
-func NewServer(conf *Config, params *asdu.Params, handler ServerHandlerInterface) (*Server, error) {
-	if handler == nil {
-		return nil, errors.New("invalid handler")
-	}
-	if err := conf.Valid(); err != nil {
-		return nil, err
-	}
-	if err := params.Valid(); err != nil {
-		return nil, err
-	}
+// NewServer new a server, default config and default asdu.ParamsWide params
+func NewServer(handler ServerHandlerInterface) *Server {
+	conf := Config{}
+	_ = conf.Valid()
 
 	return &Server{
-		config:   *conf,
-		params:   *params,
+		config:   conf,
+		params:   *asdu.ParamsWide,
 		handler:  handler,
 		sessions: make(map[*SrvSession]struct{}),
 		Clog:     clog.NewWithPrefix("cs104 server =>"),
-	}, nil
+	}
+}
+
+// SetConfig set config
+func (sf *Server) SetConfig(cfg Config) *Server {
+	if err := cfg.Valid(); err != nil {
+		panic(err)
+	}
+	sf.config = cfg
+
+	return sf
+}
+
+// SetParams set asdu params
+func (sf *Server) SetParams(p *asdu.Params) *Server {
+	if err := p.Valid(); err != nil {
+		panic(err)
+	}
+	sf.params = *p
+
+	return sf
 }
 
 // ListenAndServer run the server

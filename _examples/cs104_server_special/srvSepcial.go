@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	srv, _ := cs104.NewServerSpecial(&cs104.Config{}, asdu.ParamsWide, &mysrv{})
+	srv := cs104.NewServerSpecial(&mysrv{})
 
 	srv.LogMode(true)
 	err := srv.AddRemoteServer("127.0.0.1:2404")
