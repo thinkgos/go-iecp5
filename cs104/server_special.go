@@ -81,32 +81,37 @@ func NewServerSpecial(conf *Config, pm *asdu.Params, handler ServerHandlerInterf
 }
 
 // SetReconnectInterval set tcp  reconnect the host interval when connect failed after try
-func (sf *serverSpec) SetReconnectInterval(t time.Duration) {
+func (sf *serverSpec) SetReconnectInterval(t time.Duration) *serverSpec {
 	sf.reconnectInterval = t
+	return sf
 }
 
 // SetAutoReconnect enable auto reconnect
-func (sf *serverSpec) SetAutoReconnect(b bool) {
+func (sf *serverSpec) SetAutoReconnect(b bool) *serverSpec {
 	sf.autoReconnect = b
+	return sf
 }
 
 // SetTLSConfig set tls config
-func (sf *serverSpec) SetTLSConfig(t *tls.Config) {
+func (sf *serverSpec) SetTLSConfig(t *tls.Config) *serverSpec {
 	sf.TLSConfig = t
+	return sf
 }
 
 // SetOnConnectHandler set on connect handler
-func (sf *serverSpec) SetOnConnectHandler(f func(conn net.Conn)) {
+func (sf *serverSpec) SetOnConnectHandler(f func(conn net.Conn)) *serverSpec {
 	if f != nil {
 		sf.onConnect = f
 	}
+	return sf
 }
 
 // SetConnectionLostHandler set connection lost handler
-func (sf *serverSpec) SetConnectionLostHandler(f func(c ServerSpecial)) {
+func (sf *serverSpec) SetConnectionLostHandler(f func(c ServerSpecial)) *serverSpec {
 	if f != nil {
 		sf.onConnectionLost = f
 	}
+	return sf
 }
 
 // AddRemoteServer adds a broker URI to the list of brokers to be used.

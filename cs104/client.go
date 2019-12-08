@@ -97,18 +97,21 @@ func NewClient(conf *Config, params *asdu.Params, handler ClientHandlerInterface
 }
 
 // SetReconnectInterval set tcp  reconnect the host interval when connect failed after try
-func (sf *Client) SetReconnectInterval(t time.Duration) {
+func (sf *Client) SetReconnectInterval(t time.Duration) *Client {
 	sf.reconnectInterval = t
+	return sf
 }
 
 // SetAutoReconnect enable auto reconnect
-func (sf *Client) SetAutoReconnect(b bool) {
+func (sf *Client) SetAutoReconnect(b bool) *Client {
 	sf.autoReconnect = b
+	return sf
 }
 
 // SetTLSConfig set tls config
-func (sf *Client) SetTLSConfig(t *tls.Config) {
+func (sf *Client) SetTLSConfig(t *tls.Config) *Client {
 	sf.TLSConfig = t
+	return sf
 }
 
 // AddRemoteServer adds a broker URI to the list of brokers to be used.
@@ -131,17 +134,19 @@ func (sf *Client) AddRemoteServer(server string) error {
 }
 
 // SetOnConnectHandler set on connect handler
-func (sf *Client) SetOnConnectHandler(f func(c *Client)) {
+func (sf *Client) SetOnConnectHandler(f func(c *Client)) *Client {
 	if f != nil {
 		sf.onConnect = f
 	}
+	return sf
 }
 
 // SetConnectionLostHandler set connection lost handler
-func (sf *Client) SetConnectionLostHandler(f func(c *Client)) {
+func (sf *Client) SetConnectionLostHandler(f func(c *Client)) *Client {
 	if f != nil {
 		sf.onConnectionLost = f
 	}
+	return sf
 }
 
 // Start start the server,and return quickly,if it nil,the server will disconnected background,other failed
