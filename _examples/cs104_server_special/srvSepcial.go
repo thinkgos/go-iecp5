@@ -6,9 +6,10 @@ import (
 	"net/http"
 	"time"
 
+	_ "net/http/pprof"
+
 	"github.com/thinkgos/go-iecp5/asdu"
 	"github.com/thinkgos/go-iecp5/cs104"
-	_ "net/http/pprof"
 )
 
 func main() {
@@ -17,18 +18,17 @@ func main() {
 	srv.LogMode(true)
 	err := srv.AddRemoteServer("127.0.0.1:2404")
 	if err != nil {
-		log.Println(err)
+		panic(err)
 	}
 
 	srv.SetOnConnectHandler(func(conn net.Conn) {
 		_, _ = conn.Write([]byte{0x68, 0x0e, 0x00, 0x00, 0x00, 0x00, 0x46, 0x01, 0x04, 0x00, 0xa0, 0xaf, 0xbd, 0xd8, 0x0a, 0xf4})
 		log.Println("connected")
-	})
-	srv.SetConnectionLostHandler(func(cs104.ServerSpecial) {
-		log.Println("disconnected")
-	})
-	err = srv.Start()
-	if err != nil {
+	}).
+		SetConnectionLostHandler(func(cs104.ServerSpecial) {
+			log.Println("disconnected")
+		})
+	if err = srv.Start(); err != nil {
 		panic(err)
 	}
 
