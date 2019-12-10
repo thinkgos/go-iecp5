@@ -35,7 +35,7 @@ type serverSpec struct {
 	closeCancel      context.CancelFunc
 }
 
-// NewServerSpecial new special server, default config and default asdu.ParamsWide params
+// NewServerSpecial new special server
 func NewServerSpecial(handler ServerHandlerInterface, o *ClientOption) ServerSpecial {
 	return &serverSpec{
 		SrvSession: SrvSession{

@@ -6,7 +6,7 @@ import (
 	"github.com/thinkgos/go-iecp5/asdu"
 )
 
-const startFrame byte = 0x68 // 起动字符
+const startFrame byte = 0x68 // 启动字符
 
 // APDU form Max size 255
 //      |              APCI                   |       ASDU         |
