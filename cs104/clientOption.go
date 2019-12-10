@@ -9,6 +9,7 @@ import (
 	"github.com/thinkgos/go-iecp5/asdu"
 )
 
+// ClientOption 客户端配置
 type ClientOption struct {
 	config            Config
 	param             asdu.Params
@@ -16,9 +17,9 @@ type ClientOption struct {
 	autoReconnect     bool          // 是否启动重连
 	reconnectInterval time.Duration // 重连间隔时间
 	TLSConfig         *tls.Config   // tls配置
-
 }
 
+// NewOption with default config and default asdu.ParamsWide params
 func NewOption() *ClientOption {
 	return &ClientOption{
 		DefaultConfig(),

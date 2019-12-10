@@ -67,10 +67,10 @@ func NewClient(handler ClientHandlerInterface, o *ClientOption) *Client {
 	return &Client{
 		option:           *o,
 		handler:          handler,
-		rcvASDU:          make(chan []byte, 1024),
-		sendASDU:         make(chan []byte, 1024),
-		rcvRaw:           make(chan []byte, 1024),
-		sendRaw:          make(chan []byte, 1024), // may not block!
+		rcvASDU:          make(chan []byte, o.config.RecvUnAckLimitW<<4),
+		sendASDU:         make(chan []byte, o.config.SendUnAckLimitK<<4),
+		rcvRaw:           make(chan []byte, o.config.RecvUnAckLimitW<<5),
+		sendRaw:          make(chan []byte, o.config.SendUnAckLimitK<<5), // may not block!
 		Clog:             clog.NewWithPrefix("cs104 client =>"),
 		onConnect:        func(*Client) {},
 		onConnectionLost: func(*Client) {},

@@ -31,11 +31,8 @@ type Server struct {
 
 // NewServer new a server, default config and default asdu.ParamsWide params
 func NewServer(handler ServerHandlerInterface) *Server {
-	conf := Config{}
-	_ = conf.Valid()
-
 	return &Server{
-		config:   conf,
+		config:   DefaultConfig(),
 		params:   *asdu.ParamsWide,
 		handler:  handler,
 		sessions: make(map[*SrvSession]struct{}),
@@ -95,10 +92,10 @@ func (sf *Server) ListenAndServer(addr string) {
 				params:   &sf.params,
 				handler:  sf.handler,
 				conn:     conn,
-				rcvASDU:  make(chan []byte, 1024),
-				sendASDU: make(chan []byte, 1024),
-				rcvRaw:   make(chan []byte, 1024),
-				sendRaw:  make(chan []byte, 1024), // may not block!
+				rcvASDU:  make(chan []byte, sf.config.RecvUnAckLimitW<<4),
+				sendASDU: make(chan []byte, sf.config.SendUnAckLimitK<<4),
+				rcvRaw:   make(chan []byte, sf.config.RecvUnAckLimitW<<5),
+				sendRaw:  make(chan []byte, sf.config.SendUnAckLimitK<<5), // may not block!
 
 				Clog: sf.Clog,
 			}
