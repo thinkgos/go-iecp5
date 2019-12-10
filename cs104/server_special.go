@@ -2,12 +2,8 @@ package cs104
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"math/rand"
-	"net"
-	"net/url"
-	"strings"
 	"sync/atomic"
 	"time"
 
@@ -24,11 +20,7 @@ type ServerSpecial interface {
 	Start() error
 	Close() error
 
-	SetConfig(cfg Config) ServerSpecial
-	SetParams(p *asdu.Params) ServerSpecial
-	SetTLSConfig(t *tls.Config) ServerSpecial
-	AddRemoteServer(server string) error
-	SetOnConnectHandler(f func(con net.Conn)) ServerSpecial
+	SetOnConnectHandler(f func(c ServerSpecial)) ServerSpecial
 	SetConnectionLostHandler(f func(c ServerSpecial)) ServerSpecial
 
 	LogMode(enable bool)
@@ -37,27 +29,18 @@ type ServerSpecial interface {
 
 type serverSpec struct {
 	SrvSession
-
-	server            *url.URL      // 连接的服务器端
-	autoReconnect     bool          // 是否启动重连
-	reconnectInterval time.Duration // 重连间隔时间
-	TLSConfig         *tls.Config
-	onConnect         func(conn net.Conn)
-	onConnectionLost  func(c ServerSpecial)
-
-	closeCancel context.CancelFunc
+	option           ClientOption
+	onConnect        func(c ServerSpecial)
+	onConnectionLost func(c ServerSpecial)
+	closeCancel      context.CancelFunc
 }
 
 // NewServerSpecial new special server, default config and default asdu.ParamsWide params
-func NewServerSpecial(handler ServerHandlerInterface) ServerSpecial {
-	config := Config{}
-	_ = config.Valid()
-	param := *asdu.ParamsWide
-
+func NewServerSpecial(handler ServerHandlerInterface, o *ClientOption) ServerSpecial {
 	return &serverSpec{
 		SrvSession: SrvSession{
-			config:  &config,
-			params:  &param,
+			config:  &o.config,
+			params:  &o.param,
 			handler: handler,
 
 			rcvASDU:  make(chan []byte, 1024),
@@ -67,54 +50,14 @@ func NewServerSpecial(handler ServerHandlerInterface) ServerSpecial {
 
 			Clog: clog.NewWithPrefix("cs104 serverSpec => "),
 		},
-		autoReconnect:     true,
-		reconnectInterval: DefaultReconnectInterval,
-		onConnect:         func(conn net.Conn) {},
-		onConnectionLost:  func(ServerSpecial) {},
+		option:           *o,
+		onConnect:        func(ServerSpecial) {},
+		onConnectionLost: func(ServerSpecial) {},
 	}
-}
-
-// SetConfig set config
-func (sf *serverSpec) SetConfig(cfg Config) ServerSpecial {
-	if err := cfg.Valid(); err != nil {
-		panic(err)
-	}
-	sf.config = &cfg
-
-	return sf
-}
-
-// SetParams set asdu params
-func (sf *serverSpec) SetParams(p *asdu.Params) ServerSpecial {
-	if err := p.Valid(); err != nil {
-		panic(err)
-	}
-	param := *p
-	sf.params = &param
-
-	return sf
-}
-
-// SetReconnectInterval set tcp  reconnect the host interval when connect failed after try
-func (sf *serverSpec) SetReconnectInterval(t time.Duration) ServerSpecial {
-	sf.reconnectInterval = t
-	return sf
-}
-
-// SetAutoReconnect enable auto reconnect
-func (sf *serverSpec) SetAutoReconnect(b bool) ServerSpecial {
-	sf.autoReconnect = b
-	return sf
-}
-
-// SetTLSConfig set tls config
-func (sf *serverSpec) SetTLSConfig(t *tls.Config) ServerSpecial {
-	sf.TLSConfig = t
-	return sf
 }
 
 // SetOnConnectHandler set on connect handler
-func (sf *serverSpec) SetOnConnectHandler(f func(conn net.Conn)) ServerSpecial {
+func (sf *serverSpec) SetOnConnectHandler(f func(conn ServerSpecial)) ServerSpecial {
 	if f != nil {
 		sf.onConnect = f
 	}
@@ -129,28 +72,9 @@ func (sf *serverSpec) SetConnectionLostHandler(f func(c ServerSpecial)) ServerSp
 	return sf
 }
 
-// AddRemoteServer adds a broker URI to the list of brokers to be used.
-// The format should be scheme://host:port
-// Default values for hostname is "127.0.0.1", for schema is "tcp://".
-// An example broker URI would look like: tcp://foobar.com:1204
-func (sf *serverSpec) AddRemoteServer(server string) error {
-	if len(server) > 0 && server[0] == ':' {
-		server = "127.0.0.1" + server
-	}
-	if !strings.Contains(server, "://") {
-		server = "tcp://" + server
-	}
-	remoteURL, err := url.Parse(server)
-	if err != nil {
-		return err
-	}
-	sf.server = remoteURL
-	return nil
-}
-
 // Start start the server,and return quickly,if it nil,the server will disconnected background,other failed
 func (sf *serverSpec) Start() error {
-	if sf.server == nil {
+	if sf.option.server == nil {
 		return errors.New("empty remote server")
 	}
 
@@ -178,22 +102,22 @@ func (sf *serverSpec) running() {
 		default:
 		}
 
-		sf.Debug("connecting server %+v", sf.server)
-		conn, err := openConnection(sf.server, sf.TLSConfig, sf.config.ConnectTimeout0)
+		sf.Debug("connecting server %+v", sf.option.server)
+		conn, err := openConnection(sf.option.server, sf.option.TLSConfig, sf.config.ConnectTimeout0)
 		if err != nil {
 			sf.Error("connect failed, %v", err)
-			if !sf.autoReconnect {
+			if !sf.option.autoReconnect {
 				return
 			}
-			time.Sleep(sf.reconnectInterval)
+			time.Sleep(sf.option.reconnectInterval)
 			continue
 		}
 		sf.Debug("connect success")
 		sf.conn = conn
-		sf.onConnect(conn)
+		sf.onConnect(sf)
 		sf.run(ctx)
 		sf.onConnectionLost(sf)
-		sf.Debug("disconnected server %+v", sf.server)
+		sf.Debug("disconnected server %+v", sf.option.server)
 		select {
 		case <-ctx.Done():
 			return

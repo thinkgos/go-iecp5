@@ -13,14 +13,17 @@ type myClient struct{}
 func main() {
 	var err error
 
-	mycli := &myClient{}
-
-	client := cs104.NewClient(mycli)
-
-	client.LogMode(true)
-	if err = client.AddRemoteServer("127.0.0.1:2404"); err != nil {
+	option := cs104.NewOption()
+	if err = option.AddRemoteServer("127.0.0.1:2404"); err != nil {
 		panic(err)
 	}
+
+	mycli := &myClient{}
+
+	client := cs104.NewClient(mycli, option)
+
+	client.LogMode(true)
+
 	client.SetOnConnectHandler(func(c *cs104.Client) {
 		c.SendStartDt() // 发送startDt激活指令
 	})

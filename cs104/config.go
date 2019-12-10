@@ -117,3 +117,15 @@ func (sf *Config) Valid() error {
 
 	return nil
 }
+
+// DefaultConfig default config
+func DefaultConfig() Config {
+	return Config{
+		30 * time.Second,
+		12,
+		15 * time.Second,
+		8,
+		10 * time.Second,
+		20 * time.Second,
+	}
+}

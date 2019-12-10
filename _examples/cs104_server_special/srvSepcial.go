@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"net"
 	"net/http"
 	"time"
 
@@ -13,16 +12,19 @@ import (
 )
 
 func main() {
-	srv := cs104.NewServerSpecial(&mysrv{})
 
-	srv.LogMode(true)
-	err := srv.AddRemoteServer("127.0.0.1:2404")
+	option := cs104.NewOption()
+	err := option.AddRemoteServer("127.0.0.1:2404")
 	if err != nil {
 		panic(err)
 	}
 
-	srv.SetOnConnectHandler(func(conn net.Conn) {
-		_, _ = conn.Write([]byte{0x68, 0x0e, 0x00, 0x00, 0x00, 0x00, 0x46, 0x01, 0x04, 0x00, 0xa0, 0xaf, 0xbd, 0xd8, 0x0a, 0xf4})
+	srv := cs104.NewServerSpecial(&mysrv{}, option)
+
+	srv.LogMode(true)
+
+	srv.SetOnConnectHandler(func(c cs104.ServerSpecial) {
+		_, _ = c.UnderlyingConn().Write([]byte{0x68, 0x0e, 0x00, 0x00, 0x00, 0x00, 0x46, 0x01, 0x04, 0x00, 0xa0, 0xaf, 0xbd, 0xd8, 0x0a, 0xf4})
 		log.Println("connected")
 	}).
 		SetConnectionLostHandler(func(cs104.ServerSpecial) {

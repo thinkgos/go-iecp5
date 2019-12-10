@@ -2,12 +2,10 @@ package cs104
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"io"
 	"math/rand"
 	"net"
-	"net/url"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -24,8 +22,7 @@ const (
 
 // Client is an IEC104 master
 type Client struct {
-	conf    Config
-	param   asdu.Params
+	option  ClientOption
 	conn    net.Conn
 	handler ClientHandlerInterface
 
@@ -60,91 +57,24 @@ type Client struct {
 	cancel      context.CancelFunc
 	closeCancel context.CancelFunc
 
-	server            *url.URL      // 连接的服务器端
-	autoReconnect     bool          // 是否启动重连
-	reconnectInterval time.Duration // 重连间隔时间
-	TLSConfig         *tls.Config   // tls配置
-	onConnect         func(c *Client)
-	onConnectionLost  func(c *Client)
+	onConnect        func(c *Client)
+	onConnectionLost func(c *Client)
 }
 
 // NewClient returns an IEC104 master,default config and default asdu.ParamsWide params
-func NewClient(handler ClientHandlerInterface) *Client {
-	conf := Config{}
-	_ = conf.Valid()
+func NewClient(handler ClientHandlerInterface, o *ClientOption) *Client {
 
 	return &Client{
-		conf:     conf,
-		param:    *asdu.ParamsWide,
-		handler:  handler,
-		rcvASDU:  make(chan []byte, 1024),
-		sendASDU: make(chan []byte, 1024),
-		rcvRaw:   make(chan []byte, 1024),
-		sendRaw:  make(chan []byte, 1024), // may not block!
-		Clog:     clog.NewWithPrefix("cs104 client =>"),
-
-		autoReconnect:     true,
-		reconnectInterval: DefaultReconnectInterval,
-		onConnect:         func(*Client) {},
-		onConnectionLost:  func(*Client) {},
+		option:           *o,
+		handler:          handler,
+		rcvASDU:          make(chan []byte, 1024),
+		sendASDU:         make(chan []byte, 1024),
+		rcvRaw:           make(chan []byte, 1024),
+		sendRaw:          make(chan []byte, 1024), // may not block!
+		Clog:             clog.NewWithPrefix("cs104 client =>"),
+		onConnect:        func(*Client) {},
+		onConnectionLost: func(*Client) {},
 	}
-}
-
-// SetConfig set config
-func (sf *Client) SetConfig(cfg Config) *Client {
-	if err := cfg.Valid(); err != nil {
-		panic(err)
-	}
-	sf.conf = cfg
-
-	return sf
-}
-
-// SetParams set asdu params
-func (sf *Client) SetParams(p *asdu.Params) *Client {
-	if err := p.Valid(); err != nil {
-		panic(err)
-	}
-	sf.param = *p
-
-	return sf
-}
-
-// SetReconnectInterval set tcp  reconnect the host interval when connect failed after try
-func (sf *Client) SetReconnectInterval(t time.Duration) *Client {
-	sf.reconnectInterval = t
-	return sf
-}
-
-// SetAutoReconnect enable auto reconnect
-func (sf *Client) SetAutoReconnect(b bool) *Client {
-	sf.autoReconnect = b
-	return sf
-}
-
-// SetTLSConfig set tls config
-func (sf *Client) SetTLSConfig(t *tls.Config) *Client {
-	sf.TLSConfig = t
-	return sf
-}
-
-// AddRemoteServer adds a broker URI to the list of brokers to be used.
-// The format should be scheme://host:port
-// Default values for hostname is "127.0.0.1", for schema is "tcp://".
-// An example broker URI would look like: tcp://foobar.com:1204
-func (sf *Client) AddRemoteServer(server string) error {
-	if len(server) > 0 && server[0] == ':' {
-		server = "127.0.0.1" + server
-	}
-	if !strings.Contains(server, "://") {
-		server = "tcp://" + server
-	}
-	remoteURL, err := url.Parse(server)
-	if err != nil {
-		return err
-	}
-	sf.server = remoteURL
-	return nil
 }
 
 // SetOnConnectHandler set on connect handler
@@ -165,7 +95,7 @@ func (sf *Client) SetConnectionLostHandler(f func(c *Client)) *Client {
 
 // Start start the server,and return quickly,if it nil,the server will disconnected background,other failed
 func (sf *Client) Start() error {
-	if sf.server == nil {
+	if sf.option.server == nil {
 		return errors.New("empty remote server")
 	}
 
@@ -193,21 +123,21 @@ func (sf *Client) running() {
 		default:
 		}
 
-		sf.Debug("connecting server %+v", sf.server)
-		conn, err := openConnection(sf.server, sf.TLSConfig, sf.conf.ConnectTimeout0)
+		sf.Debug("connecting server %+v", sf.option.server)
+		conn, err := openConnection(sf.option.server, sf.option.TLSConfig, sf.option.config.ConnectTimeout0)
 		if err != nil {
 			sf.Error("connect failed, %v", err)
-			if !sf.autoReconnect {
+			if !sf.option.autoReconnect {
 				return
 			}
-			time.Sleep(sf.reconnectInterval)
+			time.Sleep(sf.option.reconnectInterval)
 			continue
 		}
 		sf.Debug("connect success")
 		sf.conn = conn
 		sf.run(ctx)
 
-		sf.Debug("disconnected server %+v", sf.server)
+		sf.Debug("disconnected server %+v", sf.option.server)
 		select {
 		case <-ctx.Done():
 			return
@@ -367,7 +297,7 @@ func (sf *Client) run(ctx context.Context) {
 
 	sf.onConnect(sf)
 	for {
-		if atomic.LoadUint32(&sf.isActive) == active && seqNoCount(sf.ackNoSend, sf.seqNoSend) <= sf.conf.SendUnAckLimitK {
+		if atomic.LoadUint32(&sf.isActive) == active && seqNoCount(sf.ackNoSend, sf.seqNoSend) <= sf.option.config.SendUnAckLimitK {
 			select {
 			case o := <-sf.sendASDU:
 				sendIFrame(o)
@@ -383,16 +313,16 @@ func (sf *Client) run(ctx context.Context) {
 			return
 		case now := <-checkTicker.C:
 			// check all timeouts
-			if now.Sub(testFrAliveSendSince) >= sf.conf.SendUnAckTimeout1 ||
-				now.Sub(sf.startDtActiveSendSince.Load().(time.Time)) >= sf.conf.SendUnAckTimeout1 ||
-				now.Sub(sf.stopDtActiveSendSince.Load().(time.Time)) >= sf.conf.SendUnAckTimeout1 {
+			if now.Sub(testFrAliveSendSince) >= sf.option.config.SendUnAckTimeout1 ||
+				now.Sub(sf.startDtActiveSendSince.Load().(time.Time)) >= sf.option.config.SendUnAckTimeout1 ||
+				now.Sub(sf.stopDtActiveSendSince.Load().(time.Time)) >= sf.option.config.SendUnAckTimeout1 {
 				sf.Error("test frame alive confirm timeout t₁")
 				return
 			}
 			// check oldest unacknowledged outbound
 			if sf.ackNoSend != sf.seqNoSend &&
 				//now.Sub(sf.peek()) >= sf.SendUnAckTimeout1 {
-				now.Sub(sf.pending[0].sendTime) >= sf.conf.SendUnAckTimeout1 {
+				now.Sub(sf.pending[0].sendTime) >= sf.option.config.SendUnAckTimeout1 {
 				sf.ackNoSend++
 				sf.Error("fatal transmission timeout t₁")
 				return
@@ -400,14 +330,14 @@ func (sf *Client) run(ctx context.Context) {
 
 			// 确定最早发送的i-Frame是否超时,超时则回复sFrame
 			if sf.ackNoRcv != sf.seqNoRcv &&
-				(now.Sub(unAckRcvSince) >= sf.conf.RecvUnAckTimeout2 ||
+				(now.Sub(unAckRcvSince) >= sf.option.config.RecvUnAckTimeout2 ||
 					now.Sub(idleTimeout3Sine) >= timeoutResolution) {
 				sendSFrame(sf.seqNoRcv)
 				sf.ackNoRcv = sf.seqNoRcv
 			}
 
 			// 空闲时间到，发送TestFrActive帧,保活
-			if now.Sub(idleTimeout3Sine) >= sf.conf.IdleTimeout3 {
+			if now.Sub(idleTimeout3Sine) >= sf.option.config.IdleTimeout3 {
 				sf.sendUFrame(uTestFrActive)
 				testFrAliveSendSince = time.Now()
 				idleTimeout3Sine = testFrAliveSendSince
@@ -441,7 +371,7 @@ func (sf *Client) run(ctx context.Context) {
 				}
 
 				sf.seqNoRcv = (sf.seqNoRcv + 1) & 32767
-				if seqNoCount(sf.ackNoRcv, sf.seqNoRcv) >= sf.conf.RecvUnAckLimitW {
+				if seqNoCount(sf.ackNoRcv, sf.seqNoRcv) >= sf.option.config.RecvUnAckLimitW {
 					sendSFrame(sf.seqNoRcv)
 					sf.ackNoRcv = sf.seqNoRcv
 				}
@@ -485,7 +415,7 @@ func (sf *Client) handlerLoop() {
 		case <-sf.ctx.Done():
 			return
 		case rawAsdu := <-sf.rcvASDU:
-			asduPack := asdu.NewEmptyASDU(&sf.param)
+			asduPack := asdu.NewEmptyASDU(&sf.option.param)
 			if err := asduPack.UnmarshalBinary(rawAsdu); err != nil {
 				sf.Warn("asdu UnmarshalBinary failed,%+v", err)
 				continue
@@ -599,7 +529,7 @@ func (sf *Client) clientHandler(asduPack *asdu.ASDU) error {
 
 // Params returns params of client
 func (sf *Client) Params() *asdu.Params {
-	return &sf.param
+	return &sf.option.param
 }
 
 // Send send asdu
