@@ -17,6 +17,14 @@ type ServerHandlerInterface interface {
 	ASDUHandler(asdu.Connect, *asdu.ASDU) error
 }
 
-// ClientHandlerInterface TODO:
+// ClientHandlerInterface  is the interface of client handler
 type ClientHandlerInterface interface {
+	InterrogationHandler(asdu.Connect, *asdu.ASDU) error
+	CounterInterrogationHandler(asdu.Connect, *asdu.ASDU) error
+	ReadHandler(asdu.Connect, *asdu.ASDU) error
+	TestCommandHandler(asdu.Connect, *asdu.ASDU) error
+	ClockSyncHandler(asdu.Connect, *asdu.ASDU) error
+	ResetProcessHandler(asdu.Connect, *asdu.ASDU) error
+	DelayAcquisitionHandler(asdu.Connect, *asdu.ASDU) error
+	ASDUHandler(asdu.Connect, *asdu.ASDU) error
 }

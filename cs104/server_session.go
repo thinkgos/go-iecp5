@@ -21,21 +21,21 @@ const (
 
 // SrvSession the cs104 server session
 type SrvSession struct {
-	*Config
+	config  *Config
 	params  *asdu.Params
 	conn    net.Conn
 	handler ServerHandlerInterface
 
-	in   chan []byte // for received asdu
-	out  chan []byte // for send asdu
-	recv chan []byte // for recvLoop raw cs104 frame
-	send chan []byte // for sendLoop raw cs104 frame
+	rcvASDU  chan []byte // for received asdu
+	sendASDU chan []byte // for send asdu
+	rcvRaw   chan []byte // for recvLoop raw cs104 frame
+	sendRaw  chan []byte // for sendLoop raw cs104 frame
 
 	// see subclass 5.1 — Protection against loss and duplication of messages
-	seqNoOut uint16 // sequence number of next outbound I-frame
-	ackNoOut uint16 // outbound sequence number yet to be confirmed
-	seqNoIn  uint16 // sequence number of next inbound I-frame
-	ackNoIn  uint16 // inbound sequence number yet to be confirmed
+	seqNoSend uint16 // sequence number of next outbound I-frame
+	ackNoSend uint16 // outbound sequence number yet to be confirmed
+	seqNoRcv  uint16 // sequence number of next inbound I-frame
+	ackNoRcv  uint16 // inbound sequence number yet to be confirmed
 	// maps sendTime I-frames to their respective sequence number
 	pending []seqPending
 	//seqManage
@@ -45,63 +45,65 @@ type SrvSession struct {
 
 	*clog.Clog
 
-	wg         sync.WaitGroup
-	cancelFunc context.CancelFunc
-	ctx        context.Context
+	wg     sync.WaitGroup
+	cancel context.CancelFunc
+	ctx    context.Context
 }
 
-// RecvLoop feeds t.recv.
-func (this *SrvSession) recvLoop() {
-	this.Debug("recvLoop start!")
+// RecvLoop feeds t.rcvRaw.
+func (sf *SrvSession) recvLoop() {
+	sf.Debug("recvLoop started!")
 	defer func() {
-		this.cancelFunc()
-		this.wg.Done()
-		this.Debug("recvLoop stop!")
+		sf.cancel()
+		sf.wg.Done()
+		sf.Debug("recvLoop stopped!")
 	}()
 
 	for {
 		rawData := make([]byte, APDUSizeMax)
-		length := 2
-		for rdCnt := 0; rdCnt < length; {
-			byteCount, err := io.ReadFull(this.conn, rawData[rdCnt:length])
+		for rdCnt, length := 0, 2; rdCnt < length; {
+			byteCount, err := io.ReadFull(sf.conn, rawData[rdCnt:length])
 			if err != nil {
 				// See: https://github.com/golang/go/issues/4373
 				if err != io.EOF && err != io.ErrClosedPipe ||
 					strings.Contains(err.Error(), "use of closed network connection") {
-					this.Error("receive failed, %v", err)
+					sf.Error("receive failed, %v", err)
 					return
 				}
 
 				if e, ok := err.(net.Error); ok && !e.Temporary() {
-					this.Error("receive failed, %v", err)
+					sf.Error("receive failed, %v", err)
 					return
 				}
 
 				if byteCount == 0 && err == io.EOF {
-					this.Error("remote connect closed, %v", err)
+					sf.Error("remote connect closed, %v", err)
 					return
 				}
 			}
 
 			rdCnt += byteCount
 			if rdCnt == 0 {
-				break
+				continue
 			} else if rdCnt == 1 {
 				if rawData[0] != startFrame {
-					break
+					rdCnt = 0
+					continue
 				}
 			} else {
 				if rawData[0] != startFrame {
-					break
+					rdCnt, length = 0, 2
+					continue
 				}
 				length = int(rawData[1]) + 2
 				if length < APCICtlFiledSize+2 || length > APDUSizeMax {
-					break
+					rdCnt, length = 0, 2
+					continue
 				}
 				if rdCnt == length {
 					apdu := rawData[:length]
-					this.Debug("RX Raw[% x]", apdu)
-					this.recv <- apdu
+					sf.Debug("RX Raw[% x]", apdu)
+					sf.rcvRaw <- apdu
 				}
 			}
 		}
@@ -109,31 +111,31 @@ func (this *SrvSession) recvLoop() {
 }
 
 // sendLoop drains t.sendTime.
-func (this *SrvSession) sendLoop() {
-	this.Debug("sendLoop start!")
+func (sf *SrvSession) sendLoop() {
+	sf.Debug("sendLoop started!")
 	defer func() {
-		this.cancelFunc()
-		this.wg.Done()
-		this.Debug("sendLoop stop!")
+		sf.cancel()
+		sf.wg.Done()
+		sf.Debug("sendLoop stopped!")
 	}()
 
 	for {
 		select {
-		case <-this.ctx.Done():
+		case <-sf.ctx.Done():
 			return
-		case apdu := <-this.send:
-			this.Debug("TX Raw[% x]", apdu)
+		case apdu := <-sf.sendRaw:
+			sf.Debug("TX Raw[% x]", apdu)
 			for wrCnt := 0; len(apdu) > wrCnt; {
-				byteCount, err := this.conn.Write(apdu[wrCnt:])
+				byteCount, err := sf.conn.Write(apdu[wrCnt:])
 				if err != nil {
 					// See: https://github.com/golang/go/issues/4373
 					if err != io.EOF && err != io.ErrClosedPipe ||
 						strings.Contains(err.Error(), "use of closed network connection") {
-						this.Error("send failed, %v", err)
+						sf.Error("sendRaw failed, %v", err)
 						return
 					}
 					if e, ok := err.(net.Error); !ok || !e.Temporary() {
-						this.Error("send failed, %v", err)
+						sf.Error("sendRaw failed, %v", err)
 						return
 					}
 					// temporary error may be recoverable
@@ -145,17 +147,17 @@ func (this *SrvSession) sendLoop() {
 }
 
 // run is the big fat state machine.
-func (this *SrvSession) run(ctx context.Context) {
-	this.Debug("run start!")
+func (sf *SrvSession) run(ctx context.Context) {
+	sf.Debug("run started!")
 	// before any thing make sure init
-	this.cleanUp()
+	sf.cleanUp()
 
-	this.ctx, this.cancelFunc = context.WithCancel(ctx)
-	this.setConnectStatus(connected)
-	this.wg.Add(3)
-	go this.recvLoop()
-	go this.sendLoop()
-	go this.handlerLoop()
+	sf.ctx, sf.cancel = context.WithCancel(ctx)
+	sf.setConnectStatus(connected)
+	sf.wg.Add(3)
+	go sf.recvLoop()
+	go sf.sendLoop()
+	go sf.handlerLoop()
 
 	// default: STOPDT, when connected establish and not enable "data transfer" yet
 	var isActive = false
@@ -171,115 +173,139 @@ func (this *SrvSession) run(ctx context.Context) {
 	// var startDtActiveSendSince = willNotTimeout
 	// var stopDtActiveSendSince = willNotTimeout
 
+	sendSFrame := func(rcvSN uint16) {
+		sf.Debug("TX sFrame %v", sAPCI{rcvSN})
+		sf.sendRaw <- newSFrame(rcvSN)
+	}
+	sendUFrame := func(which byte) {
+		sf.Debug("TX uFrame %v", uAPCI{which})
+		sf.sendRaw <- newUFrame(which)
+	}
+
+	sendIFrame := func(asdu1 []byte) {
+		seqNo := sf.seqNoSend
+
+		iframe, err := newIFrame(seqNo, sf.seqNoRcv, asdu1)
+		if err != nil {
+			return
+		}
+		sf.ackNoRcv = sf.seqNoRcv
+		sf.seqNoSend = (seqNo + 1) & 32767
+		sf.pending = append(sf.pending, seqPending{seqNo & 32767, time.Now()})
+
+		sf.Debug("TX iFrame %v", iAPCI{seqNo, sf.seqNoRcv})
+		sf.sendRaw <- iframe
+	}
+
 	defer func() {
-		this.setConnectStatus(disconnected)
+		sf.setConnectStatus(disconnected)
 		checkTicker.Stop()
-		this.conn.Close() // 连锁引发cancel
-		this.wg.Wait()
-		this.Debug("run stop!")
+		_ = sf.conn.Close() // 连锁引发cancel
+		sf.wg.Wait()
+		sf.Debug("run stopped!")
 	}()
 
 	for {
-		if isActive && seqNoCount(this.ackNoOut, this.seqNoOut) <= this.SendUnAckLimitK {
+		if isActive && seqNoCount(sf.ackNoSend, sf.seqNoSend) <= sf.config.SendUnAckLimitK {
 			select {
-			case o := <-this.out:
-				this.sendIFrame(o)
+			case o := <-sf.sendASDU:
+				sendIFrame(o)
 				idleTimeout3Sine = time.Now()
 				continue
-			case <-this.ctx.Done():
+			case <-sf.ctx.Done():
 				return
 			default: // make no block
 			}
 		}
 		select {
-		case <-this.ctx.Done():
+		case <-sf.ctx.Done():
 			return
 		case now := <-checkTicker.C:
 			// check all timeouts
-			if now.Sub(testFrAliveSendSince) >= this.SendUnAckTimeout1 {
+			if now.Sub(testFrAliveSendSince) >= sf.config.SendUnAckTimeout1 {
 				// now.Sub(startDtActiveSendSince) >= t.SendUnAckTimeout1 ||
 				// now.Sub(stopDtActiveSendSince) >= t.SendUnAckTimeout1 ||
-				this.Error("test frame alive confirm timeout t₁")
+				sf.Error("test frame alive confirm timeout t₁")
 				return
 			}
 			// check oldest unacknowledged outbound
-			if this.ackNoOut != this.seqNoOut &&
-				//now.Sub(this.peek()) >= this.SendUnAckTimeout1 {
-				now.Sub(this.pending[0].sendTime) >= this.SendUnAckTimeout1 {
-				this.ackNoOut++
-				this.Error("fatal transmission timeout t₁")
+			if sf.ackNoSend != sf.seqNoSend &&
+				//now.Sub(sf.peek()) >= sf.SendUnAckTimeout1 {
+				now.Sub(sf.pending[0].sendTime) >= sf.config.SendUnAckTimeout1 {
+				sf.ackNoSend++
+				sf.Error("fatal transmission timeout t₁")
 				return
 			}
 
 			// 确定最早发送的i-Frame是否超时,超时则回复sFrame
-			if this.ackNoIn != this.seqNoIn &&
-				(now.Sub(unAckRcvSince) >= this.RecvUnAckTimeout2 ||
+			if sf.ackNoRcv != sf.seqNoRcv &&
+				(now.Sub(unAckRcvSince) >= sf.config.RecvUnAckTimeout2 ||
 					now.Sub(idleTimeout3Sine) >= timeoutResolution) {
-				this.sendSFrame(this.seqNoIn)
-				this.ackNoIn = this.seqNoIn
+				sendSFrame(sf.seqNoRcv)
+				sf.ackNoRcv = sf.seqNoRcv
 			}
 
 			// 空闲时间到，发送TestFrActive帧,保活
-			if now.Sub(idleTimeout3Sine) >= this.IdleTimeout3 {
-				this.sendUFrame(uTestFrActive)
+			if now.Sub(idleTimeout3Sine) >= sf.config.IdleTimeout3 {
+				sendUFrame(uTestFrActive)
 				testFrAliveSendSince = time.Now()
 				idleTimeout3Sine = testFrAliveSendSince
 			}
 
-		case apdu := <-this.recv:
+		case apdu := <-sf.rcvRaw:
 			idleTimeout3Sine = time.Now() // 每收到一个i帧,S帧,U帧, 重置空闲定时器, t3
-			apci, asdu:= parse(apdu)
+			apci, asduVal := parse(apdu)
 			switch head := apci.(type) {
 			case sAPCI:
-				this.Debug("RX sFrame %v", head)
-				if !this.updateAckNoOut(head.rcvSN) {
-					this.Error("fatal incoming acknowledge either earlier than previous or later than sendTime")
+				sf.Debug("RX sFrame %v", head)
+				if !sf.updateAckNoOut(head.rcvSN) {
+					sf.Error("fatal incoming acknowledge either earlier than previous or later than sendTime")
 					return
 				}
 
 			case iAPCI:
-				this.Debug("RX iFrame %v", head)
+				sf.Debug("RX iFrame %v", head)
 				if !isActive {
-					this.Warn("station not active")
+					sf.Warn("station not active")
 					break // not active, discard apdu
 				}
-				if !this.updateAckNoOut(head.rcvSN) || head.sendSN != this.seqNoIn {
-					this.Error("fatal incoming acknowledge either earlier than previous or later than sendTime")
+				if !sf.updateAckNoOut(head.rcvSN) || head.sendSN != sf.seqNoRcv {
+					sf.Error("fatal incoming acknowledge either earlier than previous or later than sendTime")
 					return
 				}
 
-				this.in <- asdu
-				if this.ackNoIn == this.seqNoIn { // first unacked
+				sf.rcvASDU <- asduVal
+				if sf.ackNoRcv == sf.seqNoRcv { // first unacked
 					unAckRcvSince = time.Now()
 				}
 
-				this.seqNoIn = (this.seqNoIn + 1) & 32767
-				if seqNoCount(this.ackNoIn, this.seqNoIn) >= this.RecvUnAckLimitW {
-					this.sendSFrame(this.seqNoIn)
-					this.ackNoIn = this.seqNoIn
+				sf.seqNoRcv = (sf.seqNoRcv + 1) & 32767
+				if seqNoCount(sf.ackNoRcv, sf.seqNoRcv) >= sf.config.RecvUnAckLimitW {
+					sendSFrame(sf.seqNoRcv)
+					sf.ackNoRcv = sf.seqNoRcv
 				}
 
 			case uAPCI:
-				this.Debug("RX uFrame %v", head)
+				sf.Debug("RX uFrame %v", head)
 				switch head.function {
 				case uStartDtActive:
-					this.sendUFrame(uStartDtConfirm)
+					sendUFrame(uStartDtConfirm)
 					isActive = true
 				// case uStartDtConfirm:
 				// 	isActive = true
 				// 	startDtActiveSendSince = willNotTimeout
 				case uStopDtActive:
-					this.sendUFrame(uStopDtConfirm)
+					sendUFrame(uStopDtConfirm)
 					isActive = false
 				// case uStopDtConfirm:
 				// 	isActive = false
 				// 	stopDtActiveSendSince = willNotTimeout
 				case uTestFrActive:
-					this.sendUFrame(uTestFrConfirm)
+					sendUFrame(uTestFrConfirm)
 				case uTestFrConfirm:
 					testFrAliveSendSince = willNotTimeout
 				default:
-					this.Error("illegal U-Frame functions[0x%02x] ignored", head.function)
+					sf.Error("illegal U-Frame functions[0x%02x] ignored", head.function)
 				}
 			}
 		}
@@ -287,57 +313,57 @@ func (this *SrvSession) run(ctx context.Context) {
 }
 
 // handlerLoop handler iFrame asdu
-func (this *SrvSession) handlerLoop() {
-	this.Debug("handlerLoop start")
+func (sf *SrvSession) handlerLoop() {
+	sf.Debug("handlerLoop started")
 	defer func() {
-		this.wg.Done()
-		this.Debug("handlerLoop stop")
+		sf.wg.Done()
+		sf.Debug("handlerLoop stopped")
 	}()
 
 	for {
 		select {
-		case <-this.ctx.Done():
+		case <-sf.ctx.Done():
 			return
-		case rawAsdu := <-this.in:
-			asduPack := asdu.NewEmptyASDU(this.params)
+		case rawAsdu := <-sf.rcvASDU:
+			asduPack := asdu.NewEmptyASDU(sf.params)
 			if err := asduPack.UnmarshalBinary(rawAsdu); err != nil {
-				this.Error("asdu UnmarshalBinary failed,%+v", err)
+				sf.Error("asdu UnmarshalBinary failed,%+v", err)
 				continue
 			}
-			if err := this.serverHandler(asduPack); err != nil {
-				this.Error("serverHandler falied,%+v", err)
+			if err := sf.serverHandler(asduPack); err != nil {
+				sf.Error("serverHandler falied,%+v", err)
 			}
 		}
 	}
 }
 
-func (this *SrvSession) setConnectStatus(status uint32) {
-	this.rwMux.Lock()
-	atomic.StoreUint32(&this.status, status)
-	this.rwMux.Unlock()
+func (sf *SrvSession) setConnectStatus(status uint32) {
+	sf.rwMux.Lock()
+	atomic.StoreUint32(&sf.status, status)
+	sf.rwMux.Unlock()
 }
 
-func (this *SrvSession) connectStatus() uint32 {
-	this.rwMux.RLock()
-	status := atomic.LoadUint32(&this.status)
-	this.rwMux.RUnlock()
+func (sf *SrvSession) connectStatus() uint32 {
+	sf.rwMux.RLock()
+	status := atomic.LoadUint32(&sf.status)
+	sf.rwMux.RUnlock()
 	return status
 }
 
-func (this *SrvSession) cleanUp() {
-	this.ackNoIn = 0
-	this.ackNoOut = 0
-	this.seqNoIn = 0
-	this.seqNoOut = 0
-	this.pending = nil
+func (sf *SrvSession) cleanUp() {
+	sf.ackNoRcv = 0
+	sf.ackNoSend = 0
+	sf.seqNoRcv = 0
+	sf.seqNoSend = 0
+	sf.pending = nil
 	// clear sending chan buffer
 loop:
 	for {
 		select {
-		case <-this.send:
-		case <-this.recv:
-		case <-this.in:
-		case <-this.out:
+		case <-sf.sendRaw:
+		case <-sf.rcvRaw:
+		case <-sf.rcvASDU:
+		case <-sf.sendASDU:
 		default:
 			break loop
 		}
@@ -352,173 +378,146 @@ func seqNoCount(nextAckNo, nextSeqNo uint16) uint16 {
 	return nextSeqNo - nextAckNo
 }
 
-func (this *SrvSession) sendSFrame(rcvSN uint16) {
-	this.Debug("TX sFrame %v", sAPCI{rcvSN})
-	this.send <- newSFrame(rcvSN)
-}
-
-func (this *SrvSession) sendUFrame(which byte) {
-	this.Debug("TX uFrame %v", uAPCI{which})
-	this.send <- newUFrame(which)
-}
-
-func (this *SrvSession) sendIFrame(asdu1 []byte) {
-	seqNo := this.seqNoOut
-
-	iframe, err := newIFrame(seqNo, this.seqNoIn, asdu1)
-	if err != nil {
-		return
-	}
-	this.ackNoIn = this.seqNoIn
-	this.seqNoOut = (seqNo + 1) & 32767
-
-	//this.push(seqPending{seqNo & 32767, time.Now()})
-	this.pending = append(this.pending, seqPending{seqNo & 32767, time.Now()})
-
-	this.Debug("TX iFrame %v", iAPCI{seqNo, this.seqNoIn})
-	this.send <- iframe
-}
-
-func (this *SrvSession) updateAckNoOut(ackNo uint16) (ok bool) {
-	if ackNo == this.ackNoOut {
+func (sf *SrvSession) updateAckNoOut(ackNo uint16) (ok bool) {
+	if ackNo == sf.ackNoSend {
 		return true
 	}
 	// new acks validate， ack 不能在 req seq 前面,出错
-	if seqNoCount(this.ackNoOut, this.seqNoOut) < seqNoCount(ackNo, this.seqNoOut) {
+	if seqNoCount(sf.ackNoSend, sf.seqNoSend) < seqNoCount(ackNo, sf.seqNoSend) {
 		return false
 	}
 
 	// confirm reception
-	for i, v := range this.pending {
+	for i, v := range sf.pending {
 		if v.seq == (ackNo - 1) {
-			this.pending = this.pending[i+1:]
+			sf.pending = sf.pending[i+1:]
 			break
 		}
 	}
-	//this.confirmReception(ackNo)
-	this.ackNoOut = ackNo
+
+	sf.ackNoSend = ackNo
 	return true
 }
 
-func (this *SrvSession) serverHandler(asduPack *asdu.ASDU) error {
+func (sf *SrvSession) serverHandler(asduPack *asdu.ASDU) error {
 	defer func() {
 		if err := recover(); err != nil {
-			this.Critical("server handler %+v", err)
+			sf.Critical("server handler %+v", err)
 		}
 	}()
 
-	this.Debug("ASDU %+v", asduPack)
+	sf.Debug("ASDU %+v", asduPack)
 
 	switch asduPack.Identifier.Type {
 	case asdu.C_IC_NA_1: // InterrogationCmd
 		if !(asduPack.Identifier.Coa.Cause == asdu.Activation ||
 			asduPack.Identifier.Coa.Cause == asdu.Deactivation) {
-			return asduPack.SendReplyMirror(this, asdu.UnknownCOT)
+			return asduPack.SendReplyMirror(sf, asdu.UnknownCOT)
 		}
 		if asduPack.CommonAddr == asdu.InvalidCommonAddr {
-			return asduPack.SendReplyMirror(this, asdu.UnknownCA)
+			return asduPack.SendReplyMirror(sf, asdu.UnknownCA)
 		}
 		ioa, qoi := asduPack.GetInterrogationCmd()
 		if ioa != asdu.InfoObjAddrIrrelevant {
-			return asduPack.SendReplyMirror(this, asdu.UnknownIOA)
+			return asduPack.SendReplyMirror(sf, asdu.UnknownIOA)
 		}
-		return this.handler.InterrogationHandler(this, asduPack, qoi)
+		return sf.handler.InterrogationHandler(sf, asduPack, qoi)
 
 	case asdu.C_CI_NA_1: // CounterInterrogationCmd
 		if asduPack.Identifier.Coa.Cause != asdu.Activation {
-			return asduPack.SendReplyMirror(this, asdu.UnknownCOT)
+			return asduPack.SendReplyMirror(sf, asdu.UnknownCOT)
 		}
 		if asduPack.CommonAddr == asdu.InvalidCommonAddr {
-			return asduPack.SendReplyMirror(this, asdu.UnknownCA)
+			return asduPack.SendReplyMirror(sf, asdu.UnknownCA)
 		}
 		ioa, qcc := asduPack.GetCounterInterrogationCmd()
 		if ioa != asdu.InfoObjAddrIrrelevant {
-			return asduPack.SendReplyMirror(this, asdu.UnknownIOA)
+			return asduPack.SendReplyMirror(sf, asdu.UnknownIOA)
 		}
-		return this.handler.CounterInterrogationHandler(this, asduPack, qcc)
+		return sf.handler.CounterInterrogationHandler(sf, asduPack, qcc)
 
 	case asdu.C_RD_NA_1: // ReadCmd
 		if asduPack.Identifier.Coa.Cause != asdu.Request {
-			return asduPack.SendReplyMirror(this, asdu.UnknownCOT)
+			return asduPack.SendReplyMirror(sf, asdu.UnknownCOT)
 		}
 		if asduPack.CommonAddr == asdu.InvalidCommonAddr {
-			return asduPack.SendReplyMirror(this, asdu.UnknownCA)
+			return asduPack.SendReplyMirror(sf, asdu.UnknownCA)
 		}
-		return this.handler.ReadHandler(this, asduPack, asduPack.GetReadCmd())
+		return sf.handler.ReadHandler(sf, asduPack, asduPack.GetReadCmd())
 
 	case asdu.C_CS_NA_1: // ClockSynchronizationCmd
 		if asduPack.Identifier.Coa.Cause != asdu.Activation {
-			return asduPack.SendReplyMirror(this, asdu.UnknownCOT)
+			return asduPack.SendReplyMirror(sf, asdu.UnknownCOT)
 		}
 		if asduPack.CommonAddr == asdu.InvalidCommonAddr {
-			return asduPack.SendReplyMirror(this, asdu.UnknownCA)
+			return asduPack.SendReplyMirror(sf, asdu.UnknownCA)
 		}
 
 		ioa, tm := asduPack.GetClockSynchronizationCmd()
 		if ioa != asdu.InfoObjAddrIrrelevant {
-			return asduPack.SendReplyMirror(this, asdu.UnknownIOA)
+			return asduPack.SendReplyMirror(sf, asdu.UnknownIOA)
 		}
-		return this.handler.ClockSyncHandler(this, asduPack, tm)
+		return sf.handler.ClockSyncHandler(sf, asduPack, tm)
 
 	case asdu.C_TS_NA_1: // TestCommand
 		if asduPack.Identifier.Coa.Cause != asdu.Activation {
-			return asduPack.SendReplyMirror(this, asdu.UnknownCOT)
+			return asduPack.SendReplyMirror(sf, asdu.UnknownCOT)
 		}
 		if asduPack.CommonAddr == asdu.InvalidCommonAddr {
-			return asduPack.SendReplyMirror(this, asdu.UnknownCA)
+			return asduPack.SendReplyMirror(sf, asdu.UnknownCA)
 		}
 		ioa, _ := asduPack.GetTestCommand()
 		if ioa != asdu.InfoObjAddrIrrelevant {
-			return asduPack.SendReplyMirror(this, asdu.UnknownIOA)
+			return asduPack.SendReplyMirror(sf, asdu.UnknownIOA)
 		}
-		return asduPack.SendReplyMirror(this, asdu.ActivationCon)
+		return asduPack.SendReplyMirror(sf, asdu.ActivationCon)
 
 	case asdu.C_RP_NA_1: // ResetProcessCmd
 		if asduPack.Identifier.Coa.Cause != asdu.Activation {
-			return asduPack.SendReplyMirror(this, asdu.UnknownCOT)
+			return asduPack.SendReplyMirror(sf, asdu.UnknownCOT)
 		}
 		if asduPack.CommonAddr == asdu.InvalidCommonAddr {
-			return asduPack.SendReplyMirror(this, asdu.UnknownCA)
+			return asduPack.SendReplyMirror(sf, asdu.UnknownCA)
 		}
 		ioa, qrp := asduPack.GetResetProcessCmd()
 		if ioa != asdu.InfoObjAddrIrrelevant {
-			return asduPack.SendReplyMirror(this, asdu.UnknownIOA)
+			return asduPack.SendReplyMirror(sf, asdu.UnknownIOA)
 		}
-		return this.handler.ResetProcessHandler(this, asduPack, qrp)
+		return sf.handler.ResetProcessHandler(sf, asduPack, qrp)
 	case asdu.C_CD_NA_1: // DelayAcquireCommand
 		if !(asduPack.Identifier.Coa.Cause == asdu.Activation ||
 			asduPack.Identifier.Coa.Cause == asdu.Spontaneous) {
-			return asduPack.SendReplyMirror(this, asdu.UnknownCOT)
+			return asduPack.SendReplyMirror(sf, asdu.UnknownCOT)
 		}
 		if asduPack.CommonAddr == asdu.InvalidCommonAddr {
-			return asduPack.SendReplyMirror(this, asdu.UnknownCA)
+			return asduPack.SendReplyMirror(sf, asdu.UnknownCA)
 		}
 		ioa, msec := asduPack.GetDelayAcquireCommand()
 		if ioa != asdu.InfoObjAddrIrrelevant {
-			return asduPack.SendReplyMirror(this, asdu.UnknownIOA)
+			return asduPack.SendReplyMirror(sf, asdu.UnknownIOA)
 		}
-		return this.handler.DelayAcquisitionHandler(this, asduPack, msec)
+		return sf.handler.DelayAcquisitionHandler(sf, asduPack, msec)
 	}
 
-	if err := this.handler.ASDUHandler(this, asduPack); err != nil {
-		return asduPack.SendReplyMirror(this, asdu.UnknownTypeID)
+	if err := sf.handler.ASDUHandler(sf, asduPack); err != nil {
+		return asduPack.SendReplyMirror(sf, asdu.UnknownTypeID)
 	}
 	return nil
 }
 
 // IsConnected get server session connected state
-func (this *SrvSession) IsConnected() bool {
-	return this.connectStatus() == connected
+func (sf *SrvSession) IsConnected() bool {
+	return sf.connectStatus() == connected
 }
 
 // Params get params
-func (this *SrvSession) Params() *asdu.Params {
-	return this.params
+func (sf *SrvSession) Params() *asdu.Params {
+	return sf.params
 }
 
 // Send asdu frame
-func (this *SrvSession) Send(u *asdu.ASDU) error {
-	if !this.IsConnected() {
+func (sf *SrvSession) Send(u *asdu.ASDU) error {
+	if !sf.IsConnected() {
 		return ErrUseClosedConnection
 	}
 	data, err := u.MarshalBinary()
@@ -526,7 +525,7 @@ func (this *SrvSession) Send(u *asdu.ASDU) error {
 		return err
 	}
 	select {
-	case this.out <- data:
+	case sf.sendASDU <- data:
 	default:
 		return ErrBufferFulled
 	}
@@ -534,6 +533,6 @@ func (this *SrvSession) Send(u *asdu.ASDU) error {
 }
 
 // UnderlyingConn got under net.conn
-func (this *SrvSession) UnderlyingConn() net.Conn {
-	return this.conn
+func (sf *SrvSession) UnderlyingConn() net.Conn {
+	return sf.conn
 }

@@ -3,7 +3,6 @@ package cs104
 import (
 	"context"
 	"crypto/tls"
-	"errors"
 	"net"
 	"sync"
 	"time"
@@ -19,8 +18,8 @@ const timeoutResolution = 100 * time.Millisecond
 
 // Server the common server
 type Server struct {
-	conf      *Config
-	params    *asdu.Params
+	config    Config
+	params    asdu.Params
 	handler   ServerHandlerInterface
 	TLSConfig *tls.Config
 	mux       sync.Mutex
@@ -30,104 +29,114 @@ type Server struct {
 	wg sync.WaitGroup
 }
 
-// NewServer new a server
-func NewServer(conf *Config, params *asdu.Params, handler ServerHandlerInterface) (*Server, error) {
-	if handler == nil {
-		return nil, errors.New("invalid handler")
-	}
-	if err := conf.Valid(); err != nil {
-		return nil, err
-	}
-	if err := params.Valid(); err != nil {
-		return nil, err
-	}
-
+// NewServer new a server, default config and default asdu.ParamsWide params
+func NewServer(handler ServerHandlerInterface) *Server {
 	return &Server{
-		conf:     conf,
-		params:   params,
+		config:   DefaultConfig(),
+		params:   *asdu.ParamsWide,
 		handler:  handler,
 		sessions: make(map[*SrvSession]struct{}),
 		Clog:     clog.NewWithPrefix("cs104 server =>"),
-	}, nil
+	}
+}
+
+// SetConfig set config
+func (sf *Server) SetConfig(cfg Config) *Server {
+	if err := cfg.Valid(); err != nil {
+		panic(err)
+	}
+	sf.config = cfg
+
+	return sf
+}
+
+// SetParams set asdu params
+func (sf *Server) SetParams(p *asdu.Params) *Server {
+	if err := p.Valid(); err != nil {
+		panic(err)
+	}
+	sf.params = *p
+
+	return sf
 }
 
 // ListenAndServer run the server
-func (this *Server) ListenAndServer(addr string) {
+func (sf *Server) ListenAndServer(addr string) {
 	listen, err := net.Listen("tcp", addr)
 	if err != nil {
-		this.Error("server run failed, %v", err)
+		sf.Error("server run failed, %v", err)
 		return
 	}
-	this.mux.Lock()
-	this.listen = listen
-	this.mux.Unlock()
+	sf.mux.Lock()
+	sf.listen = listen
+	sf.mux.Unlock()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer func() {
 		cancel()
-		this.Close()
-		this.Debug("server stop")
+		_ = sf.Close()
+		sf.Debug("server stop")
 	}()
-	this.Debug("server run")
+	sf.Debug("server run")
 	for {
 		conn, err := listen.Accept()
 		if err != nil {
-			this.Error("server run failed, %v", err)
+			sf.Error("server run failed, %v", err)
 			return
 		}
 
-		this.wg.Add(1)
+		sf.wg.Add(1)
 		go func() {
 			sess := &SrvSession{
-				Config:  this.conf,
-				params:  this.params,
-				handler: this.handler,
-				conn:    conn,
-				in:      make(chan []byte, 1024),
-				out:     make(chan []byte, 1024),
-				recv:    make(chan []byte, 1024),
-				send:    make(chan []byte, 1024), // may not block!
+				config:   &sf.config,
+				params:   &sf.params,
+				handler:  sf.handler,
+				conn:     conn,
+				rcvASDU:  make(chan []byte, sf.config.RecvUnAckLimitW<<4),
+				sendASDU: make(chan []byte, sf.config.SendUnAckLimitK<<4),
+				rcvRaw:   make(chan []byte, sf.config.RecvUnAckLimitW<<5),
+				sendRaw:  make(chan []byte, sf.config.SendUnAckLimitK<<5), // may not block!
 
-				Clog: this.Clog,
+				Clog: sf.Clog,
 			}
-			this.mux.Lock()
-			this.sessions[sess] = struct{}{}
-			this.mux.Unlock()
+			sf.mux.Lock()
+			sf.sessions[sess] = struct{}{}
+			sf.mux.Unlock()
 			sess.run(ctx)
-			this.mux.Lock()
-			delete(this.sessions, sess)
-			this.mux.Unlock()
-			this.wg.Done()
+			sf.mux.Lock()
+			delete(sf.sessions, sess)
+			sf.mux.Unlock()
+			sf.wg.Done()
 		}()
 	}
 }
 
 // Close close the server
-func (this *Server) Close() error {
+func (sf *Server) Close() error {
 	var err error
 
-	this.mux.Lock()
-	if this.listen != nil {
-		err = this.listen.Close()
-		this.listen = nil
+	sf.mux.Lock()
+	if sf.listen != nil {
+		err = sf.listen.Close()
+		sf.listen = nil
 	}
-	this.mux.Unlock()
-	this.wg.Wait()
+	sf.mux.Unlock()
+	sf.wg.Wait()
 	return err
 }
 
 // Send imp interface Connect
-func (this *Server) Send(a *asdu.ASDU) error {
-	this.mux.Lock()
-	for k := range this.sessions {
+func (sf *Server) Send(a *asdu.ASDU) error {
+	sf.mux.Lock()
+	for k := range sf.sessions {
 		_ = k.Send(a.Clone())
 	}
-	this.mux.Unlock()
+	sf.mux.Unlock()
 	return nil
 }
 
 // Params imp interface Connect
-func (this *Server) Params() *asdu.Params { return this.params }
+func (sf *Server) Params() *asdu.Params { return &sf.params }
 
 // UnderlyingConn imp interface Connect
-func (this *Server) UnderlyingConn() net.Conn { return nil }
+func (sf *Server) UnderlyingConn() net.Conn { return nil }

@@ -1124,25 +1124,25 @@ func PackedSinglePointWithSCD(c Connect, isSequence bool, coa CauseOfTransmissio
 }
 
 // GetSinglePoint [M_SP_NA_1], [M_SP_TA_1] or [M_SP_TB_1] 获取单点信息信息体集合
-func (this *ASDU) GetSinglePoint() []SinglePointInfo {
-	info := make([]SinglePointInfo, 0, this.Variable.Number)
+func (sf *ASDU) GetSinglePoint() []SinglePointInfo {
+	info := make([]SinglePointInfo, 0, sf.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
-	for i, once := 0, false; i < int(this.Variable.Number); i++ {
-		if !this.Variable.IsSequence || !once {
+	for i, once := 0, false; i < int(sf.Variable.Number); i++ {
+		if !sf.Variable.IsSequence || !once {
 			once = true
-			infoObjAddr = this.DecodeInfoObjAddr()
+			infoObjAddr = sf.DecodeInfoObjAddr()
 		} else {
 			infoObjAddr++
 		}
-		value := this.DecodeByte()
+		value := sf.DecodeByte()
 
 		var t time.Time
-		switch this.Type {
+		switch sf.Type {
 		case M_SP_NA_1:
 		case M_SP_TA_1:
-			t = this.DecodeCP24Time2a()
+			t = sf.DecodeCP24Time2a()
 		case M_SP_TB_1:
-			t = this.DecodeCP56Time2a()
+			t = sf.DecodeCP56Time2a()
 		default:
 			panic(ErrTypeIDNotMatch)
 		}
@@ -1157,25 +1157,25 @@ func (this *ASDU) GetSinglePoint() []SinglePointInfo {
 }
 
 // GetDoublePoint [M_DP_NA_1], [M_DP_TA_1] or [M_DP_TB_1] 获得双点信息体集合
-func (this *ASDU) GetDoublePoint() []DoublePointInfo {
-	info := make([]DoublePointInfo, 0, this.Variable.Number)
+func (sf *ASDU) GetDoublePoint() []DoublePointInfo {
+	info := make([]DoublePointInfo, 0, sf.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
-	for i, once := 0, false; i < int(this.Variable.Number); i++ {
-		if !this.Variable.IsSequence || !once {
+	for i, once := 0, false; i < int(sf.Variable.Number); i++ {
+		if !sf.Variable.IsSequence || !once {
 			once = true
-			infoObjAddr = this.DecodeInfoObjAddr()
+			infoObjAddr = sf.DecodeInfoObjAddr()
 		} else {
 			infoObjAddr++
 		}
-		value := this.DecodeByte()
+		value := sf.DecodeByte()
 
 		var t time.Time
-		switch this.Type {
+		switch sf.Type {
 		case M_DP_NA_1:
 		case M_DP_TA_1:
-			t = this.DecodeCP24Time2a()
+			t = sf.DecodeCP24Time2a()
 		case M_DP_TB_1:
-			t = this.DecodeCP56Time2a()
+			t = sf.DecodeCP56Time2a()
 		default:
 			panic(ErrTypeIDNotMatch)
 		}
@@ -1190,26 +1190,26 @@ func (this *ASDU) GetDoublePoint() []DoublePointInfo {
 }
 
 // GetStepPosition [M_ST_NA_1], [M_ST_TA_1] or [M_ST_TB_1] 获得步位置信息体集合
-func (this *ASDU) GetStepPosition() []StepPositionInfo {
-	info := make([]StepPositionInfo, 0, this.Variable.Number)
+func (sf *ASDU) GetStepPosition() []StepPositionInfo {
+	info := make([]StepPositionInfo, 0, sf.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
-	for i, once := 0, false; i < int(this.Variable.Number); i++ {
-		if !this.Variable.IsSequence || !once {
+	for i, once := 0, false; i < int(sf.Variable.Number); i++ {
+		if !sf.Variable.IsSequence || !once {
 			once = true
-			infoObjAddr = this.DecodeInfoObjAddr()
+			infoObjAddr = sf.DecodeInfoObjAddr()
 		} else {
 			infoObjAddr++
 		}
-		value := ParseStepPosition(this.DecodeByte())
-		qds := QualityDescriptor(this.DecodeByte())
+		value := ParseStepPosition(sf.DecodeByte())
+		qds := QualityDescriptor(sf.DecodeByte())
 
 		var t time.Time
-		switch this.Type {
+		switch sf.Type {
 		case M_ST_NA_1:
 		case M_ST_TA_1:
-			t = this.DecodeCP24Time2a()
+			t = sf.DecodeCP24Time2a()
 		case M_SP_TB_1:
-			t = this.DecodeCP56Time2a()
+			t = sf.DecodeCP56Time2a()
 		default:
 			panic(ErrTypeIDNotMatch)
 		}
@@ -1224,27 +1224,27 @@ func (this *ASDU) GetStepPosition() []StepPositionInfo {
 }
 
 // GetBitString32 [M_BO_NA_1], [M_BO_TA_1] or [M_BO_TB_1] 获得比特位串信息体集合
-func (this *ASDU) GetBitString32() []BitString32Info {
-	info := make([]BitString32Info, 0, this.Variable.Number)
+func (sf *ASDU) GetBitString32() []BitString32Info {
+	info := make([]BitString32Info, 0, sf.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
-	for i, once := 0, false; i < int(this.Variable.Number); i++ {
-		if !this.Variable.IsSequence || !once {
+	for i, once := 0, false; i < int(sf.Variable.Number); i++ {
+		if !sf.Variable.IsSequence || !once {
 			once = true
-			infoObjAddr = this.DecodeInfoObjAddr()
+			infoObjAddr = sf.DecodeInfoObjAddr()
 		} else {
 			infoObjAddr++
 		}
 
-		value := this.DecodeBitsString32()
-		qds := QualityDescriptor(this.DecodeByte())
+		value := sf.DecodeBitsString32()
+		qds := QualityDescriptor(sf.DecodeByte())
 
 		var t time.Time
-		switch this.Type {
+		switch sf.Type {
 		case M_BO_NA_1:
 		case M_BO_TA_1:
-			t = this.DecodeCP24Time2a()
+			t = sf.DecodeCP24Time2a()
 		case M_BO_TB_1:
-			t = this.DecodeCP56Time2a()
+			t = sf.DecodeCP56Time2a()
 		default:
 			panic(ErrTypeIDNotMatch)
 		}
@@ -1259,30 +1259,30 @@ func (this *ASDU) GetBitString32() []BitString32Info {
 }
 
 // GetMeasuredValueNormal [M_ME_NA_1], [M_ME_TA_1],[ M_ME_TD_1] or [M_ME_ND_1] 获得测量值,规一化值信息体集合
-func (this *ASDU) GetMeasuredValueNormal() []MeasuredValueNormalInfo {
-	info := make([]MeasuredValueNormalInfo, 0, this.Variable.Number)
+func (sf *ASDU) GetMeasuredValueNormal() []MeasuredValueNormalInfo {
+	info := make([]MeasuredValueNormalInfo, 0, sf.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
-	for i, once := 0, false; i < int(this.Variable.Number); i++ {
-		if !this.Variable.IsSequence || !once {
+	for i, once := 0, false; i < int(sf.Variable.Number); i++ {
+		if !sf.Variable.IsSequence || !once {
 			once = true
-			infoObjAddr = this.DecodeInfoObjAddr()
+			infoObjAddr = sf.DecodeInfoObjAddr()
 		} else {
 			infoObjAddr++
 		}
 
-		value := this.DecodeNormalize()
+		value := sf.DecodeNormalize()
 
 		var t time.Time
 		var qds QualityDescriptor
-		switch this.Type {
+		switch sf.Type {
 		case M_ME_NA_1:
-			qds = QualityDescriptor(this.DecodeByte())
+			qds = QualityDescriptor(sf.DecodeByte())
 		case M_ME_TA_1:
-			qds = QualityDescriptor(this.DecodeByte())
-			t = this.DecodeCP24Time2a()
+			qds = QualityDescriptor(sf.DecodeByte())
+			t = sf.DecodeCP24Time2a()
 		case M_ME_TD_1:
-			qds = QualityDescriptor(this.DecodeByte())
-			t = this.DecodeCP56Time2a()
+			qds = QualityDescriptor(sf.DecodeByte())
+			t = sf.DecodeCP56Time2a()
 		case M_ME_ND_1: // 不带品质
 		default:
 			panic(ErrTypeIDNotMatch)
@@ -1298,27 +1298,27 @@ func (this *ASDU) GetMeasuredValueNormal() []MeasuredValueNormalInfo {
 }
 
 // GetMeasuredValueScaled [M_ME_NB_1], [M_ME_TB_1] or [M_ME_TE_1] 获得测量值，标度化值信息体集合
-func (this *ASDU) GetMeasuredValueScaled() []MeasuredValueScaledInfo {
-	info := make([]MeasuredValueScaledInfo, 0, this.Variable.Number)
+func (sf *ASDU) GetMeasuredValueScaled() []MeasuredValueScaledInfo {
+	info := make([]MeasuredValueScaledInfo, 0, sf.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
-	for i, once := 0, false; i < int(this.Variable.Number); i++ {
-		if !this.Variable.IsSequence || !once {
+	for i, once := 0, false; i < int(sf.Variable.Number); i++ {
+		if !sf.Variable.IsSequence || !once {
 			once = true
-			infoObjAddr = this.DecodeInfoObjAddr()
+			infoObjAddr = sf.DecodeInfoObjAddr()
 		} else {
 			infoObjAddr++
 		}
 
-		value := this.DecodeScaled()
-		qds := QualityDescriptor(this.DecodeByte())
+		value := sf.DecodeScaled()
+		qds := QualityDescriptor(sf.DecodeByte())
 
 		var t time.Time
-		switch this.Type {
+		switch sf.Type {
 		case M_ME_NB_1:
 		case M_ME_TB_1:
-			t = this.DecodeCP24Time2a()
+			t = sf.DecodeCP24Time2a()
 		case M_ME_TE_1:
-			t = this.DecodeCP56Time2a()
+			t = sf.DecodeCP56Time2a()
 		default:
 			panic(ErrTypeIDNotMatch)
 		}
@@ -1333,27 +1333,27 @@ func (this *ASDU) GetMeasuredValueScaled() []MeasuredValueScaledInfo {
 }
 
 // GetMeasuredValueFloat [M_ME_NC_1], [M_ME_TC_1] or [M_ME_TF_1].获得测量值,短浮点数信息体集合
-func (this *ASDU) GetMeasuredValueFloat() []MeasuredValueFloatInfo {
-	info := make([]MeasuredValueFloatInfo, 0, this.Variable.Number)
+func (sf *ASDU) GetMeasuredValueFloat() []MeasuredValueFloatInfo {
+	info := make([]MeasuredValueFloatInfo, 0, sf.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
-	for i, once := 0, false; i < int(this.Variable.Number); i++ {
-		if !this.Variable.IsSequence || !once {
+	for i, once := 0, false; i < int(sf.Variable.Number); i++ {
+		if !sf.Variable.IsSequence || !once {
 			once = true
-			infoObjAddr = this.DecodeInfoObjAddr()
+			infoObjAddr = sf.DecodeInfoObjAddr()
 		} else {
 			infoObjAddr++
 		}
 
-		value := this.DecodeFloat()
-		qua := this.DecodeByte() & 0xf1
+		value := sf.DecodeFloat32()
+		qua := sf.DecodeByte() & 0xf1
 
 		var t time.Time
-		switch this.Type {
+		switch sf.Type {
 		case M_ME_NC_1:
 		case M_ME_TC_1:
-			t = this.DecodeCP24Time2a()
+			t = sf.DecodeCP24Time2a()
 		case M_ME_TF_1:
-			t = this.DecodeCP56Time2a()
+			t = sf.DecodeCP56Time2a()
 		default:
 			panic(ErrTypeIDNotMatch)
 		}
@@ -1367,26 +1367,26 @@ func (this *ASDU) GetMeasuredValueFloat() []MeasuredValueFloatInfo {
 }
 
 // GetIntegratedTotals [M_IT_NA_1], [M_IT_TA_1] or [M_IT_TB_1]. 获得累计量信息体集合
-func (this *ASDU) GetIntegratedTotals() []BinaryCounterReadingInfo {
-	info := make([]BinaryCounterReadingInfo, 0, this.Variable.Number)
+func (sf *ASDU) GetIntegratedTotals() []BinaryCounterReadingInfo {
+	info := make([]BinaryCounterReadingInfo, 0, sf.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
-	for i, once := 0, false; i < int(this.Variable.Number); i++ {
-		if !this.Variable.IsSequence || !once {
+	for i, once := 0, false; i < int(sf.Variable.Number); i++ {
+		if !sf.Variable.IsSequence || !once {
 			once = true
-			infoObjAddr = this.DecodeInfoObjAddr()
+			infoObjAddr = sf.DecodeInfoObjAddr()
 		} else {
 			infoObjAddr++
 		}
 
-		value := this.DecodeBinaryCounterReading()
+		value := sf.DecodeBinaryCounterReading()
 
 		var t time.Time
-		switch this.Type {
+		switch sf.Type {
 		case M_IT_NA_1:
 		case M_IT_TA_1:
-			t = this.DecodeCP24Time2a()
+			t = sf.DecodeCP24Time2a()
 		case M_IT_TB_1:
-			t = this.DecodeCP56Time2a()
+			t = sf.DecodeCP56Time2a()
 		default:
 			panic(ErrTypeIDNotMatch)
 		}
@@ -1399,25 +1399,25 @@ func (this *ASDU) GetIntegratedTotals() []BinaryCounterReadingInfo {
 }
 
 // GetEventOfProtectionEquipment [M_EP_TA_1] [M_EP_TD_1] 获取继电器保护设备事件信息体
-func (this *ASDU) GetEventOfProtectionEquipment() []EventOfProtectionEquipmentInfo {
-	info := make([]EventOfProtectionEquipmentInfo, 0, this.Variable.Number)
+func (sf *ASDU) GetEventOfProtectionEquipment() []EventOfProtectionEquipmentInfo {
+	info := make([]EventOfProtectionEquipmentInfo, 0, sf.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
-	for i, once := 0, false; i < int(this.Variable.Number); i++ {
-		if !this.Variable.IsSequence || !once {
+	for i, once := 0, false; i < int(sf.Variable.Number); i++ {
+		if !sf.Variable.IsSequence || !once {
 			once = true
-			infoObjAddr = this.DecodeInfoObjAddr()
+			infoObjAddr = sf.DecodeInfoObjAddr()
 		} else {
 			infoObjAddr++
 		}
 
-		value := this.DecodeByte()
-		msec := this.DecodeCP16Time2a()
+		value := sf.DecodeByte()
+		msec := sf.DecodeCP16Time2a()
 		var t time.Time
-		switch this.Type {
+		switch sf.Type {
 		case M_EP_TA_1:
-			t = this.DecodeCP24Time2a()
+			t = sf.DecodeCP24Time2a()
 		case M_EP_TD_1:
-			t = this.DecodeCP56Time2a()
+			t = sf.DecodeCP56Time2a()
 		default:
 			panic(ErrTypeIDNotMatch)
 		}
@@ -1432,22 +1432,22 @@ func (this *ASDU) GetEventOfProtectionEquipment() []EventOfProtectionEquipmentIn
 }
 
 // GetPackedStartEventsOfProtectionEquipment [M_EP_TB_1] [M_EP_TE_1] 获取继电器保护设备事件信息体
-func (this *ASDU) GetPackedStartEventsOfProtectionEquipment() PackedStartEventsOfProtectionEquipmentInfo {
+func (sf *ASDU) GetPackedStartEventsOfProtectionEquipment() PackedStartEventsOfProtectionEquipmentInfo {
 	info := PackedStartEventsOfProtectionEquipmentInfo{}
 
-	if this.Variable.IsSequence || this.Variable.Number != 1 {
+	if sf.Variable.IsSequence || sf.Variable.Number != 1 {
 		return info
 	}
 
-	info.Ioa = this.DecodeInfoObjAddr()
-	info.Event = StartEvent(this.DecodeByte())
-	info.Qdp = QualityDescriptorProtection(this.DecodeByte() & 0xf1)
-	info.Msec = this.DecodeCP16Time2a()
-	switch this.Type {
+	info.Ioa = sf.DecodeInfoObjAddr()
+	info.Event = StartEvent(sf.DecodeByte())
+	info.Qdp = QualityDescriptorProtection(sf.DecodeByte() & 0xf1)
+	info.Msec = sf.DecodeCP16Time2a()
+	switch sf.Type {
 	case M_EP_TB_1:
-		info.Time = this.DecodeCP24Time2a()
+		info.Time = sf.DecodeCP24Time2a()
 	case M_EP_TE_1:
-		info.Time = this.DecodeCP56Time2a()
+		info.Time = sf.DecodeCP56Time2a()
 	default:
 		panic(ErrTypeIDNotMatch)
 	}
@@ -1455,22 +1455,22 @@ func (this *ASDU) GetPackedStartEventsOfProtectionEquipment() PackedStartEventsO
 }
 
 // GetPackedOutputCircuitInfo [M_EP_TC_1] [M_EP_TF_1] 获取继电器保护设备成组输出电路信息信息体
-func (this *ASDU) GetPackedOutputCircuitInfo() PackedOutputCircuitInfoInfo {
+func (sf *ASDU) GetPackedOutputCircuitInfo() PackedOutputCircuitInfoInfo {
 	info := PackedOutputCircuitInfoInfo{}
 
-	if this.Variable.IsSequence || this.Variable.Number != 1 {
+	if sf.Variable.IsSequence || sf.Variable.Number != 1 {
 		return info
 	}
 
-	info.Ioa = this.DecodeInfoObjAddr()
-	info.Oci = OutputCircuitInfo(this.DecodeByte())
-	info.Qdp = QualityDescriptorProtection(this.DecodeByte() & 0xf1)
-	info.Msec = this.DecodeCP16Time2a()
-	switch this.Type {
+	info.Ioa = sf.DecodeInfoObjAddr()
+	info.Oci = OutputCircuitInfo(sf.DecodeByte())
+	info.Qdp = QualityDescriptorProtection(sf.DecodeByte() & 0xf1)
+	info.Msec = sf.DecodeCP16Time2a()
+	switch sf.Type {
 	case M_EP_TC_1:
-		info.Time = this.DecodeCP24Time2a()
+		info.Time = sf.DecodeCP24Time2a()
 	case M_EP_TF_1:
-		info.Time = this.DecodeCP56Time2a()
+		info.Time = sf.DecodeCP56Time2a()
 	default:
 		panic(ErrTypeIDNotMatch)
 	}
@@ -1478,18 +1478,18 @@ func (this *ASDU) GetPackedOutputCircuitInfo() PackedOutputCircuitInfoInfo {
 }
 
 // GetPackedSinglePointWithSCD [M_PS_NA_1]. 获得带变位检出的成组单点信息
-func (this *ASDU) GetPackedSinglePointWithSCD() []PackedSinglePointWithSCDInfo {
-	info := make([]PackedSinglePointWithSCDInfo, 0, this.Variable.Number)
+func (sf *ASDU) GetPackedSinglePointWithSCD() []PackedSinglePointWithSCDInfo {
+	info := make([]PackedSinglePointWithSCDInfo, 0, sf.Variable.Number)
 	infoObjAddr := InfoObjAddr(0)
-	for i, once := 0, false; i < int(this.Variable.Number); i++ {
-		if !this.Variable.IsSequence || !once {
+	for i, once := 0, false; i < int(sf.Variable.Number); i++ {
+		if !sf.Variable.IsSequence || !once {
 			once = true
-			infoObjAddr = this.DecodeInfoObjAddr()
+			infoObjAddr = sf.DecodeInfoObjAddr()
 		} else {
 			infoObjAddr++
 		}
-		scd := this.DecodeStatusAndStatusChangeDetection()
-		qds := QualityDescriptor(this.DecodeByte())
+		scd := sf.DecodeStatusAndStatusChangeDetection()
+		qds := QualityDescriptor(sf.DecodeByte())
 		info = append(info, PackedSinglePointWithSCDInfo{
 			Ioa: infoObjAddr,
 			Scd: scd,

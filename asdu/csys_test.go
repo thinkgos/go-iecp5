@@ -246,6 +246,38 @@ func TestDelayAcquireCommand(t *testing.T) {
 	}
 }
 
+func TestTestCommandCP56Time2a(t *testing.T) {
+	type args struct {
+		c   Connect
+		coa CauseOfTransmission
+		ca  CommonAddr
+		t   time.Time
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			"C_TS_TA_1",
+			args{
+				newConn(append([]byte{byte(C_TS_TA_1), 0x01, 0x06, 0x00, 0x34, 0x12,
+					0x00, 0x00, 0x00, 0xaa, 0x55}, tm0CP56Time2aBytes...), t),
+				CauseOfTransmission{Cause: Activation},
+				0x1234,
+				tm0},
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := TestCommandCP56Time2a(tt.args.c, tt.args.coa, tt.args.ca, tt.args.t); (err != nil) != tt.wantErr {
+				t.Errorf("TestCommandCP56Time2a() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestASDU_GetInterrogationCmd(t *testing.T) {
 	type fields struct {
 		Params  *Params
@@ -482,6 +514,46 @@ func TestASDU_GetDelayAcquireCommand(t *testing.T) {
 			}
 			if got1 != tt.want1 {
 				t.Errorf("ASDU.GetDelayAcquireCommand() msec = %v, want %v", got1, tt.want1)
+			}
+		})
+	}
+}
+
+func TestASDU_GetTestCommandCP56Time2a(t *testing.T) {
+	type fields struct {
+		Params  *Params
+		infoObj []byte
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   InfoObjAddr
+		want1  bool
+		want2  time.Time
+	}{
+		{
+			"C_CS_TA_1",
+			fields{ParamsWide, append([]byte{0x00, 0x00, 0x00, 0xaa, 0x55}, tm0CP56Time2aBytes...)},
+			0,
+			true,
+			tm0,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sf := &ASDU{
+				Params:  tt.fields.Params,
+				infoObj: tt.fields.infoObj,
+			}
+			got, got1, got2 := sf.GetTestCommandCP56Time2a()
+			if got != tt.want {
+				t.Errorf("GetTestCommandCP56Time2a() got = %v, want %v", got, tt.want)
+			}
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("GetTestCommandCP56Time2a() got1 = %v, want %v", got1, tt.want1)
+			}
+			if got2 != tt.want2 {
+				t.Errorf("GetTestCommandCP56Time2a() got2 = %v, want %v", got2, tt.want2)
 			}
 		})
 	}

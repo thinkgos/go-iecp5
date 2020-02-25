@@ -180,36 +180,36 @@ func ParameterActivation(c Connect, coa CauseOfTransmission, ca CommonAddr, p Pa
 }
 
 // GetParameterNormal [P_ME_NA_1]，获取 测量值参数,标度化值 信息体
-func (this *ASDU) GetParameterNormal() ParameterNormalInfo {
+func (sf *ASDU) GetParameterNormal() ParameterNormalInfo {
 	return ParameterNormalInfo{
-		this.DecodeInfoObjAddr(),
-		this.DecodeNormalize(),
-		ParseQualifierOfParamMV(this.infoObj[0]),
+		sf.DecodeInfoObjAddr(),
+		sf.DecodeNormalize(),
+		ParseQualifierOfParamMV(sf.infoObj[0]),
 	}
 }
 
 // GetParameterScaled [P_ME_NB_1]，获取 测量值参数,归一化值 信息体
-func (this *ASDU) GetParameterScaled() ParameterScaledInfo {
+func (sf *ASDU) GetParameterScaled() ParameterScaledInfo {
 	return ParameterScaledInfo{
-		this.DecodeInfoObjAddr(),
-		this.DecodeScaled(),
-		ParseQualifierOfParamMV(this.infoObj[0]),
+		sf.DecodeInfoObjAddr(),
+		sf.DecodeScaled(),
+		ParseQualifierOfParamMV(sf.infoObj[0]),
 	}
 }
 
 // GetParameterFloat [P_ME_NC_1]，获取 测量值参数,短浮点数 信息体
-func (this *ASDU) GetParameterFloat() ParameterFloatInfo {
+func (sf *ASDU) GetParameterFloat() ParameterFloatInfo {
 	return ParameterFloatInfo{
-		this.DecodeInfoObjAddr(),
-		this.DecodeFloat(),
-		ParseQualifierOfParamMV(this.infoObj[0]),
+		sf.DecodeInfoObjAddr(),
+		sf.DecodeFloat32(),
+		ParseQualifierOfParamMV(sf.infoObj[0]),
 	}
 }
 
 // GetParameterActivation [P_AC_NA_1]，获取 参数激活 信息体
-func (this *ASDU) GetParameterActivation() ParameterActivationInfo {
+func (sf *ASDU) GetParameterActivation() ParameterActivationInfo {
 	return ParameterActivationInfo{
-		this.DecodeInfoObjAddr(),
-		QualifierOfParameterAct(this.infoObj[0]),
+		sf.DecodeInfoObjAddr(),
+		QualifierOfParameterAct(sf.infoObj[0]),
 	}
 }

@@ -34,46 +34,46 @@ func NewWithPrefix(prefix string) *Clog {
 }
 
 // LogMode set enable or disable log output when you has set logger
-func (this *Clog) LogMode(enable bool) {
+func (sf *Clog) LogMode(enable bool) {
 	if enable {
-		atomic.StoreUint32(&this.hasLog, 1)
+		atomic.StoreUint32(&sf.hasLog, 1)
 	} else {
-		atomic.StoreUint32(&this.hasLog, 0)
+		atomic.StoreUint32(&sf.hasLog, 0)
 	}
 }
 
 // SetLogProvider set logger provider
-func (this *Clog) SetLogProvider(p LogProvider) {
+func (sf *Clog) SetLogProvider(p LogProvider) {
 	if p != nil {
-		this.logger = p
+		sf.logger = p
 	}
 }
 
 // Critical Log CRITICAL level message.
-func (this *Clog) Critical(format string, v ...interface{}) {
-	if atomic.LoadUint32(&this.hasLog) == 1 {
-		this.logger.Critical(format, v...)
+func (sf *Clog) Critical(format string, v ...interface{}) {
+	if atomic.LoadUint32(&sf.hasLog) == 1 {
+		sf.logger.Critical(format, v...)
 	}
 }
 
 // Error Log ERROR level message.
-func (this *Clog) Error(format string, v ...interface{}) {
-	if atomic.LoadUint32(&this.hasLog) == 1 {
-		this.logger.Error(format, v...)
+func (sf *Clog) Error(format string, v ...interface{}) {
+	if atomic.LoadUint32(&sf.hasLog) == 1 {
+		sf.logger.Error(format, v...)
 	}
 }
 
 // Warn Log WARN level message.
-func (this *Clog) Warn(format string, v ...interface{}) {
-	if atomic.LoadUint32(&this.hasLog) == 1 {
-		this.logger.Warn(format, v...)
+func (sf *Clog) Warn(format string, v ...interface{}) {
+	if atomic.LoadUint32(&sf.hasLog) == 1 {
+		sf.logger.Warn(format, v...)
 	}
 }
 
 // Debug Log DEBUG level message.
-func (this *Clog) Debug(format string, v ...interface{}) {
-	if atomic.LoadUint32(&this.hasLog) == 1 {
-		this.logger.Debug(format, v...)
+func (sf *Clog) Debug(format string, v ...interface{}) {
+	if atomic.LoadUint32(&sf.hasLog) == 1 {
+		sf.logger.Debug(format, v...)
 	}
 }
 
@@ -92,21 +92,21 @@ func newDefaultLogger(prefix string) *logger {
 }
 
 // Critical Log CRITICAL level message.
-func (this *logger) Critical(format string, v ...interface{}) {
-	this.Printf("[C]: "+format, v...)
+func (sf *logger) Critical(format string, v ...interface{}) {
+	sf.Printf("[C]: "+format, v...)
 }
 
 // Error Log ERROR level message.
-func (this *logger) Error(format string, v ...interface{}) {
-	this.Printf("[E]: "+format, v...)
+func (sf *logger) Error(format string, v ...interface{}) {
+	sf.Printf("[E]: "+format, v...)
 }
 
 // Warn Log WARN level message.
-func (this *logger) Warn(format string, v ...interface{}) {
-	this.Printf("[W]: "+format, v...)
+func (sf *logger) Warn(format string, v ...interface{}) {
+	sf.Printf("[W]: "+format, v...)
 }
 
 // Debug Log DEBUG level message.
-func (this *logger) Debug(format string, v ...interface{}) {
-	this.Printf("[D]: "+format, v...)
+func (sf *logger) Debug(format string, v ...interface{}) {
+	sf.Printf("[D]: "+format, v...)
 }
