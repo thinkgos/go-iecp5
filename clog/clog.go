@@ -16,97 +16,88 @@ type LogProvider interface {
 
 // Clog 日志内部调试实现
 type Clog struct {
-	logger LogProvider
+	provider LogProvider
 	// is log output enabled,1: enable, 0: disable
-	hasLog uint32
+	has uint32
 }
 
-// New 创建一个新的日志无前缀
-func New() *Clog {
-	return NewWithPrefix("")
-}
-
-// NewWithPrefix 创建一个新的日志，采用指定prefix前缀
-func NewWithPrefix(prefix string) *Clog {
-	return &Clog{
-		logger: newDefaultLogger(prefix),
+// NewLogger 创建一个新的日志，采用指定prefix前缀
+func NewLogger(prefix string) Clog {
+	return Clog{
+		defaultLogger{
+			log.New(os.Stdout, prefix, log.LstdFlags),
+		},
+		0,
 	}
 }
 
-// LogMode set enable or disable log output when you has set logger
+// LogMode set enable or disable log output when you has set provider
 func (sf *Clog) LogMode(enable bool) {
 	if enable {
-		atomic.StoreUint32(&sf.hasLog, 1)
+		atomic.StoreUint32(&sf.has, 1)
 	} else {
-		atomic.StoreUint32(&sf.hasLog, 0)
+		atomic.StoreUint32(&sf.has, 0)
 	}
 }
 
-// SetLogProvider set logger provider
+// SetLogProvider set provider provider
 func (sf *Clog) SetLogProvider(p LogProvider) {
 	if p != nil {
-		sf.logger = p
+		sf.provider = p
 	}
 }
 
 // Critical Log CRITICAL level message.
-func (sf *Clog) Critical(format string, v ...interface{}) {
-	if atomic.LoadUint32(&sf.hasLog) == 1 {
-		sf.logger.Critical(format, v...)
+func (sf Clog) Critical(format string, v ...interface{}) {
+	if atomic.LoadUint32(&sf.has) == 1 {
+		sf.provider.Critical(format, v...)
 	}
 }
 
 // Error Log ERROR level message.
-func (sf *Clog) Error(format string, v ...interface{}) {
-	if atomic.LoadUint32(&sf.hasLog) == 1 {
-		sf.logger.Error(format, v...)
+func (sf Clog) Error(format string, v ...interface{}) {
+	if atomic.LoadUint32(&sf.has) == 1 {
+		sf.provider.Error(format, v...)
 	}
 }
 
 // Warn Log WARN level message.
-func (sf *Clog) Warn(format string, v ...interface{}) {
-	if atomic.LoadUint32(&sf.hasLog) == 1 {
-		sf.logger.Warn(format, v...)
+func (sf Clog) Warn(format string, v ...interface{}) {
+	if atomic.LoadUint32(&sf.has) == 1 {
+		sf.provider.Warn(format, v...)
 	}
 }
 
 // Debug Log DEBUG level message.
-func (sf *Clog) Debug(format string, v ...interface{}) {
-	if atomic.LoadUint32(&sf.hasLog) == 1 {
-		sf.logger.Debug(format, v...)
+func (sf Clog) Debug(format string, v ...interface{}) {
+	if atomic.LoadUint32(&sf.has) == 1 {
+		sf.provider.Debug(format, v...)
 	}
 }
 
 // default log
-type logger struct {
+type defaultLogger struct {
 	*log.Logger
 }
 
-var _ LogProvider = (*logger)(nil)
-
-// newDefaultLogger new default logger with prefix output os.Stderr
-func newDefaultLogger(prefix string) *logger {
-	return &logger{
-		log.New(os.Stderr, prefix, log.LstdFlags),
-	}
-}
+var _ LogProvider = (*defaultLogger)(nil)
 
 // Critical Log CRITICAL level message.
-func (sf *logger) Critical(format string, v ...interface{}) {
+func (sf defaultLogger) Critical(format string, v ...interface{}) {
 	sf.Printf("[C]: "+format, v...)
 }
 
 // Error Log ERROR level message.
-func (sf *logger) Error(format string, v ...interface{}) {
+func (sf defaultLogger) Error(format string, v ...interface{}) {
 	sf.Printf("[E]: "+format, v...)
 }
 
 // Warn Log WARN level message.
-func (sf *logger) Warn(format string, v ...interface{}) {
+func (sf defaultLogger) Warn(format string, v ...interface{}) {
 	sf.Printf("[W]: "+format, v...)
 }
 
 // Debug Log DEBUG level message.
-func (sf *logger) Debug(format string, v ...interface{}) {
+func (sf defaultLogger) Debug(format string, v ...interface{}) {
 	sf.Printf("[D]: "+format, v...)
 }

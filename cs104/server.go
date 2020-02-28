@@ -25,7 +25,7 @@ type Server struct {
 	mux       sync.Mutex
 	sessions  map[*SrvSession]struct{}
 	listen    net.Listener
-	*clog.Clog
+	clog.Clog
 	wg sync.WaitGroup
 }
 
@@ -36,7 +36,7 @@ func NewServer(handler ServerHandlerInterface) *Server {
 		params:   *asdu.ParamsWide,
 		handler:  handler,
 		sessions: make(map[*SrvSession]struct{}),
-		Clog:     clog.NewWithPrefix("cs104 server =>"),
+		Clog:     clog.NewLogger("cs104 server => "),
 	}
 }
 

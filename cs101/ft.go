@@ -39,8 +39,8 @@ const (
 	// 14-15: 制造厂和用户协商定义
 
 	// 从动站向启动站传输的报文中控制域的功能码(PRM = 0)
-	FcsPositiveApproval          = iota // 认可: 肯定认可
-	FcsNegativeApproval                 // 否定认可: 未收到报文,链路忙
+	FcsConfirmed                 = iota // 认可: 肯定认可
+	FcsNConfirmed                       // 否定认可: 未收到报文,链路忙
 	_                                   // 保留
 	_                                   // 保留
 	_                                   // 保留

@@ -48,7 +48,7 @@ func NewServerSpecial(handler ServerHandlerInterface, o *ClientOption) ServerSpe
 			rcvRaw:   make(chan []byte, 1024),
 			sendRaw:  make(chan []byte, 1024), // may not block!
 
-			Clog: clog.NewWithPrefix("cs104 serverSpec => "),
+			Clog: clog.NewLogger("cs104 serverSpec => "),
 		},
 		option:           *o,
 		onConnect:        func(ServerSpecial) {},

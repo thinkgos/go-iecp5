@@ -50,7 +50,7 @@ type Client struct {
 	isActive uint32
 
 	// 其他
-	*clog.Clog
+	clog.Clog
 
 	wg          sync.WaitGroup
 	ctx         context.Context
@@ -63,7 +63,6 @@ type Client struct {
 
 // NewClient returns an IEC104 master,default config and default asdu.ParamsWide params
 func NewClient(handler ClientHandlerInterface, o *ClientOption) *Client {
-
 	return &Client{
 		option:           *o,
 		handler:          handler,
@@ -71,7 +70,7 @@ func NewClient(handler ClientHandlerInterface, o *ClientOption) *Client {
 		sendASDU:         make(chan []byte, o.config.SendUnAckLimitK<<4),
 		rcvRaw:           make(chan []byte, o.config.RecvUnAckLimitW<<5),
 		sendRaw:          make(chan []byte, o.config.SendUnAckLimitK<<5), // may not block!
-		Clog:             clog.NewWithPrefix("cs104 client =>"),
+		Clog:             clog.NewLogger("cs104 client => "),
 		onConnect:        func(*Client) {},
 		onConnectionLost: func(*Client) {},
 	}

@@ -43,7 +43,7 @@ type SrvSession struct {
 	status uint32
 	rwMux  sync.RWMutex
 
-	*clog.Clog
+	clog.Clog
 
 	wg     sync.WaitGroup
 	cancel context.CancelFunc
