@@ -69,7 +69,7 @@ const (
 	QDSInvalid
 
 	// QDSGood means no flags, no problems.
-	QDSGood = 0
+	QDSGood QualityDescriptor = 0
 )
 
 //QualityDescriptorProtection  Quality descriptor Protection Equipment flags attribute.
