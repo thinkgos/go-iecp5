@@ -18,19 +18,24 @@ import (
 )
 
 const (
-	// inactive = iota
-	// active
-
 	// Timeout for syncSendIFrame
 	syncSendTimeout = time.Second
 )
 
+type Variant struct {
+	asdu.Identifier
+	Ioa       asdu.InfoObjAddr
+	Value     interface{}
+	Quality   asdu.QualityDescriptor
+	Timestamp time.Time
+}
+
 // Client is an IEC104 master
 type HighLevelClient struct {
-	option          ClientOption
-	conn            net.Conn
-	responseHandler map[uint64]chan *asdu.ASDU
-	subscribeChan   chan interface{}
+	option           ClientOption
+	conn             net.Conn
+	responseHandler  map[uint64]chan *asdu.ASDU
+	subscriptionChan chan Variant
 
 	// channel
 	rcvAsdu chan *asdu.ASDU
@@ -52,10 +57,9 @@ type HighLevelClient struct {
 
 	// 其他
 
-	*clog.Clog
+	clog.Clog
 
-	wg          sync.WaitGroup
-	closeCancel context.CancelFunc
+	wg sync.WaitGroup
 
 	onConnect        func()
 	onConnectionLost func()
@@ -69,7 +73,7 @@ func NewHighLevelClient(o *ClientOption) *HighLevelClient {
 		rcvAsdu:          make(chan *asdu.ASDU, o.config.RecvUnAckLimitW<<5),
 		rcvRaw:           make(chan []byte, o.config.RecvUnAckLimitW<<5),
 		sendRaw:          make(chan []byte, o.config.SendUnAckLimitK<<5), // may not block!
-		Clog:             clog.NewWithPrefix("cs104 client =>"),
+		Clog:             clog.NewLogger("cs104 client => "),
 		onConnect:        func() {},
 		onConnectionLost: func() {},
 	}
@@ -109,19 +113,19 @@ func (sf *HighLevelClient) UnderlyingConn() net.Conn {
 	return sf.conn
 }
 
-// Close close all
-func (sf *HighLevelClient) Close() error {
-	sf.rwMux.Lock()
-	if sf.closeCancel != nil {
-		sf.closeCancel()
-	}
-	sf.rwMux.Unlock()
-	return nil
-}
+// // Close close all
+// func (sf *HighLevelClient) Close() error {
+// 	sf.rwMux.Lock()
+// 	if sf.closeCancel != nil {
+// 		sf.closeCancel()
+// 	}
+// 	sf.rwMux.Unlock()
+// 	return nil
+// }
 
-func (sf *HighLevelClient) Subscribe(sub chan interface{}) {
+func (sf *HighLevelClient) Subscribe(sub chan Variant) {
 	sf.rwMux.Lock()
-	sf.subscribeChan = sub
+	sf.subscriptionChan = sub
 	sf.rwMux.Unlock()
 }
 
@@ -408,24 +412,38 @@ func (sf *HighLevelClient) TestCommand(coa asdu.CauseOfTransmission, ca asdu.Com
 	return asdu.TestCommand(sf, coa, ca)
 }
 
-func (sf *HighLevelClient) Connecting(serverAddr string) {
-	sf.option.AddRemoteServer(serverAddr)
+func (sf *HighLevelClient) Connect(ctx context.Context) {
 	defer sf.setConnectStatus(initial)
-	sf.rwMux.Lock()
 	if !atomic.CompareAndSwapUint32(&sf.status, initial, disconnected) {
-		sf.rwMux.Unlock()
 		return
 	}
-	var ctx context.Context
-	ctx, sf.closeCancel = context.WithCancel(context.Background())
-	sf.rwMux.Unlock()
 
-	var waitChan chan struct{}
-	for {
-		sf.Debug("connecting server %+v", sf.option.server)
-		conn, err := openConnection(sf.option.server, sf.option.TLSConfig, sf.option.config.ConnectTimeout0)
-		if err != nil {
-			sf.Error("connect failed, %v", err)
+	go func() {
+		waitChan := make(chan struct{}, 1)
+		for {
+			sf.Debug("connecting server %+v", sf.option.server)
+			conn, err := openConnection(sf.option.server, sf.option.TLSConfig, sf.option.config.ConnectTimeout0)
+			if err != nil {
+				sf.Error("connect failed, %v", err)
+				if !sf.option.autoReconnect {
+					return
+				}
+				go func() {
+					time.Sleep(sf.option.reconnectInterval)
+					waitChan <- struct{}{}
+				}()
+				select {
+				case <-ctx.Done():
+					return
+				case <-waitChan:
+					continue
+				}
+			}
+			sf.Debug("connect success")
+			sf.conn = conn
+			sf.run(ctx)
+			sf.conn.Close()
+
 			if !sf.option.autoReconnect {
 				return
 			}
@@ -440,25 +458,7 @@ func (sf *HighLevelClient) Connecting(serverAddr string) {
 				continue
 			}
 		}
-		sf.Debug("connect success")
-		sf.conn = conn
-		sf.run(ctx)
-		sf.conn.Close()
-
-		if !sf.option.autoReconnect {
-			return
-		}
-		go func() {
-			time.Sleep(sf.option.reconnectInterval)
-			waitChan <- struct{}{}
-		}()
-		select {
-		case <-ctx.Done():
-			return
-		case <-waitChan:
-			continue
-		}
-	}
+	}()
 }
 
 // run is the big fat state machine.
@@ -471,7 +471,7 @@ func (sf *HighLevelClient) run(ctx context.Context) {
 	runCtx, runCancel := context.WithCancel(ctx)
 	defer runCancel()
 
-	sf.wg.Add(1)
+	sf.wg.Add(2)
 	defer sf.wg.Wait()
 	go sf.recvLoop(runCtx, runCancel)
 	go sf.subscribeLoop(runCtx)
@@ -631,119 +631,177 @@ func (sf *HighLevelClient) subscribeLoop(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case data := <-sf.rcvAsdu:
-			if sf.subscribeChan == nil {
+			if sf.subscriptionChan == nil {
+				sf.Debug("subscriptionChan nil")
 				continue
 			}
-			sf.subscribeChan <- data
-			continue
+			ioa := data.Clone().DecodeInfoObjAddr()
 			switch data.Type {
 			case asdu.M_SP_NA_1:
 				// Single Info
 				value := data.GetSinglePoint()[0]
-				if value.Qds != asdu.QDSGood {
-					continue
+				v := Variant{
+					Identifier: data.Identifier,
+					Ioa:        ioa,
+					Value:      value.Value,
+					Quality:    value.Qds,
+					Timestamp:  value.Time,
 				}
-				sf.subscribeChan <- value.Value
+				sf.subscriptionChan <- v
 			case asdu.M_SP_TB_1:
 				// Single Info with time
 				value := data.GetSinglePoint()[0]
-				if value.Qds != asdu.QDSGood {
-					continue
+				v := Variant{
+					Identifier: data.Identifier,
+					Ioa:        ioa,
+					Value:      value.Value,
+					Quality:    value.Qds,
+					Timestamp:  value.Time,
 				}
-				sf.subscribeChan <- value.Value
+				sf.subscriptionChan <- v
 			case asdu.M_DP_NA_1:
 				// Double Info
 				value := data.GetDoublePoint()[0]
-				if value.Qds != asdu.QDSGood {
-					continue
+				v := Variant{
+					Identifier: data.Identifier,
+					Ioa:        ioa,
+					Value:      value.Value.Value(),
+					Quality:    value.Qds,
+					Timestamp:  value.Time,
 				}
-				sf.subscribeChan <- value.Value.Value()
+				sf.subscriptionChan <- v
 			case asdu.M_DP_TB_1:
 				// Double Info with time
 				value := data.GetDoublePoint()[0]
-				if value.Qds != asdu.QDSGood {
-					continue
+				v := Variant{
+					Identifier: data.Identifier,
+					Ioa:        ioa,
+					Value:      value.Value.Value(),
+					Quality:    value.Qds,
+					Timestamp:  value.Time,
 				}
-				sf.subscribeChan <- value.Value.Value()
+				sf.subscriptionChan <- v
 			case asdu.M_ST_NA_1:
 				// Step Position Info
 				value := data.GetStepPosition()[0]
-				if value.Qds != asdu.QDSGood {
-					continue
+				v := Variant{
+					Identifier: data.Identifier,
+					Ioa:        ioa,
+					Value:      value.Value.Value(),
+					Quality:    value.Qds,
+					Timestamp:  value.Time,
 				}
-				sf.subscribeChan <- value.Value.Value()
+				sf.subscriptionChan <- v
 			case asdu.M_ST_TB_1:
 				// Step Position Info with time
 				value := data.GetStepPosition()[0]
-				if value.Qds != asdu.QDSGood {
-					continue
+				v := Variant{
+					Identifier: data.Identifier,
+					Ioa:        ioa,
+					Value:      value.Value.Value(),
+					Quality:    value.Qds,
+					Timestamp:  value.Time,
 				}
-				sf.subscribeChan <- value.Value.Value()
+				sf.subscriptionChan <- v
 			case asdu.M_BO_NA_1:
 				// 32 Bit string
 				value := data.GetBitString32()[0]
-				if value.Qds != asdu.QDSGood {
-					continue
+				v := Variant{
+					Identifier: data.Identifier,
+					Ioa:        ioa,
+					Value:      value.Value,
+					Quality:    value.Qds,
+					Timestamp:  value.Time,
 				}
-				sf.subscribeChan <- value.Value
+				sf.subscriptionChan <- v
 			case asdu.M_BO_TB_1:
 				// 32 Bit string with time
 				value := data.GetBitString32()[0]
-				if value.Qds != asdu.QDSGood {
-					continue
+				v := Variant{
+					Identifier: data.Identifier,
+					Ioa:        ioa,
+					Value:      value.Value,
+					Quality:    value.Qds,
+					Timestamp:  value.Time,
 				}
-				sf.subscribeChan <- value.Value
+				sf.subscriptionChan <- v
 			case asdu.M_ME_NA_1:
 				// Normalized Measured Value
 				value := data.GetMeasuredValueNormal()[0]
-				if value.Qds != asdu.QDSGood {
-					continue
+				v := Variant{
+					Identifier: data.Identifier,
+					Ioa:        ioa,
+					Value:      value.Value.Float64(),
+					Quality:    value.Qds,
+					Timestamp:  value.Time,
 				}
-				sf.subscribeChan <- value.Value.Float64()
+				sf.subscriptionChan <- v
 			case asdu.M_ME_TD_1:
 				// Normalized Measured Value with time
 				value := data.GetMeasuredValueNormal()[0]
-				if value.Qds != asdu.QDSGood {
-					continue
+				v := Variant{
+					Identifier: data.Identifier,
+					Ioa:        ioa,
+					Value:      value.Value.Float64(),
+					Quality:    value.Qds,
+					Timestamp:  value.Time,
 				}
-				sf.subscribeChan <- value.Value.Float64()
+				sf.subscriptionChan <- v
 			case asdu.M_ME_ND_1:
 				// Normalized Measured Value without quality description
 				value := data.GetMeasuredValueNormal()[0]
-				if value.Qds != asdu.QDSGood {
-					continue
+				v := Variant{
+					Identifier: data.Identifier,
+					Ioa:        ioa,
+					Value:      value.Value.Float64(),
+					Quality:    value.Qds,
+					Timestamp:  value.Time,
 				}
-				sf.subscribeChan <- value.Value.Float64()
+				sf.subscriptionChan <- v
 			case asdu.M_ME_NB_1:
 				// Scaled Measured Value
 				value := data.GetMeasuredValueScaled()[0]
-				if value.Qds != asdu.QDSGood {
-					continue
+				v := Variant{
+					Identifier: data.Identifier,
+					Ioa:        ioa,
+					Value:      value.Value,
+					Quality:    value.Qds,
+					Timestamp:  value.Time,
 				}
-				sf.subscribeChan <- value.Value
+				sf.subscriptionChan <- v
 			case asdu.M_ME_TE_1:
 				// Scaled Measured Value with time
 				value := data.GetMeasuredValueScaled()[0]
-				if value.Qds != asdu.QDSGood {
-					continue
+				v := Variant{
+					Identifier: data.Identifier,
+					Ioa:        ioa,
+					Value:      value.Value,
+					Quality:    value.Qds,
+					Timestamp:  value.Time,
 				}
-				sf.subscribeChan <- value.Value
+				sf.subscriptionChan <- v
 			case asdu.M_ME_NC_1:
 				// Short Float Measured Value
 				value := data.GetMeasuredValueFloat()[0]
-				if value.Qds != asdu.QDSGood {
-					continue
+				v := Variant{
+					Identifier: data.Identifier,
+					Ioa:        ioa,
+					Value:      value.Value,
+					Quality:    value.Qds,
+					Timestamp:  value.Time,
 				}
-				sf.subscribeChan <- value.Value
+				sf.subscriptionChan <- v
 			case asdu.M_ME_TF_1:
 				// Short Float Measured Value with time
 				value := data.GetMeasuredValueFloat()[0]
-				if value.Qds != asdu.QDSGood {
-					continue
+				v := Variant{
+					Identifier: data.Identifier,
+					Ioa:        ioa,
+					Value:      value.Value,
+					Quality:    value.Qds,
+					Timestamp:  value.Time,
 				}
-				sf.subscribeChan <- value.Value
-			default:
-				continue
+				sf.subscriptionChan <- v
 			}
 		}
 	}
