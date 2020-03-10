@@ -29,9 +29,11 @@ const (
 type HighLevelClient struct {
 	option          ClientOption
 	conn            net.Conn
-	responseHandler map[uint64]chan Response
+	responseHandler map[uint64]chan *asdu.ASDU
+	subscribeChan   chan interface{}
 
 	// channel
+	rcvAsdu chan *asdu.ASDU
 	rcvRaw  chan []byte // for recvLoop raw cs104 frame
 	sendRaw chan []byte // for sendLoop raw cs104 frame
 
@@ -63,7 +65,8 @@ type HighLevelClient struct {
 func NewHighLevelClient(o *ClientOption) *HighLevelClient {
 	return &HighLevelClient{
 		option:           *o,
-		responseHandler:  make(map[uint64]chan Response),
+		responseHandler:  make(map[uint64]chan *asdu.ASDU),
+		rcvAsdu:          make(chan *asdu.ASDU, o.config.RecvUnAckLimitW<<5),
 		rcvRaw:           make(chan []byte, o.config.RecvUnAckLimitW<<5),
 		sendRaw:          make(chan []byte, o.config.SendUnAckLimitK<<5), // may not block!
 		Clog:             clog.NewWithPrefix("cs104 client =>"),
@@ -91,42 +94,6 @@ func (sf *HighLevelClient) SetConnectionLostHandler(f func()) {
 	}
 }
 
-// // clientHandler hand response handler
-// func (sf *HighLevelClient) clientHandler(asduPack *asdu.ASDU) error {
-// 	defer func() {
-// 		if err := recover(); err != nil {
-// 			sf.Critical("client handler %+v", err)
-// 		}
-// 	}()
-
-// 	sf.Debug("ASDU %+v", asduPack)
-
-// 	switch asduPack.Identifier.Type {
-// 	case asdu.C_IC_NA_1: // InterrogationCmd
-// 		return sf.handler.InterrogationHandler(sf, asduPack)
-
-// 	case asdu.C_CI_NA_1: // CounterInterrogationCmd
-// 		return sf.handler.CounterInterrogationHandler(sf, asduPack)
-
-// 	case asdu.C_RD_NA_1: // ReadCmd
-// 		return sf.handler.ReadHandler(sf, asduPack)
-
-// 	case asdu.C_CS_NA_1: // ClockSynchronizationCmd
-// 		return sf.handler.ClockSyncHandler(sf, asduPack)
-
-// 	case asdu.C_TS_NA_1: // TestCommand
-// 		return sf.handler.TestCommandHandler(sf, asduPack)
-
-// 	case asdu.C_RP_NA_1: // ResetProcessCmd
-// 		return sf.handler.ResetProcessHandler(sf, asduPack)
-
-// 	case asdu.C_CD_NA_1: // DelayAcquireCommand
-// 		return sf.handler.DelayAcquisitionHandler(sf, asduPack)
-// 	}
-
-// 	return sf.handler.ASDUHandler(sf, asduPack)
-// }
-
 // IsConnected get server session connected state
 func (sf *HighLevelClient) IsConnected() bool {
 	return sf.connectStatus() == connected
@@ -150,6 +117,12 @@ func (sf *HighLevelClient) Close() error {
 	}
 	sf.rwMux.Unlock()
 	return nil
+}
+
+func (sf *HighLevelClient) Subscribe(sub chan interface{}) {
+	sf.rwMux.Lock()
+	sf.subscribeChan = sub
+	sf.rwMux.Unlock()
 }
 
 func (sf *HighLevelClient) Write(id asdu.TypeID, ca asdu.CommonAddr, ioa asdu.InfoObjAddr, v interface{}) error {
@@ -246,7 +219,7 @@ func (sf *HighLevelClient) Write(id asdu.TypeID, ca asdu.CommonAddr, ioa asdu.In
 	if _, ok := sf.responseHandler[uint64(ioa)]; ok {
 		return fmt.Errorf("Last Read Request has not completed")
 	}
-	ch := make(chan Response)
+	ch := make(chan *asdu.ASDU)
 	sf.responseHandler[uint64(ioa)] = ch
 	defer func() {
 		sf.rwMux.Lock()
@@ -262,7 +235,7 @@ func (sf *HighLevelClient) Write(id asdu.TypeID, ca asdu.CommonAddr, ioa asdu.In
 		return nil
 	}
 
-	return asdu.ErrTypeIDNotMatch
+	return err
 }
 
 // Read executes a synchronous read request
@@ -283,7 +256,7 @@ func (sf *HighLevelClient) Read(ca asdu.CommonAddr, ioa asdu.InfoObjAddr) (inter
 		return nil, time.Time{}, fmt.Errorf("Last Read on ioa: %v has not completed", ioa)
 	}
 
-	ch := make(chan Response)
+	ch := make(chan *asdu.ASDU)
 	sf.responseHandler[uint64(ioa)] = ch
 	defer func() {
 		sf.rwMux.Lock()
@@ -368,6 +341,9 @@ func (sf *HighLevelClient) Read(ca asdu.CommonAddr, ioa asdu.InfoObjAddr) (inter
 	case asdu.M_ME_ND_1:
 		// Normalized Measured Value without quality description
 		value := resp.GetMeasuredValueNormal()[0]
+		if value.Qds != asdu.QDSGood {
+			return nil, time.Time{}, fmt.Errorf("Quality not Good: %v", value.Qds)
+		}
 		return value.Value.Float64(), time.Time{}, nil
 	case asdu.M_ME_NB_1:
 		// Scaled Measured Value
@@ -497,7 +473,8 @@ func (sf *HighLevelClient) run(ctx context.Context) {
 
 	sf.wg.Add(1)
 	defer sf.wg.Wait()
-	go sf.recvLoop(runCancel)
+	go sf.recvLoop(runCtx, runCancel)
+	go sf.subscribeLoop(runCtx)
 
 	var checkTicker = time.NewTicker(timeoutResolution)
 	defer checkTicker.Stop()
@@ -615,9 +592,9 @@ func (sf *HighLevelClient) run(ctx context.Context) {
 					sf.Error("Error unmarshaling asdu: %v", err)
 				} else {
 					if resp, ok := sf.responseHandler[uint64(asduPack.Clone().DecodeInfoObjAddr())]; ok {
-						resp <- Response{asduPack, nil}
+						resp <- asduPack
 					} else {
-						// sf.Debug()
+						sf.rcvAsdu <- asduPack
 					}
 				}
 
@@ -644,15 +621,149 @@ func (sf *HighLevelClient) run(ctx context.Context) {
 	}
 }
 
-func (sf *HighLevelClient) recvLoop(cancel context.CancelFunc) {
+func (sf *HighLevelClient) subscribeLoop(ctx context.Context) {
+	sf.Debug("SubscribeLoop started")
+	defer sf.Debug("SubscribeLoop stopped")
+	defer sf.wg.Done()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case data := <-sf.rcvAsdu:
+			if sf.subscribeChan == nil {
+				continue
+			}
+			sf.subscribeChan <- data
+			continue
+			switch data.Type {
+			case asdu.M_SP_NA_1:
+				// Single Info
+				value := data.GetSinglePoint()[0]
+				if value.Qds != asdu.QDSGood {
+					continue
+				}
+				sf.subscribeChan <- value.Value
+			case asdu.M_SP_TB_1:
+				// Single Info with time
+				value := data.GetSinglePoint()[0]
+				if value.Qds != asdu.QDSGood {
+					continue
+				}
+				sf.subscribeChan <- value.Value
+			case asdu.M_DP_NA_1:
+				// Double Info
+				value := data.GetDoublePoint()[0]
+				if value.Qds != asdu.QDSGood {
+					continue
+				}
+				sf.subscribeChan <- value.Value.Value()
+			case asdu.M_DP_TB_1:
+				// Double Info with time
+				value := data.GetDoublePoint()[0]
+				if value.Qds != asdu.QDSGood {
+					continue
+				}
+				sf.subscribeChan <- value.Value.Value()
+			case asdu.M_ST_NA_1:
+				// Step Position Info
+				value := data.GetStepPosition()[0]
+				if value.Qds != asdu.QDSGood {
+					continue
+				}
+				sf.subscribeChan <- value.Value.Value()
+			case asdu.M_ST_TB_1:
+				// Step Position Info with time
+				value := data.GetStepPosition()[0]
+				if value.Qds != asdu.QDSGood {
+					continue
+				}
+				sf.subscribeChan <- value.Value.Value()
+			case asdu.M_BO_NA_1:
+				// 32 Bit string
+				value := data.GetBitString32()[0]
+				if value.Qds != asdu.QDSGood {
+					continue
+				}
+				sf.subscribeChan <- value.Value
+			case asdu.M_BO_TB_1:
+				// 32 Bit string with time
+				value := data.GetBitString32()[0]
+				if value.Qds != asdu.QDSGood {
+					continue
+				}
+				sf.subscribeChan <- value.Value
+			case asdu.M_ME_NA_1:
+				// Normalized Measured Value
+				value := data.GetMeasuredValueNormal()[0]
+				if value.Qds != asdu.QDSGood {
+					continue
+				}
+				sf.subscribeChan <- value.Value.Float64()
+			case asdu.M_ME_TD_1:
+				// Normalized Measured Value with time
+				value := data.GetMeasuredValueNormal()[0]
+				if value.Qds != asdu.QDSGood {
+					continue
+				}
+				sf.subscribeChan <- value.Value.Float64()
+			case asdu.M_ME_ND_1:
+				// Normalized Measured Value without quality description
+				value := data.GetMeasuredValueNormal()[0]
+				if value.Qds != asdu.QDSGood {
+					continue
+				}
+				sf.subscribeChan <- value.Value.Float64()
+			case asdu.M_ME_NB_1:
+				// Scaled Measured Value
+				value := data.GetMeasuredValueScaled()[0]
+				if value.Qds != asdu.QDSGood {
+					continue
+				}
+				sf.subscribeChan <- value.Value
+			case asdu.M_ME_TE_1:
+				// Scaled Measured Value with time
+				value := data.GetMeasuredValueScaled()[0]
+				if value.Qds != asdu.QDSGood {
+					continue
+				}
+				sf.subscribeChan <- value.Value
+			case asdu.M_ME_NC_1:
+				// Short Float Measured Value
+				value := data.GetMeasuredValueFloat()[0]
+				if value.Qds != asdu.QDSGood {
+					continue
+				}
+				sf.subscribeChan <- value.Value
+			case asdu.M_ME_TF_1:
+				// Short Float Measured Value with time
+				value := data.GetMeasuredValueFloat()[0]
+				if value.Qds != asdu.QDSGood {
+					continue
+				}
+				sf.subscribeChan <- value.Value
+			default:
+				continue
+			}
+		}
+	}
+
+}
+
+func (sf *HighLevelClient) recvLoop(ctx context.Context, cancel context.CancelFunc) {
 	sf.Debug("recvLoop started")
+	defer sf.Debug("recvLoop stopped")
 	defer func() {
 		cancel()
 		sf.wg.Done()
-		sf.Debug("recvLoop stopped")
 	}()
 
 	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
 		rawData := make([]byte, APDUSizeMax)
 		for rdCnt, length := 0, 2; rdCnt < length; {
 			byteCount, err := io.ReadFull(sf.conn, rawData[rdCnt:length])
@@ -795,13 +906,7 @@ func (sf *HighLevelClient) Send(a *asdu.ASDU) error {
 	return nil
 }
 
-// Response ...
-type Response struct {
-	V   *asdu.ASDU
-	Err error
-}
-
-func (sf *HighLevelClient) syncSendIFrame(asduPack *asdu.ASDU, resp chan Response) (*asdu.ASDU, error) {
+func (sf *HighLevelClient) syncSendIFrame(asduPack *asdu.ASDU, resp chan *asdu.ASDU) (*asdu.ASDU, error) {
 	data, err := asduPack.MarshalBinary()
 	if err != nil {
 		return nil, err
@@ -830,10 +935,7 @@ func (sf *HighLevelClient) syncSendIFrame(asduPack *asdu.ASDU, resp chan Respons
 
 	select {
 	case ch := <-resp:
-		if ch.Err != nil {
-			return nil, ch.Err
-		}
-		return ch.V, nil
+		return ch, nil
 	case <-timer.C:
 		return nil, fmt.Errorf("ErrorBadTimeOut")
 	}
