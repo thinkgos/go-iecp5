@@ -24,10 +24,10 @@ const (
 	SPIOn                     // 开
 )
 
-// Value single point to byte
-func (sf SinglePoint) Value() byte {
-	return byte(sf & 0x01)
-}
+// // Value single point to byte
+// func (sf SinglePoint) Value() byte {
+// 	return byte(sf & 0x01)
+// }
 
 // DoublePoint is a measured value of a determination aware switch.
 // See companion standard 101, subclass 7.2.6.2.
@@ -41,10 +41,10 @@ const (
 	DPIIndeterminate                                  // 不确定或中间状态
 )
 
-// Value double point to byte
-func (sf DoublePoint) Value() byte {
-	return byte(sf & 0x03)
-}
+// // Value double point to byte
+// func (sf DoublePoint) Value() byte {
+// 	return byte(sf & 0x03)
+// }
 
 // QualityDescriptor Quality descriptor flags attribute measured values.
 // See companion standard 101, subclass 7.2.6.3.
@@ -110,14 +110,14 @@ type StepPosition struct {
 	HasTransient bool
 }
 
-// Value returns step position value.
-func (sf StepPosition) Value() byte {
-	p := sf.Val & 0x7f
-	if sf.HasTransient {
-		p |= 0x80
-	}
-	return byte(p)
-}
+// // Value returns step position value.
+// func (sf StepPosition) Value() byte {
+// 	p := sf.Val & 0x7f
+// 	if sf.HasTransient {
+// 		p |= 0x80
+// 	}
+// 	return byte(p)
+// }
 
 // ParseStepPosition parse byte to StepPosition.
 func ParseStepPosition(b byte) StepPosition {
@@ -135,10 +135,10 @@ func ParseStepPosition(b byte) StepPosition {
 // See companion standard 101, subclass 7.2.6.6.
 type Normalize int16
 
-// Float64 returns the value in [-1, 1 − 2⁻¹⁵].
-func (sf Normalize) Float64() float64 {
-	return float64(sf) / 32768
-}
+// // Float64 returns the value in [-1, 1 − 2⁻¹⁵].
+// func (sf Normalize) Float64() float64 {
+// 	return float64(sf) / 32768
+// }
 
 // BinaryCounterReading is binary counter reading
 // See companion standard 101, subclass 7.2.6.9.
