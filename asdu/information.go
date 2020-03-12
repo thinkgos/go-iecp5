@@ -81,6 +81,14 @@ func (sf SinglePoint) Value() bool {
 	return bool(sf)
 }
 
+// ParseSinglePoint ...
+func ParseSinglePoint(b byte) SinglePoint {
+	if (b & 0x01) == 0x01 {
+		return SinglePoint(true)
+	}
+	return SinglePoint(false)
+}
+
 // DoublePoint is a measured value of a determination aware switch.
 // See companion standard 101, subclass 7.2.6.2.
 type DoublePoint byte
@@ -96,6 +104,11 @@ const (
 // Value double point to byte
 func (sf DoublePoint) Value() byte {
 	return byte(sf & 0x03)
+}
+
+// ParseDoublePoint ...
+func ParseDoublePoint(b byte) DoublePoint {
+	return DoublePoint(b & 0x03)
 }
 
 // StepPosition is a measured value with transient state indication.
@@ -139,6 +152,11 @@ func (sf BitString) Value() uint32 {
 	return uint32(sf)
 }
 
+// ParseBitString ...
+func ParseBitString(b uint32) BitString {
+	return BitString(b)
+}
+
 // NormalizedMeasurement is a 16-bit normalized value in[-1, 1 − 2⁻¹⁵]..
 // 规一化值 f归一= 32768 * f真实 / 满码值
 // See companion standard 101, subclass 7.2.6.6.
@@ -154,6 +172,11 @@ func (sf NormalizedMeasurement) NormalizedValue() float64 {
 	return float64(sf) / 32768
 }
 
+// ParseNormalizedMeasurement ...
+func ParseNormalizedMeasurement(b int16) NormalizedMeasurement {
+	return NormalizedMeasurement(b)
+}
+
 // ScaledMeasurement is a 16-bit scaled value in [-2¹⁵, +2¹⁵-1]
 type ScaledMeasurement int16
 
@@ -162,12 +185,22 @@ func (sf ScaledMeasurement) Value() int16 {
 	return int16(sf)
 }
 
+// ParseScaledMeasurement ...
+func ParseScaledMeasurement(b int16) ScaledMeasurement {
+	return ScaledMeasurement(b)
+}
+
 // ShortFloatMeasurement is a floa32 value
 type ShortFloatMeasurement float32
 
 // Value ...
 func (sf ShortFloatMeasurement) Value() float32 {
 	return float32(sf)
+}
+
+// ParseShortFloatMeasurement ...
+func ParseShortFloatMeasurement(b float32) ShortFloatMeasurement {
+	return ShortFloatMeasurement(b)
 }
 
 // BinaryCounterReading is binary counter reading
@@ -240,6 +273,19 @@ const (
 	SCOOff SingleCommand = false
 )
 
+// Value ...
+func (sf SingleCommand) Value() bool {
+	return bool(sf)
+}
+
+// ParseSingleCommand ...
+func ParseSingleCommand(b byte) SingleCommand {
+	if (b & 0x01) == 0x01 {
+		return SingleCommand(true)
+	}
+	return SingleCommand(false)
+}
+
 // DoubleCommand double command
 // See companion standard 101, subclass 7.2.6.16.
 type DoubleCommand byte
@@ -252,6 +298,16 @@ const (
 	DCONotAllow3
 )
 
+// Value ...
+func (sf DoubleCommand) Value() byte {
+	return byte(sf)
+}
+
+// ParseDoubleCommand ...
+func ParseDoubleCommand(b byte) DoubleCommand {
+	return DoubleCommand(b & 0x03)
+}
+
 // StepCommand step command
 // See companion standard 101, subclass 7.2.6.17.
 type StepCommand byte
@@ -263,6 +319,16 @@ const (
 	SCOStepUP
 	SCONotAllow3
 )
+
+// Value ...
+func (sf StepCommand) Value() byte {
+	return byte(sf)
+}
+
+// ParseDoubleCommand ...
+func ParseStepCommand(b byte) StepCommand {
+	return StepCommand(b & 0x03)
+}
 
 // COICause Initialization reason
 // See companion standard 101, subclass 7.2.6.21.

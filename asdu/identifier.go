@@ -203,6 +203,14 @@ var infoObjSize = [256]int{
 	C_SE_NC_1: 5,
 	C_BO_NA_1: 4,
 
+	C_SC_TA_1: 8,
+	C_DC_TA_1: 8,
+	C_RC_TA_1: 8,
+	C_SE_TA_1: 10,
+	C_SE_TB_1: 10,
+	C_SE_TC_1: 12,
+	C_BO_TA_1: 11,
+
 	M_EI_NA_1: 1,
 
 	C_IC_NA_1: 1,

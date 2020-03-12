@@ -7,28 +7,38 @@ import (
 	"time"
 )
 
-// AppendValueAndQuality append value and quality or qualifier to asdu
-func (sf *ASDU) AppendValueAndQ(value interface{}, quality interface{}) error {
+// AppendValueAndQ append value and quality or qualifier to asdu
+func (sf *ASDU) AppendValueAndQ(value interface{}, quali interface{}) error {
 	var q byte
-	switch qq := quality.(type) {
-	case QOCQual:
-		q = byte(qq)
-	case QOSQual:
-		q = byte(qq)
+	switch qq := quali.(type) {
+	case QualifierOfCommand:
+		q = qq.Value()
+	case QualifierOfSetpointCmd:
+		q = qq.Value()
 	default:
 		return fmt.Errorf("Unknown quality Type")
 	}
 	switch v := value.(type) {
+	case SinglePoint:
+		if v.Value() {
+			sf.infoObj = append(sf.infoObj, q|0x01)
+		} else {
+			sf.infoObj = append(sf.infoObj, q)
+		}
+	case DoublePoint:
+		sf.infoObj = append(sf.infoObj, v.Value()|q)
+	case StepPosition:
+		sf.infoObj = append(sf.infoObj, v.Value()|q)
 	case SingleCommand:
-		if v {
+		if v.Value() {
 			sf.infoObj = append(sf.infoObj, q|0x01)
 		} else {
 			sf.infoObj = append(sf.infoObj, q)
 		}
 	case DoubleCommand:
-		sf.infoObj = append(sf.infoObj, byte(v)|q)
+		sf.infoObj = append(sf.infoObj, v.Value()|q)
 	case StepCommand:
-		sf.infoObj = append(sf.infoObj, byte(v)|q)
+		sf.infoObj = append(sf.infoObj, v.Value()|q)
 	case BitString:
 		sf.infoObj = append(sf.infoObj, byte(v), byte(v>>8), byte(v>>16), byte(v>>24))
 	case NormalizedMeasurement:
@@ -37,7 +47,7 @@ func (sf *ASDU) AppendValueAndQ(value interface{}, quality interface{}) error {
 		sf.infoObj = append(sf.infoObj, byte(v), byte(v>>8), q)
 	case ShortFloatMeasurement:
 		bits := math.Float32bits(float32(v))
-		sf.infoObj = append(sf.infoObj, byte(bits), byte(bits>>8), byte(bits>>16), byte(bits>>24))
+		sf.infoObj = append(sf.infoObj, byte(bits), byte(bits>>8), byte(bits>>16), byte(bits>>24), q)
 	default:
 		return fmt.Errorf("Unknown value type")
 	}
