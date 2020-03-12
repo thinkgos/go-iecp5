@@ -129,10 +129,12 @@ func (sf *HighLevelClient) Subscribe(sub chan AsduInfo) {
 	sf.rwMux.Unlock()
 }
 
+// Write executes a synchronous write request.
+// Only single address space at a time for now.
+// It returns nil if the write command succeed, otherwise an error will be returned.
+// Ignore QualifierOfSetpointCmd currently.
 func (sf *HighLevelClient) Write(id asdu.TypeID, ca asdu.CommonAddr, ioa asdu.InfoObjAddr, v interface{}) error {
 
-	// TODO: QualifierOfCommand Ignored
-	var qoc byte
 	// TODO: QualifierOfSetpointCmd Ignored
 	var qos byte
 
@@ -149,14 +151,10 @@ func (sf *HighLevelClient) Write(id asdu.TypeID, ca asdu.CommonAddr, ioa asdu.In
 
 	switch id {
 	case asdu.C_SC_NA_1, asdu.C_SC_TA_1:
-		if vv, ok := v.(bool); ok {
-			if vv {
-				asduPack.AppendBytes(qoc | 0x01)
-			} else {
-				asduPack.AppendBytes(qoc | 0x00)
-			}
+		if vv, ok := v.(byte); ok {
+			asduPack.AppendBytes(vv)
 		} else {
-			return fmt.Errorf("Should provide value in boolean type")
+			return fmt.Errorf("Should provide value in byte type")
 		}
 
 		if id == asdu.C_SC_TA_1 {
@@ -164,7 +162,7 @@ func (sf *HighLevelClient) Write(id asdu.TypeID, ca asdu.CommonAddr, ioa asdu.In
 		}
 	case asdu.C_DC_NA_1, asdu.C_DC_TA_1:
 		if vv, ok := v.(byte); ok {
-			asduPack.AppendBytes(qoc | byte(vv&0x03))
+			asduPack.AppendBytes(vv)
 		} else {
 			return fmt.Errorf("Should provide value in byte type ")
 		}
@@ -174,7 +172,7 @@ func (sf *HighLevelClient) Write(id asdu.TypeID, ca asdu.CommonAddr, ioa asdu.In
 		}
 	case asdu.C_RC_NA_1, asdu.C_RC_TA_1:
 		if vv, ok := v.(byte); ok {
-			asduPack.AppendBytes(qoc | byte(vv&0x03))
+			asduPack.AppendBytes(vv)
 		} else {
 			return fmt.Errorf("Should provide value in byte type ")
 		}
@@ -245,6 +243,8 @@ func (sf *HighLevelClient) Write(id asdu.TypeID, ca asdu.CommonAddr, ioa asdu.In
 }
 
 // Read executes a synchronous read request
+// Only single address space at a time for now
+// It returns *AsduInfo which contains the data, and maybe also the time
 func (sf *HighLevelClient) Read(ca asdu.CommonAddr, ioa asdu.InfoObjAddr) (*AsduInfo, error) {
 	asduPack := asdu.NewASDU(sf.Params(), asdu.Identifier{
 		Type:       asdu.C_RD_NA_1,
@@ -284,7 +284,11 @@ func (sf *HighLevelClient) Read(ca asdu.CommonAddr, ioa asdu.InfoObjAddr) (*Asdu
 		if v.Qds != asdu.QDSGood {
 			return nil, fmt.Errorf("Quality not Good: %v", v.Qds)
 		}
-		data.Value = v.Value()
+		if v.Value() {
+			data.Value = 0x01
+		} else {
+			data.Value = 0
+		}
 	case asdu.M_SP_TB_1:
 		// Single Info with time
 		v := resp.GetSinglePoint()[0]
@@ -426,6 +430,9 @@ func (sf *HighLevelClient) TestCommand(coa asdu.CauseOfTransmission, ca asdu.Com
 	return asdu.TestCommand(sf, coa, ca)
 }
 
+// Connect connects to the server, always returns true
+// If autoReconnect is set, it will always try to reconnect.
+// You can always use the context to close the connection
 func (sf *HighLevelClient) Connect(ctx context.Context) {
 	defer sf.setConnectStatus(initial)
 	if !atomic.CompareAndSwapUint32(&sf.status, initial, disconnected) {

@@ -37,16 +37,11 @@ func checkValid(c Connect, typeID TypeID, isSequence bool, infosLen int) error {
 type SinglePointInfo struct {
 	Ioa InfoObjAddr
 	// value of single point
-	value SinglePoint
+	Value SinglePoint
 	// Quality descriptor asdu.OK means no remarks.
 	Qds QualityDescriptor
 	// the type does not include timing will ignore
 	Time time.Time
-}
-
-// Value returns value of SinglePointInfo
-func (sf *SinglePointInfo) Value() bool {
-	return sf.value&0x01 == 0x01
 }
 
 // single sends a type identification [M_SP_NA_1], [M_SP_TA_1] or [M_SP_TB_1].单点信息
@@ -77,7 +72,7 @@ func single(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission, 
 			}
 		}
 		var value byte
-		if v.Value() {
+		if v.Value {
 			value = 0x01
 		}
 		u.AppendBytes(value | byte(v.Qds&0xf0))
@@ -151,16 +146,11 @@ func SingleCP56Time2a(c Connect, coa CauseOfTransmission, ca CommonAddr, infos .
 // DoublePointInfo the measured value attributes.
 type DoublePointInfo struct {
 	Ioa   InfoObjAddr
-	value DoublePoint
+	Value DoublePoint
 	// Quality descriptor asdu.QDSGood means no remarks.
 	Qds QualityDescriptor
 	// the type does not include timing will ignore
 	Time time.Time
-}
-
-// Value returns value of DoublePointInfo
-func (sf *DoublePointInfo) Value() byte {
-	return byte(sf.value & 0x03)
 }
 
 // double sends a type identification [M_DP_NA_1], [M_DP_TA_1] or [M_DP_TB_1].双点信息
@@ -190,8 +180,8 @@ func double(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission, 
 				return err
 			}
 		}
+		u.AppendValueAndQ(v.Value, v.Qds)
 
-		u.AppendBytes(byte(v.Value()) | byte(v.Qds&0xf0))
 		switch typeID {
 		case M_DP_NA_1:
 		case M_DP_TA_1:
@@ -262,20 +252,11 @@ func DoubleCP56Time2a(c Connect, coa CauseOfTransmission, ca CommonAddr, infos .
 // StepPositionInfo the measured value attributes.
 type StepPositionInfo struct {
 	Ioa   InfoObjAddr
-	value StepPosition
+	Value StepPosition
 	// Quality descriptor asdu.GOOD means no remarks.
 	Qds QualityDescriptor
 	// the type does not include timing will ignore
 	Time time.Time
-}
-
-// Value returns value of StepPositionInfo
-func (sf *StepPositionInfo) Value() byte {
-	p := sf.value.Val & 0x7f
-	if sf.value.HasTransient {
-		p |= 0x80
-	}
-	return byte(p)
 }
 
 // step sends a type identification [M_ST_NA_1], [M_ST_TA_1] or [M_ST_TB_1].步位置信息
@@ -305,8 +286,8 @@ func step(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmission, ca
 				return err
 			}
 		}
+		u.AppendValueAndQ(v.Value, v.Qds)
 
-		u.AppendBytes(v.Value(), byte(v.Qds))
 		switch typeID {
 		case M_ST_NA_1:
 		case M_ST_TA_1:
@@ -377,16 +358,11 @@ func StepCP56Time2a(c Connect, coa CauseOfTransmission, ca CommonAddr, infos ...
 // BitString32Info the measured value attributes.
 type BitString32Info struct {
 	Ioa   InfoObjAddr
-	value uint32
+	Value BitString
 	// Quality descriptor asdu.GOOD means no remarks.
 	Qds QualityDescriptor
 	// the type does not include timing will ignore
 	Time time.Time
-}
-
-// Value returns value of BitString32Info
-func (sf *BitString32Info) Value() uint32 {
-	return sf.value
 }
 
 // bitString32 sends a type identification [M_BO_NA_1], [M_BO_TA_1] or [M_BO_TB_1].比特位串
@@ -416,7 +392,7 @@ func bitString32(c Connect, typeID TypeID, isSequence bool, coa CauseOfTransmiss
 				return err
 			}
 		}
-		u.AppendBitsString32(v.Value()).AppendBytes(byte(v.Qds))
+		u.AppendValueAndQ(v.Value, v.Qds)
 
 		switch typeID {
 		case M_BO_NA_1:
@@ -479,16 +455,11 @@ func BitString32CP56Time2a(c Connect, coa CauseOfTransmission, ca CommonAddr, in
 // MeasuredValueNormalInfo the measured value attributes.
 type MeasuredValueNormalInfo struct {
 	Ioa   InfoObjAddr
-	value Normalize
+	Value NormalizedMeasurement
 	// Quality descriptor asdu.GOOD means no remarks.
 	Qds QualityDescriptor
 	// the type does not include timing will ignore
 	Time time.Time
-}
-
-// Value return the value in [-1, 1 − 2⁻¹⁵].
-func (sf *MeasuredValueNormalInfo) Value() float64 {
-	return float64(sf.value) / 32768
 }
 
 // measuredValueNormal sends a type identification [M_ME_NA_1], [M_ME_TA_1],[ M_ME_TD_1] or [M_ME_ND_1].测量值,规一化值
@@ -519,7 +490,7 @@ func measuredValueNormal(c Connect, typeID TypeID, isSequence bool, coa CauseOfT
 				return err
 			}
 		}
-		u.AppendNormalize(v.value)
+		u.AppendValueAndQ(v.Value, v.Qds)
 		switch typeID {
 		case M_ME_NA_1:
 			u.AppendBytes(byte(v.Qds))
@@ -608,16 +579,11 @@ func MeasuredValueNormalNoQuality(c Connect, isSequence bool, coa CauseOfTransmi
 // MeasuredValueScaledInfo the measured value attributes.
 type MeasuredValueScaledInfo struct {
 	Ioa   InfoObjAddr
-	value int16
+	Value ScaledMeasurement
 	// Quality descriptor asdu.GOOD means no remarks.
 	Qds QualityDescriptor
 	// the type does not include timing will ignore
 	Time time.Time
-}
-
-// Value return value of MeasuredValueScaledInfo
-func (sf *MeasuredValueScaledInfo) Value() int16 {
-	return sf.value
 }
 
 // measuredValueScaled sends a type identification [M_ME_NB_1], [M_ME_TB_1] or [M_ME_TE_1].测量值,标度化值
@@ -647,7 +613,7 @@ func measuredValueScaled(c Connect, typeID TypeID, isSequence bool, coa CauseOfT
 				return err
 			}
 		}
-		u.AppendScaled(v.Value()).AppendBytes(byte(v.Qds))
+		u.AppendValueAndQ(v.Value, v.Qds)
 		switch typeID {
 		case M_ME_NB_1:
 		case M_ME_TB_1:
@@ -711,16 +677,11 @@ func MeasuredValueScaledCP56Time2a(c Connect, coa CauseOfTransmission, ca Common
 // MeasuredValueFloatInfo the measured value attributes.
 type MeasuredValueFloatInfo struct {
 	Ioa   InfoObjAddr
-	value float32
+	Value ShortFloatMeasurement
 	// Quality descriptor asdu.GOOD means no remarks.
 	Qds QualityDescriptor
 	// the type does not include timing will ignore
 	Time time.Time
-}
-
-// Value return value of MeasuredValueFloatInfo
-func (sf *MeasuredValueFloatInfo) Value() float32 {
-	return sf.value
 }
 
 // measuredValueFloat sends a type identification [M_ME_NC_1], [M_ME_TC_1] or [M_ME_TF_1].测量值,短浮点数
@@ -751,7 +712,7 @@ func measuredValueFloat(c Connect, typeID TypeID, isSequence bool, coa CauseOfTr
 			}
 		}
 
-		u.AppendFloat32(v.Value()).AppendBytes(byte(v.Qds & 0xf1))
+		u.AppendValueAndQ(v.Value, v.Qds)
 		switch typeID {
 		case M_ME_NC_1:
 		case M_ME_TC_1:
@@ -1172,7 +1133,11 @@ func (sf *ASDU) GetSinglePoint() []SinglePointInfo {
 		} else {
 			infoObjAddr++
 		}
-		value := sf.DecodeByte()
+		var value bool
+		v := sf.DecodeByte()
+		if v&0x01 == 1 {
+			value = true
+		}
 
 		var t time.Time
 		switch sf.Type {
@@ -1187,8 +1152,8 @@ func (sf *ASDU) GetSinglePoint() []SinglePointInfo {
 
 		info = append(info, SinglePointInfo{
 			Ioa:   infoObjAddr,
-			value: SinglePoint(value & 0x01),
-			Qds:   QualityDescriptor(value & 0xf0),
+			Value: SinglePoint(value),
+			Qds:   QualityDescriptor(v & 0xf0),
 			Time:  t})
 	}
 	return info
@@ -1220,7 +1185,7 @@ func (sf *ASDU) GetDoublePoint() []DoublePointInfo {
 
 		info = append(info, DoublePointInfo{
 			Ioa:   infoObjAddr,
-			value: DoublePoint(value & 0x03),
+			Value: DoublePoint(value & 0x03),
 			Qds:   QualityDescriptor(value & 0xf0),
 			Time:  t})
 	}
@@ -1254,7 +1219,7 @@ func (sf *ASDU) GetStepPosition() []StepPositionInfo {
 
 		info = append(info, StepPositionInfo{
 			Ioa:   infoObjAddr,
-			value: value,
+			Value: value,
 			Qds:   qds,
 			Time:  t})
 	}
@@ -1274,7 +1239,7 @@ func (sf *ASDU) GetBitString32() []BitString32Info {
 		}
 
 		value := sf.DecodeBitsString32()
-		qds := QualityDescriptor(sf.DecodeByte())
+		qds := QualityDescriptor(0)
 
 		var t time.Time
 		switch sf.Type {
@@ -1289,7 +1254,7 @@ func (sf *ASDU) GetBitString32() []BitString32Info {
 
 		info = append(info, BitString32Info{
 			Ioa:   infoObjAddr,
-			value: value,
+			Value: BitString(value),
 			Qds:   qds,
 			Time:  t})
 	}
@@ -1328,7 +1293,7 @@ func (sf *ASDU) GetMeasuredValueNormal() []MeasuredValueNormalInfo {
 
 		info = append(info, MeasuredValueNormalInfo{
 			Ioa:   infoObjAddr,
-			value: value,
+			Value: NormalizedMeasurement(value),
 			Qds:   qds,
 			Time:  t})
 	}
@@ -1363,7 +1328,7 @@ func (sf *ASDU) GetMeasuredValueScaled() []MeasuredValueScaledInfo {
 
 		info = append(info, MeasuredValueScaledInfo{
 			Ioa:   infoObjAddr,
-			value: value,
+			Value: ScaledMeasurement(value),
 			Qds:   qds,
 			Time:  t})
 	}
@@ -1397,7 +1362,7 @@ func (sf *ASDU) GetMeasuredValueFloat() []MeasuredValueFloatInfo {
 		}
 		info = append(info, MeasuredValueFloatInfo{
 			Ioa:   infoObjAddr,
-			value: value,
+			Value: ShortFloatMeasurement(value),
 			Qds:   QualityDescriptor(qua),
 			Time:  t})
 	}
