@@ -35,7 +35,7 @@ type HighLevelClient struct {
 	option           ClientOption
 	conn             net.Conn
 	responseHandler  map[uint64]chan *asdu.ASDU
-	subscriptionChan chan AsduInfo
+	subscriptionChan chan *AsduInfo
 
 	// channel
 	rcvAsdu chan *asdu.ASDU
@@ -123,7 +123,7 @@ func (sf *HighLevelClient) UnderlyingConn() net.Conn {
 // 	return nil
 // }
 
-func (sf *HighLevelClient) Subscribe(sub chan AsduInfo) {
+func (sf *HighLevelClient) Subscribe(sub chan *AsduInfo) {
 	sf.rwMux.Lock()
 	sf.subscriptionChan = sub
 	sf.rwMux.Unlock()
@@ -132,11 +132,7 @@ func (sf *HighLevelClient) Subscribe(sub chan AsduInfo) {
 // Write executes a synchronous write request.
 // Only single address space at a time for now.
 // It returns nil if the write command succeed, otherwise an error will be returned.
-// Ignore QualifierOfSetpointCmd currently.
-func (sf *HighLevelClient) Write(id asdu.TypeID, ca asdu.CommonAddr, ioa asdu.InfoObjAddr, v interface{}) error {
-
-	// TODO: QualifierOfSetpointCmd Ignored
-	var qos byte
+func (sf *HighLevelClient) Write(id asdu.TypeID, ca asdu.CommonAddr, ioa asdu.InfoObjAddr, value interface{}, qualifier interface{}) error {
 
 	asduPack := asdu.NewASDU(sf.Params(), asdu.Identifier{
 		Type:       id,
@@ -149,72 +145,14 @@ func (sf *HighLevelClient) Write(id asdu.TypeID, ca asdu.CommonAddr, ioa asdu.In
 		return err
 	}
 
+	err := asduPack.AppendValueAndQ(value, qualifier)
+	if err != nil {
+		return err
+	}
+
 	switch id {
-	case asdu.C_SC_NA_1, asdu.C_SC_TA_1:
-		if vv, ok := v.(byte); ok {
-			asduPack.AppendBytes(vv)
-		} else {
-			return fmt.Errorf("Should provide value in byte type")
-		}
-
-		if id == asdu.C_SC_TA_1 {
-			asduPack.AppendBytes(asdu.CP56Time2a(time.Now(), asduPack.InfoObjTimeZone)...)
-		}
-	case asdu.C_DC_NA_1, asdu.C_DC_TA_1:
-		if vv, ok := v.(byte); ok {
-			asduPack.AppendBytes(vv)
-		} else {
-			return fmt.Errorf("Should provide value in byte type ")
-		}
-
-		if id == asdu.C_DC_TA_1 {
-			asduPack.AppendBytes(asdu.CP56Time2a(time.Now(), asduPack.InfoObjTimeZone)...)
-		}
-	case asdu.C_RC_NA_1, asdu.C_RC_TA_1:
-		if vv, ok := v.(byte); ok {
-			asduPack.AppendBytes(vv)
-		} else {
-			return fmt.Errorf("Should provide value in byte type ")
-		}
-		if id == asdu.C_RC_TA_1 {
-			asduPack.AppendBytes(asdu.CP56Time2a(time.Now(), asduPack.InfoObjTimeZone)...)
-		}
-	case asdu.C_SE_NA_1, asdu.C_SE_TA_1:
-		if vv, ok := v.(int16); ok {
-			asduPack.AppendNormalize(asdu.Normalize(vv)).AppendBytes(qos)
-		} else {
-			return fmt.Errorf("Should provide value in int16 type ")
-		}
-		if id == asdu.C_SE_TA_1 {
-			asduPack.AppendBytes(asdu.CP56Time2a(time.Now(), asduPack.InfoObjTimeZone)...)
-		}
-	case asdu.C_SE_NB_1, asdu.C_SE_TB_1:
-		if vv, ok := v.(int16); ok {
-			asduPack.AppendScaled(vv).AppendBytes(qos)
-		} else {
-			return fmt.Errorf("Should provide value in int16 type ")
-		}
-		if id == asdu.C_SE_TB_1 {
-			asduPack.AppendBytes(asdu.CP56Time2a(time.Now(), asduPack.InfoObjTimeZone)...)
-		}
-	case asdu.C_SE_NC_1, asdu.C_SE_TC_1:
-		if vv, ok := v.(float32); ok {
-			asduPack.AppendFloat32(vv).AppendBytes(qos)
-		} else {
-			return fmt.Errorf("Should provide value in float32 type ")
-		}
-		if id == asdu.C_SE_TC_1 {
-			asduPack.AppendBytes(asdu.CP56Time2a(time.Now(), asduPack.InfoObjTimeZone)...)
-		}
-	case asdu.C_BO_NA_1, asdu.C_BO_TA_1:
-		if vv, ok := v.(uint32); ok {
-			asduPack.AppendBitsString32(vv)
-		} else {
-			return fmt.Errorf("Should provide value in float32 type ")
-		}
-		if id == asdu.C_BO_TA_1 {
-			asduPack.AppendBytes(asdu.CP56Time2a(time.Now(), asduPack.InfoObjTimeZone)...)
-		}
+	case asdu.C_SC_TA_1, asdu.C_DC_TA_1, asdu.C_RC_TA_1, asdu.C_SE_TA_1, asdu.C_SE_TB_1, asdu.C_SE_TC_1, asdu.C_BO_TA_1:
+		asduPack.AppendBytes(asdu.CP56Time2a(time.Now(), asduPack.InfoObjTimeZone)...)
 	}
 
 	// this uID is used to matching response packet to request packet
@@ -276,128 +214,12 @@ func (sf *HighLevelClient) Read(ca asdu.CommonAddr, ioa asdu.InfoObjAddr) (*Asdu
 	if err != nil {
 		return nil, err
 	}
-	data := &AsduInfo{}
-	switch resp.Type {
-	case asdu.M_SP_NA_1:
-		// Single Info
-		v := resp.GetSinglePoint()[0]
-		if v.Qds != asdu.QDSGood {
-			return nil, fmt.Errorf("Quality not Good: %v", v.Qds)
-		}
-		if v.Value() {
-			data.Value = 0x01
-		} else {
-			data.Value = 0
-		}
-	case asdu.M_SP_TB_1:
-		// Single Info with time
-		v := resp.GetSinglePoint()[0]
-		if v.Qds != asdu.QDSGood {
-			return nil, fmt.Errorf("Quality not Good: %v", v.Qds)
-		}
-		data.Value = v.Value()
-		data.Timestamp = v.Time
-	case asdu.M_DP_NA_1:
-		// Double Info
-		v := resp.GetDoublePoint()[0]
-		if v.Qds != asdu.QDSGood {
-			return nil, fmt.Errorf("Quality not Good: %v", v.Qds)
-		}
-		data.Value = v.Value()
-	case asdu.M_DP_TB_1:
-		// Double Info with time
-		v := resp.GetDoublePoint()[0]
-		if v.Qds != asdu.QDSGood {
-			return nil, fmt.Errorf("Quality not Good: %v", v.Qds)
-		}
-		data.Value = v.Value()
-		data.Timestamp = v.Time
-	case asdu.M_ST_NA_1:
-		// Step Position Info
-		v := resp.GetStepPosition()[0]
-		if v.Qds != asdu.QDSGood {
-			return nil, fmt.Errorf("Quality not Good: %v", v.Qds)
-		}
-		data.Value = v.Value()
-	case asdu.M_ST_TB_1:
-		// Step Position Info with time
-		v := resp.GetStepPosition()[0]
-		if v.Qds != asdu.QDSGood {
-			return nil, fmt.Errorf("Quality not Good: %v", v.Qds)
-		}
-		data.Value = v.Value()
-		data.Timestamp = v.Time
-	case asdu.M_BO_NA_1:
-		// 32 Bit string
-		v := resp.GetBitString32()[0]
-		if v.Qds != asdu.QDSGood {
-			return nil, fmt.Errorf("Quality not Good: %v", v.Qds)
-		}
-		data.Value = v.Value()
-	case asdu.M_BO_TB_1:
-		// 32 Bit string with time
-		v := resp.GetBitString32()[0]
-		if v.Qds != asdu.QDSGood {
-			return nil, fmt.Errorf("Quality not Good: %v", v.Qds)
-		}
-		data.Value = v.Value()
-		data.Timestamp = v.Time
-	case asdu.M_ME_NA_1:
-		// Normalized Measured Value
-		v := resp.GetMeasuredValueNormal()[0]
-		if v.Qds != asdu.QDSGood {
-			return nil, fmt.Errorf("Quality not Good: %v", v.Qds)
-		}
-		data.Value = v.Value()
-	case asdu.M_ME_TD_1:
-		// Normalized Measured Value with time
-		v := resp.GetMeasuredValueNormal()[0]
-		if v.Qds != asdu.QDSGood {
-			return nil, fmt.Errorf("Quality not Good: %v", v.Qds)
-		}
-		data.Value = v.Value()
-		data.Timestamp = v.Time
-	case asdu.M_ME_ND_1:
-		// Normalized Measured Value without quality description
-		v := resp.GetMeasuredValueNormal()[0]
-		if v.Qds != asdu.QDSGood {
-			return nil, fmt.Errorf("Quality not Good: %v", v.Qds)
-		}
-		data.Value = v.Value()
-	case asdu.M_ME_NB_1:
-		// Scaled Measured Value
-		v := resp.GetMeasuredValueScaled()[0]
-		if v.Qds != asdu.QDSGood {
-			return nil, fmt.Errorf("Quality not Good: %v", v.Qds)
-		}
-		data.Value = v.Value()
-	case asdu.M_ME_TE_1:
-		// Scaled Measured Value with time
-		v := resp.GetMeasuredValueScaled()[0]
-		if v.Qds != asdu.QDSGood {
-			return nil, fmt.Errorf("Quality not Good: %v", v.Qds)
-		}
-		data.Value = v.Value()
-		data.Timestamp = v.Time
-	case asdu.M_ME_NC_1:
-		// Short Float Measured Value
-		v := resp.GetMeasuredValueFloat()[0]
-		if v.Qds != asdu.QDSGood {
-			return nil, fmt.Errorf("Quality not Good: %v", v.Qds)
-		}
-		data.Value = v.Value()
-	case asdu.M_ME_TF_1:
-		// Short Float Measured Value with time
-		v := resp.GetMeasuredValueFloat()[0]
-		if v.Qds != asdu.QDSGood {
-			return nil, fmt.Errorf("Quality not Good: %v", v.Qds)
-		}
-		data.Value = v.Value()
-		data.Timestamp = v.Time
-	default:
-		return nil, fmt.Errorf("TypeID: %v Not Supported", resp.Type)
+
+	if v := createAsduInfoFromAsdu(resp); v != nil {
+		return v, nil
 	}
-	return data, nil
+	return nil, fmt.Errorf("TypeID: %v Not Supported", resp.Type)
+
 }
 
 //InterrogationCmd wrap asdu.InterrogationCmd
@@ -647,6 +469,110 @@ func (sf *HighLevelClient) run(ctx context.Context) {
 	}
 }
 
+func createAsduInfoFromAsdu(asduPack *asdu.ASDU) *AsduInfo {
+	data := &AsduInfo{
+		Identifier: asduPack.Identifier,
+		Ioa:        asduPack.Clone().DecodeInfoObjAddr(),
+		Timestamp:  time.Time{},
+	}
+
+	switch asduPack.Type {
+	case asdu.M_SP_NA_1:
+		// Single Info
+		v := asduPack.GetSinglePoint()[0]
+		if v.Value.Value() {
+			data.Value = 0x01
+		} else {
+			data.Value = 0
+		}
+		data.Quality = v.Qds
+	case asdu.M_SP_TB_1:
+		// Single Info with time
+		v := asduPack.GetSinglePoint()[0]
+		if v.Value.Value() {
+			data.Value = 0x01
+		} else {
+			data.Value = 0
+		}
+		data.Quality = v.Qds
+		data.Timestamp = v.Time
+	case asdu.M_DP_NA_1:
+		// Double Info
+		v := asduPack.GetDoublePoint()[0]
+		data.Value = v.Value.Value()
+		data.Quality = v.Qds
+	case asdu.M_DP_TB_1:
+		// Double Info with time
+		v := asduPack.GetDoublePoint()[0]
+		data.Quality = v.Qds
+		data.Value = v.Value.Value()
+		data.Timestamp = v.Time
+	case asdu.M_ST_NA_1:
+		// Step Position Info
+		v := asduPack.GetStepPosition()[0]
+		data.Quality = v.Qds
+		data.Value = v.Value.Value()
+	case asdu.M_ST_TB_1:
+		// Step Position Info with time
+		v := asduPack.GetStepPosition()[0]
+		data.Quality = v.Qds
+		data.Value = v.Value.Value()
+		data.Timestamp = v.Time
+	case asdu.M_BO_NA_1:
+		// 32 Bit string
+		v := asduPack.GetBitString32()[0]
+		data.Quality = v.Qds
+		data.Value = v.Value.Value()
+	case asdu.M_BO_TB_1:
+		// 32 Bit string with time
+		v := asduPack.GetBitString32()[0]
+		data.Quality = v.Qds
+		data.Value = v.Value.Value()
+		data.Timestamp = v.Time
+	case asdu.M_ME_NA_1:
+		// Normalized Measured Value
+		v := asduPack.GetMeasuredValueNormal()[0]
+		data.Quality = v.Qds
+		data.Value = v.Value.Value()
+	case asdu.M_ME_TD_1:
+		// Normalized Measured Value with time
+		v := asduPack.GetMeasuredValueNormal()[0]
+		data.Quality = v.Qds
+		data.Value = v.Value.Value()
+		data.Timestamp = v.Time
+	case asdu.M_ME_ND_1:
+		// Normalized Measured Value without quality description
+		v := asduPack.GetMeasuredValueNormal()[0]
+		data.Quality = v.Qds
+		data.Value = v.Value.Value()
+	case asdu.M_ME_NB_1:
+		// Scaled Measured Value
+		v := asduPack.GetMeasuredValueScaled()[0]
+		data.Quality = v.Qds
+		data.Value = v.Value.Value()
+	case asdu.M_ME_TE_1:
+		// Scaled Measured Value with time
+		v := asduPack.GetMeasuredValueScaled()[0]
+		data.Quality = v.Qds
+		data.Value = v.Value.Value()
+		data.Timestamp = v.Time
+	case asdu.M_ME_NC_1:
+		// Short Float Measured Value
+		v := asduPack.GetMeasuredValueFloat()[0]
+		data.Quality = v.Qds
+		data.Value = v.Value.Value()
+	case asdu.M_ME_TF_1:
+		// Short Float Measured Value with time
+		v := asduPack.GetMeasuredValueFloat()[0]
+		data.Quality = v.Qds
+		data.Value = v.Value.Value()
+		data.Timestamp = v.Time
+	default:
+		return nil
+	}
+	return data
+}
+
 func (sf *HighLevelClient) subscribeLoop(ctx context.Context) {
 	sf.Debug("SubscribeLoop started")
 	defer sf.Debug("SubscribeLoop stopped")
@@ -661,172 +587,7 @@ func (sf *HighLevelClient) subscribeLoop(ctx context.Context) {
 				sf.Debug("subscriptionChan nil")
 				continue
 			}
-			ioa := data.Clone().DecodeInfoObjAddr()
-			switch data.Type {
-			case asdu.M_SP_NA_1:
-				// Single Info
-				value := data.GetSinglePoint()[0]
-				v := AsduInfo{
-					Identifier: data.Identifier,
-					Ioa:        ioa,
-					Value:      value.Value(),
-					Quality:    value.Qds,
-					Timestamp:  value.Time,
-				}
-				sf.subscriptionChan <- v
-			case asdu.M_SP_TB_1:
-				// Single Info with time
-				value := data.GetSinglePoint()[0]
-				v := AsduInfo{
-					Identifier: data.Identifier,
-					Ioa:        ioa,
-					Value:      value.Value(),
-					Quality:    value.Qds,
-					Timestamp:  value.Time,
-				}
-				sf.subscriptionChan <- v
-			case asdu.M_DP_NA_1:
-				// Double Info
-				value := data.GetDoublePoint()[0]
-				v := AsduInfo{
-					Identifier: data.Identifier,
-					Ioa:        ioa,
-					Value:      value.Value(),
-					Quality:    value.Qds,
-					Timestamp:  value.Time,
-				}
-				sf.subscriptionChan <- v
-			case asdu.M_DP_TB_1:
-				// Double Info with time
-				value := data.GetDoublePoint()[0]
-				v := AsduInfo{
-					Identifier: data.Identifier,
-					Ioa:        ioa,
-					Value:      value.Value(),
-					Quality:    value.Qds,
-					Timestamp:  value.Time,
-				}
-				sf.subscriptionChan <- v
-			case asdu.M_ST_NA_1:
-				// Step Position Info
-				value := data.GetStepPosition()[0]
-				v := AsduInfo{
-					Identifier: data.Identifier,
-					Ioa:        ioa,
-					Value:      value.Value(),
-					Quality:    value.Qds,
-					Timestamp:  value.Time,
-				}
-				sf.subscriptionChan <- v
-			case asdu.M_ST_TB_1:
-				// Step Position Info with time
-				value := data.GetStepPosition()[0]
-				v := AsduInfo{
-					Identifier: data.Identifier,
-					Ioa:        ioa,
-					Value:      value.Value(),
-					Quality:    value.Qds,
-					Timestamp:  value.Time,
-				}
-				sf.subscriptionChan <- v
-			case asdu.M_BO_NA_1:
-				// 32 Bit string
-				value := data.GetBitString32()[0]
-				v := AsduInfo{
-					Identifier: data.Identifier,
-					Ioa:        ioa,
-					Value:      value.Value(),
-					Quality:    value.Qds,
-					Timestamp:  value.Time,
-				}
-				sf.subscriptionChan <- v
-			case asdu.M_BO_TB_1:
-				// 32 Bit string with time
-				value := data.GetBitString32()[0]
-				v := AsduInfo{
-					Identifier: data.Identifier,
-					Ioa:        ioa,
-					Value:      value.Value(),
-					Quality:    value.Qds,
-					Timestamp:  value.Time,
-				}
-				sf.subscriptionChan <- v
-			case asdu.M_ME_NA_1:
-				// Normalized Measured Value
-				value := data.GetMeasuredValueNormal()[0]
-				v := AsduInfo{
-					Identifier: data.Identifier,
-					Ioa:        ioa,
-					Value:      value.Value(),
-					Quality:    value.Qds,
-					Timestamp:  value.Time,
-				}
-				sf.subscriptionChan <- v
-			case asdu.M_ME_TD_1:
-				// Normalized Measured Value with time
-				value := data.GetMeasuredValueNormal()[0]
-				v := AsduInfo{
-					Identifier: data.Identifier,
-					Ioa:        ioa,
-					Value:      value.Value(),
-					Quality:    value.Qds,
-					Timestamp:  value.Time,
-				}
-				sf.subscriptionChan <- v
-			case asdu.M_ME_ND_1:
-				// Normalized Measured Value without quality description
-				value := data.GetMeasuredValueNormal()[0]
-				v := AsduInfo{
-					Identifier: data.Identifier,
-					Ioa:        ioa,
-					Value:      value.Value(),
-					Quality:    value.Qds,
-					Timestamp:  value.Time,
-				}
-				sf.subscriptionChan <- v
-			case asdu.M_ME_NB_1:
-				// Scaled Measured Value
-				value := data.GetMeasuredValueScaled()[0]
-				v := AsduInfo{
-					Identifier: data.Identifier,
-					Ioa:        ioa,
-					Value:      value.Value(),
-					Quality:    value.Qds,
-					Timestamp:  value.Time,
-				}
-				sf.subscriptionChan <- v
-			case asdu.M_ME_TE_1:
-				// Scaled Measured Value with time
-				value := data.GetMeasuredValueScaled()[0]
-				v := AsduInfo{
-					Identifier: data.Identifier,
-					Ioa:        ioa,
-					Value:      value.Value(),
-					Quality:    value.Qds,
-					Timestamp:  value.Time,
-				}
-				sf.subscriptionChan <- v
-			case asdu.M_ME_NC_1:
-				// Short Float Measured Value
-				value := data.GetMeasuredValueFloat()[0]
-				v := AsduInfo{
-					Identifier: data.Identifier,
-					Ioa:        ioa,
-					Value:      value.Value(),
-					Quality:    value.Qds,
-					Timestamp:  value.Time,
-				}
-				sf.subscriptionChan <- v
-			case asdu.M_ME_TF_1:
-				// Short Float Measured Value with time
-				value := data.GetMeasuredValueFloat()[0]
-				v := AsduInfo{
-					Identifier: data.Identifier,
-					Ioa:        ioa,
-					Value:      value.Value(),
-					Quality:    value.Qds,
-					Timestamp:  value.Time,
-				}
+			if v := createAsduInfoFromAsdu(data); v != nil {
 				sf.subscriptionChan <- v
 			}
 		}
