@@ -10,10 +10,10 @@ func TestSinglePoint_Value(t *testing.T) {
 	tests := []struct {
 		name string
 		this SinglePoint
-		want byte
+		want bool
 	}{
-		{"off", SPIOff, 0x00},
-		{"on", SPIOn, 0x01},
+		{"off", SPIOff, false},
+		{"on", SPIOn, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -80,15 +80,15 @@ func TestStepPosition_Value(t *testing.T) {
 
 // TestNormal tests the full value range.
 func TestNormal(t *testing.T) {
-	v := Normalize(-1 << 15)
-	last := v.Float64()
+	v := NormalizedMeasurement(-1 << 15)
+	last := v.NormalizedValue()
 	if last != -1 {
 		t.Errorf("%#04x: got %f, want -1", uint16(v), last)
 	}
 
 	for v != 1<<15-1 {
 		v++
-		got := v.Float64()
+		got := v.NormalizedValue()
 		if got <= last || got >= 1 {
 			t.Errorf("%#04x: got %f (%#04x was %f)", uint16(v), got, uint16(v-1), last)
 		}
@@ -99,7 +99,7 @@ func TestNormal(t *testing.T) {
 func TestNormalize_Float64(t *testing.T) {
 	min := float64(-1)
 	for v := math.MinInt16; v < math.MaxInt16; v++ {
-		got := Normalize(v).Float64()
+		got := NormalizedMeasurement(v).NormalizedValue()
 		if got < min || got >= 1 {
 			t.Errorf("%#04x: got %f (%#04x was %f)", uint16(v), got, uint16(v-1), min)
 		}
