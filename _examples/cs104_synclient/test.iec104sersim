@@ -1,0 +1,589 @@
+21.04.018
+1
+0.0.0.0
+2404
+0.0.0.0
+FALSE
+12
+8
+30
+15
+10
+20
+10000
+5000
+50
+0
+TRUE
+5
+1
+2
+3
+4
+5
+TRUE
+FALSE
+FALSE
+C:\Program Files (x86)\FreyrSCADA Embedded Solution\IEC 60870-5-104 Server Simulator
+10
+FALSE
+127.0.0.1
+2405
+0.0.0.0
+TRUE
+TRUE
+TRUE
+COT_TWO_BYTE
+47
+1
+Single Point
+M_SP_NA_1 = 1
+1
+1
+INRO1   = 21
+60
+STATUS_ONLY
+0
+PARAMETER_NONE
+1
+0
+2
+Double Point
+M_DP_NA_1 = 3
+3
+1
+INRO1   = 21
+60
+STATUS_ONLY
+0
+PARAMETER_NONE
+1
+0
+3
+Step Position
+M_ST_NA_1 = 5
+5
+1
+INRO1   = 21
+60
+STATUS_ONLY
+0
+PARAMETER_NONE
+1
+0
+4
+Bitstring
+M_BO_NA_1 = 7
+7
+1
+INROGEN = 20
+0
+STATUS_ONLY
+0
+PARAMETER_NONE
+1
+60
+5
+Measured Normalized
+M_ME_NA_1 = 9
+9
+1
+INROGEN = 20
+0
+STATUS_ONLY
+0
+PARAMETER_NONE
+1
+60
+6
+Measured Scaled
+M_ME_NB_1 = 11
+11
+1
+INRO3   = 23
+0
+STATUS_ONLY
+0
+PARAMETER_NONE
+1
+60
+7
+Measured Short Float
+M_ME_NC_1 = 13
+13
+1
+INRO3   = 23
+60
+STATUS_ONLY
+0
+PARAMETER_NONE
+1
+0
+8
+Integrated Totals
+M_IT_NA_1 = 15
+15
+1
+REQCOGEN= 37
+0
+STATUS_ONLY
+0
+PARAMETER_NONE
+1
+0
+9
+Measured Normalized Without Quality
+M_ME_ND_1 = 21
+21
+1
+INRO3   = 23
+60
+STATUS_ONLY
+0
+PARAMETER_NONE
+1
+0
+10
+Single Point
+M_SP_TB_1 = 30
+30
+1
+INROGEN = 20
+60
+STATUS_ONLY
+0
+PARAMETER_NONE
+1
+0
+11
+Double Point
+M_DP_TB_1 = 31
+31
+1
+INROGEN = 20
+0
+STATUS_ONLY
+0
+PARAMETER_NONE
+1
+60
+12
+Step Position
+M_ST_TB_1 = 32
+32
+1
+INROGEN = 20
+0
+STATUS_ONLY
+0
+PARAMETER_NONE
+1
+60
+13
+Bitstring
+M_BO_TB_1 = 33
+33
+1
+INROGEN = 20
+0
+STATUS_ONLY
+0
+PARAMETER_NONE
+1
+60
+14
+Measured Normalized
+M_ME_TD_1 = 34
+34
+1
+INROGEN = 20
+60
+STATUS_ONLY
+0
+PARAMETER_NONE
+1
+0
+15
+Measured Scaled
+M_ME_TE_1 = 35
+35
+1
+INROGEN = 20
+60
+STATUS_ONLY
+0
+PARAMETER_NONE
+1
+0
+16
+Measured Short Float
+M_ME_TF_1 = 36
+36
+1
+INROGEN = 20
+60
+STATUS_ONLY
+0
+PARAMETER_NONE
+1
+0
+17
+Integrated Totals
+M_IT_TB_1 = 37
+37
+1
+REQCO1  = 38
+0
+STATUS_ONLY
+0
+PARAMETER_NONE
+1
+0
+18
+Event of Protection Equipment
+M_EP_TD_1 = 38
+38
+1
+NOTUSED
+0
+STATUS_ONLY
+0
+PARAMETER_NONE
+1
+0
+19
+Packed Start Events of Protection Equipment
+M_EP_TE_1 = 39
+39
+1
+NOTUSED
+0
+STATUS_ONLY
+0
+PARAMETER_NONE
+1
+0
+20
+Packed Output Circuit Information of Protection Equipment
+M_EP_TF_1 = 40
+40
+1
+NOTUSED
+0
+STATUS_ONLY
+0
+PARAMETER_NONE
+1
+0
+21
+Single Command
+C_SC_NA_1 = 45
+45
+1
+NOTUSED
+0
+DIRECT_OPERATE
+0
+PARAMETER_NONE
+1
+0
+22
+Double Command
+C_DC_NA_1 = 46
+46
+1
+NOTUSED
+0
+DIRECT_OPERATE
+0
+PARAMETER_NONE
+1
+0
+23
+Regulating Step Command
+C_RC_NA_1 = 47
+47
+1
+NOTUSED
+0
+DIRECT_OPERATE
+0
+PARAMETER_NONE
+1
+0
+24
+Set Point command - Normalized Value
+C_SE_NA_1 = 48
+48
+1
+NOTUSED
+0
+DIRECT_OPERATE
+0
+PARAMETER_NONE
+1
+0
+25
+Set Point command - Scaled Value
+C_SE_NB_1 = 49
+49
+1
+NOTUSED
+0
+DIRECT_OPERATE
+0
+PARAMETER_NONE
+1
+0
+26
+Set Point command - Float Value
+C_SE_NC_1 = 50
+50
+1
+NOTUSED
+0
+DIRECT_OPERATE
+0
+PARAMETER_NONE
+1
+0
+27
+Bitstring of 32 bit command
+C_BO_NA_1 = 51
+51
+1
+NOTUSED
+0
+DIRECT_OPERATE
+0
+PARAMETER_NONE
+1
+0
+28
+Single Command
+C_SC_TA_1 = 58
+58
+1
+NOTUSED
+0
+DIRECT_OPERATE
+0
+PARAMETER_NONE
+1
+0
+29
+Double Command
+C_DC_TA_1 = 59
+59
+1
+NOTUSED
+0
+DIRECT_OPERATE
+0
+PARAMETER_NONE
+1
+0
+30
+Regulating Step Command
+C_RC_TA_1 = 60
+60
+1
+NOTUSED
+0
+DIRECT_OPERATE
+0
+PARAMETER_NONE
+1
+0
+31
+Set Point command - Normalized Value
+C_SE_TA_1 = 61
+61
+1
+NOTUSED
+0
+DIRECT_OPERATE
+0
+PARAMETER_NONE
+1
+0
+32
+Set Point command - Scaled Value
+C_SE_TB_1 = 62
+62
+1
+NOTUSED
+0
+DIRECT_OPERATE
+0
+PARAMETER_NONE
+1
+0
+33
+Set Point command - Float Value
+C_SE_TC_1 = 63
+63
+1
+NOTUSED
+0
+DIRECT_OPERATE
+0
+PARAMETER_NONE
+1
+0
+34
+Bitstring of 32 bit command
+C_BO_TA_1 = 64
+64
+1
+NOTUSED
+0
+DIRECT_OPERATE
+0
+PARAMETER_NONE
+1
+0
+35
+Parameter
+P_ME_NA_1 = 110
+110
+1
+INRO5   = 25
+0
+STATUS_ONLY
+0
+PARAMETER_THRESHOLDVALUE
+1
+0
+36
+Parameter
+P_ME_NB_1 = 111
+111
+1
+INRO5   = 25
+0
+STATUS_ONLY
+0
+PARAMETER_THRESHOLDVALUE
+1
+0
+37
+Parameter
+P_ME_NC_1 = 112
+112
+1
+INRO5   = 25
+0
+STATUS_ONLY
+0
+PARAMETER_THRESHOLDVALUE
+1
+0
+38
+Single Point
+M_SP_NA_1 = 1
+1
+1
+INROGEN = 20
+60
+STATUS_ONLY
+0
+PARAMETER_NONE
+2
+0
+39
+Double Point
+M_DP_NA_1 = 3
+3
+1
+INROGEN = 20
+60
+STATUS_ONLY
+0
+PARAMETER_NONE
+2
+0
+40
+Step Position
+M_ST_NA_1 = 5
+5
+1
+INROGEN = 20
+60
+STATUS_ONLY
+0
+PARAMETER_NONE
+2
+0
+41
+Bitstring
+M_BO_NA_1 = 7
+7
+1
+INROGEN = 20
+60
+STATUS_ONLY
+0
+PARAMETER_NONE
+2
+0
+42
+Measured Normalized
+M_ME_NA_1 = 9
+9
+1
+INRO1   = 21
+60
+STATUS_ONLY
+0
+PARAMETER_NONE
+3
+0
+43
+Measured Scaled
+M_ME_NB_1 = 11
+11
+1
+INRO1   = 21
+60
+STATUS_ONLY
+0
+PARAMETER_NONE
+3
+0
+44
+Measured Short Float
+M_ME_NC_1 = 13
+13
+1
+INRO1   = 21
+60
+STATUS_ONLY
+0
+PARAMETER_NONE
+3
+0
+45
+Single Command
+C_SC_NA_1 = 45
+45
+1
+NOTUSED
+0
+DIRECT_OPERATE
+0
+PARAMETER_NONE
+2
+0
+46
+Set Point command - Normalized Value
+C_SE_NA_1 = 48
+48
+1
+NOTUSED
+0
+DIRECT_OPERATE
+0
+PARAMETER_NONE
+3
+0
