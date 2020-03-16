@@ -146,7 +146,6 @@ func (sf *Synclient) Write(ca asdu.CommonAddr, ioa asdu.InfoObjAddr, id asdu.Typ
 	switch id {
 	case asdu.C_SC_TA_1, asdu.C_DC_TA_1, asdu.C_RC_TA_1, asdu.C_SE_TA_1, asdu.C_SE_TB_1, asdu.C_SE_TC_1, asdu.C_BO_TA_1:
 		asduPack.AppendCP56Time2a(time.Now(), asduPack.InfoObjTimeZone)
-		// asduPack.AppendBytes(asdu.CP56Time2a(time.Now(), asduPack.InfoObjTimeZone)...)
 	}
 
 	// this uID is used to matching response packet to request packet
@@ -219,53 +218,7 @@ func (sf *Synclient) Read(ca asdu.CommonAddr, ioa asdu.InfoObjAddr) (*AsduInfo, 
 
 //InterrogationCmd wrap asdu.InterrogationCmd
 func (sf *Synclient) InterrogationCmd(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, qoi asdu.QualifierOfInterrogation) error {
-	// // this id is used to matching response packet to request packet
-	// uIDCon := uint64(0) + (uint64(ca) << (8 * sf.option.param.InfoObjAddrSize)) + ((uint64(asdu.ActivationCon)) << (8 * (sf.option.param.InfoObjAddrSize + sf.option.param.CommonAddrSize)))
-
-	// // Request target on ioa which is already in operating state will be rejected
-	// if _, ok := sf.readWriteHandler[uIDCon]; ok {
-	// 	return nil, fmt.Errorf("Last SystemCommand on CommonAddr(%v) has not completed", ca)
-	// }
-
-	// uIDData := uint64(0) + (uint64(ca) << (8 * sf.option.param.InfoObjAddrSize)) + ((uint64(qoi)) << (8 * (sf.option.param.InfoObjAddrSize + sf.option.param.CommonAddrSize)))
-	// uIDTerm := uint64(0) + (uint64(ca) << (8 * sf.option.param.InfoObjAddrSize)) + ((uint64(asdu.ActivationTerm)) << (8 * (sf.option.param.InfoObjAddrSize + sf.option.param.CommonAddrSize)))
-
-	// ch := make(chan *asdu.ASDU)
-	// sf.readWriteHandler[uIDCon] = ch
-	// sf.readWriteHandler[uIDData] = ch
-	// sf.readWriteHandler[uIDTerm] = ch
-	// defer func() {
-	// 	sf.rwMux.Lock()
-	// 	delete(sf.readWriteHandler, uIDCon)
-	// 	delete(sf.readWriteHandler, uIDData)
-	// 	delete(sf.readWriteHandler, uIDTerm)
-	// 	sf.rwMux.Unlock()
-	// }()
-
 	return asdu.InterrogationCmd(sf, coa, ca, qoi)
-
-	// confirmed := false
-	// result := make([]*AsduInfo, 0)
-	// for {
-	// 	select {
-	// 	case resp := <-ch:
-	// 		if !confirmed {
-	// 			if resp.Coa.Cause != asdu.ActivationCon {
-	// 				return nil, fmt.Errorf("InterrogationCmd on ca(%v).qoi(%v) Failed", ca, qoi)
-	// 			}
-	// 			confirmed = true
-	// 			continue
-	// 		}
-	// 		if resp.Coa.Cause == asdu.ActivationTerm {
-	// 			return result, nil
-	// 		}
-	// 		if v := createAsduInfoFromAsdu(resp); v != nil {
-	// 			result = append(result, v)
-	// 		}
-	// 	case <-time.After(time.Second):
-	// 		return nil, fmt.Errorf("ErrorBadTimeOut")
-	// 	}
-	// }
 }
 
 // CounterInterrogationCmd wrap asdu.CounterInterrogationCmd
@@ -608,6 +561,10 @@ func createAsduInfoFromAsdu(asduPack *asdu.ASDU) *AsduInfo {
 		data.Timestamp = v.Time
 	// case asdu.M_IT_NA_1:
 	// 	v := asduPack.GetIntegratedTotals()
+	// case asdu.M_PS_NA_1:
+	// case asdu.M_EP_TD_1:
+	// case asdu.M_EP_TE_1:
+	// case asdu.M_EP_TF_1:
 	// case asdu.P_ME_NA_1:
 	// 	v := asduPack.GetParameterNormal()
 	// 	// data.Quality = v.Qpm.Value()
@@ -794,41 +751,6 @@ func (sf *Synclient) Send(a *asdu.ASDU) error {
 
 	return nil
 }
-
-// func (sf *Synclient) syncSendIFrame(asduPack *asdu.ASDU, resp chan *asdu.ASDU) (*asdu.ASDU, error) {
-// 	data, err := asduPack.MarshalBinary()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	seqNo := sf.seqNoSend
-// 	iframe, err := newIFrame(seqNo, sf.seqNoRcv, data)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	sf.ackNoRcv = sf.seqNoRcv
-// 	sf.seqNoSend = (seqNo + 1) & 32767
-// 	sf.pending = append(sf.pending, seqPending{seqNo & 32767, time.Now()})
-
-// 	if seqNoCount(sf.ackNoSend, sf.seqNoSend) > sf.option.config.SendUnAckLimitK {
-// 		// TODO: Wait some time? RecvUnAckTimeout2?
-// 		return nil, ErrBufferFulled
-// 	}
-
-// 	sf.Debug("TX iFrame %v", iAPCI{seqNo, sf.seqNoRcv})
-
-// 	sf.sendRaw <- iframe
-
-// 	// timer := time.NewTimer(sf.option.config.SendUnAckTimeout1)
-// 	timer := time.NewTimer(syncSendTimeout)
-// 	defer timer.Stop()
-
-// 	select {
-// 	case ch := <-resp:
-// 		return ch, nil
-// 	case <-timer.C:
-// 		return nil, fmt.Errorf("ErrorBadTimeOut")
-// 	}
-// }
 
 func (sf *Synclient) send(apdu []byte) {
 	sf.Debug("TX Raw[% x]", apdu)
