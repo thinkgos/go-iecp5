@@ -37,7 +37,7 @@ type Synclient struct {
 	option ClientOption
 	conn   net.Conn
 
-	responseHandler  map[uint64]chan *asdu.ASDU
+	readWriteHandler map[uint64]chan *asdu.ASDU
 	subscriptionChan chan *AsduInfo
 
 	// channel
@@ -72,7 +72,7 @@ type Synclient struct {
 func NewSynclient(o *ClientOption) *Synclient {
 	return &Synclient{
 		option:           *o,
-		responseHandler:  make(map[uint64]chan *asdu.ASDU),
+		readWriteHandler: make(map[uint64]chan *asdu.ASDU),
 		rcvAsdu:          make(chan *asdu.ASDU, o.config.RecvUnAckLimitW<<5),
 		rcvRaw:           make(chan []byte, o.config.RecvUnAckLimitW<<5),
 		sendRaw:          make(chan []byte, o.config.SendUnAckLimitK<<5), // may not block!
@@ -151,31 +151,28 @@ func (sf *Synclient) Write(ca asdu.CommonAddr, ioa asdu.InfoObjAddr, id asdu.Typ
 
 	// this uID is used to matching response packet to request packet
 	uID := uint64(ioa) + (uint64(ca) << (8 * sf.option.param.InfoObjAddrSize))
-	// (uint64(asdu.Activation))<<(8*(sf.option.param.InfoObjAddrSize+sf.option.param.CommonAddrSize))
+	//  + ((uint64(asdu.ActivationCon)) << (8 * (sf.option.param.InfoObjAddrSize + sf.option.param.CommonAddrSize)))
 	// Request target on ioa which is already in operating state will be rejected
-	if _, ok := sf.responseHandler[uID]; ok {
+	if _, ok := sf.readWriteHandler[uID]; ok {
 		return fmt.Errorf("Last Write Command on Address ca(%v).ioa(%v) has not completed", ca, ioa)
 	}
 	ch := make(chan *asdu.ASDU)
-	sf.responseHandler[uID] = ch
+	sf.readWriteHandler[uID] = ch
 	defer func() {
 		sf.rwMux.Lock()
-		delete(sf.responseHandler, uID)
+		delete(sf.readWriteHandler, uID)
 		sf.rwMux.Unlock()
 	}()
 	err = sf.Send(asduPack)
 	if err != nil {
 		return err
 	}
+
 	timer := time.NewTimer(syncSendTimeout)
 	defer timer.Stop()
-
 	select {
-	case resp := <-ch:
-		if resp.Coa.Cause == asdu.ActivationCon {
-			return nil
-		}
-		return fmt.Errorf("Write ca=%v, ioa=%v, id=%v, value=%v, qualifier=%v failed: cause=%v", ca, ioa, id, value, qualifier, resp.Coa.Cause)
+	case <-ch:
+		return nil
 	case <-timer.C:
 		return fmt.Errorf("ErrorBadTimeOut")
 	}
@@ -185,39 +182,30 @@ func (sf *Synclient) Write(ca asdu.CommonAddr, ioa asdu.InfoObjAddr, id asdu.Typ
 // Only single address space at a time for now
 // It returns *AsduInfo which contains the data, and maybe also the time
 func (sf *Synclient) Read(ca asdu.CommonAddr, ioa asdu.InfoObjAddr) (*AsduInfo, error) {
-	asduPack := asdu.NewASDU(sf.Params(), asdu.Identifier{
-		Type:       asdu.C_RD_NA_1,
-		Variable:   asdu.VariableStruct{IsSequence: false, Number: 1},
-		Coa:        asdu.ParseCauseOfTransmission(byte(asdu.Request)),
-		OrigAddr:   0,
-		CommonAddr: ca,
-	})
-	if err := asduPack.AppendInfoObjAddr(ioa); err != nil {
-		return nil, err
-	}
-
 	// this id is used to matching response packet to request packet
 	uID := uint64(ioa) + (uint64(ca) << (8 * sf.option.param.InfoObjAddrSize))
+	//  + ((uint64(asdu.Request)) << (8 * (sf.option.param.InfoObjAddrSize + sf.option.param.CommonAddrSize)))
 
 	// Request target on ioa which is already in operating state will be rejected
-	if _, ok := sf.responseHandler[uID]; ok {
+	if _, ok := sf.readWriteHandler[uID]; ok {
 		return nil, fmt.Errorf("Last Read Command on Address ca(%v).ioa(%v) has not completed", ca, ioa)
 	}
 
 	ch := make(chan *asdu.ASDU)
-	sf.responseHandler[uID] = ch
+	sf.readWriteHandler[uID] = ch
 	defer func() {
 		sf.rwMux.Lock()
-		delete(sf.responseHandler, uID)
+		delete(sf.readWriteHandler, uID)
 		sf.rwMux.Unlock()
 	}()
-	err := sf.Send(asduPack)
+
+	err := asdu.ReadCmd(sf, ca, ioa)
 	if err != nil {
 		return nil, err
 	}
+
 	timer := time.NewTimer(syncSendTimeout)
 	defer timer.Stop()
-
 	select {
 	case resp := <-ch:
 		if v := createAsduInfoFromAsdu(resp); v != nil {
@@ -231,53 +219,53 @@ func (sf *Synclient) Read(ca asdu.CommonAddr, ioa asdu.InfoObjAddr) (*AsduInfo, 
 
 //InterrogationCmd wrap asdu.InterrogationCmd
 func (sf *Synclient) InterrogationCmd(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, qoi asdu.QualifierOfInterrogation) error {
-	// if !sf.IsConnected() {
-	// 	return nil, ErrUseClosedConnection
-	// }
-	// if atomic.LoadUint32(&sf.isActive) == inactive {
-	// 	return nil, ErrNotActive
-	// }
-	// if !(coa.Cause == asdu.Activation || coa.Cause == asdu.Deactivation) {
-	// 	return asdu.ErrCmdCause
-	// }
-
-	// asduPack := asdu.NewASDU(sf.Params(), asdu.Identifier{
-	// 	asdu.C_IC_NA_1,
-	// 	asdu.VariableStruct{IsSequence: false, Number: 1},
-	// 	coa,
-	// 	0,
-	// 	ca,
-	// })
-	// if err := asduPack.AppendInfoObjAddr(asdu.InfoObjAddrIrrelevant); err != nil {
-	// 	return err
-	// }
-	// asduPack.AppendBytes(byte(qoi))
-
 	// // this id is used to matching response packet to request packet
-	// uID := uint64(0) + (uint64(ca) << (8 * sf.option.param.InfoObjAddrSize))
+	// uIDCon := uint64(0) + (uint64(ca) << (8 * sf.option.param.InfoObjAddrSize)) + ((uint64(asdu.ActivationCon)) << (8 * (sf.option.param.InfoObjAddrSize + sf.option.param.CommonAddrSize)))
 
 	// // Request target on ioa which is already in operating state will be rejected
-	// if _, ok := sf.responseHandler[uID]; ok {
-	// 	return nil, fmt.Errorf("Last SystemCommand on CommonAddr %v has not completed", ca)
+	// if _, ok := sf.readWriteHandler[uIDCon]; ok {
+	// 	return nil, fmt.Errorf("Last SystemCommand on CommonAddr(%v) has not completed", ca)
 	// }
+
+	// uIDData := uint64(0) + (uint64(ca) << (8 * sf.option.param.InfoObjAddrSize)) + ((uint64(qoi)) << (8 * (sf.option.param.InfoObjAddrSize + sf.option.param.CommonAddrSize)))
+	// uIDTerm := uint64(0) + (uint64(ca) << (8 * sf.option.param.InfoObjAddrSize)) + ((uint64(asdu.ActivationTerm)) << (8 * (sf.option.param.InfoObjAddrSize + sf.option.param.CommonAddrSize)))
 
 	// ch := make(chan *asdu.ASDU)
-	// sf.responseHandler[uID] = ch
+	// sf.readWriteHandler[uIDCon] = ch
+	// sf.readWriteHandler[uIDData] = ch
+	// sf.readWriteHandler[uIDTerm] = ch
 	// defer func() {
 	// 	sf.rwMux.Lock()
-	// 	delete(sf.responseHandler, uID)
+	// 	delete(sf.readWriteHandler, uIDCon)
+	// 	delete(sf.readWriteHandler, uIDData)
+	// 	delete(sf.readWriteHandler, uIDTerm)
 	// 	sf.rwMux.Unlock()
 	// }()
-	// resp, err := sf.syncSendIFrame(asduPack, ch)
-	// if err != nil {
-	// 	return nil, err
-	// }
 
-	// if v := createAsduInfoFromAsdu(resp); v != nil {
-	// 	return v, nil
+	return asdu.InterrogationCmd(sf, coa, ca, qoi)
+
+	// confirmed := false
+	// result := make([]*AsduInfo, 0)
+	// for {
+	// 	select {
+	// 	case resp := <-ch:
+	// 		if !confirmed {
+	// 			if resp.Coa.Cause != asdu.ActivationCon {
+	// 				return nil, fmt.Errorf("InterrogationCmd on ca(%v).qoi(%v) Failed", ca, qoi)
+	// 			}
+	// 			confirmed = true
+	// 			continue
+	// 		}
+	// 		if resp.Coa.Cause == asdu.ActivationTerm {
+	// 			return result, nil
+	// 		}
+	// 		if v := createAsduInfoFromAsdu(resp); v != nil {
+	// 			result = append(result, v)
+	// 		}
+	// 	case <-time.After(time.Second):
+	// 		return nil, fmt.Errorf("ErrorBadTimeOut")
+	// 	}
 	// }
-	// return nil, fmt.Errorf("TypeID: %v Not Supported", resp.Type)
-	return nil
 }
 
 // CounterInterrogationCmd wrap asdu.CounterInterrogationCmd
@@ -286,23 +274,18 @@ func (sf *Synclient) CounterInterrogationCmd(coa asdu.CauseOfTransmission, ca as
 }
 
 // ClockSynchronizationCmd wrap asdu.ClockSynchronizationCmd
-func (sf *Synclient) ClockSynchronizationCmd(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, t time.Time) error {
-	return asdu.ClockSynchronizationCmd(sf, coa, ca, t)
+func (sf *Synclient) ClockSynchronizationCmd(ca asdu.CommonAddr, t time.Time) error {
+	return asdu.ClockSynchronizationCmd(sf, ca, t)
 }
 
 // ResetProcessCmd wrap asdu.ResetProcessCmd
-func (sf *Synclient) ResetProcessCmd(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, qrp asdu.QualifierOfResetProcessCmd) error {
-	return asdu.ResetProcessCmd(sf, coa, ca, qrp)
-}
-
-// DelayAcquireCommand wrap asdu.DelayAcquireCommand
-func (sf *Synclient) DelayAcquireCommand(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, msec uint16) error {
-	return asdu.DelayAcquireCommand(sf, coa, ca, msec)
+func (sf *Synclient) ResetProcessCmd(ca asdu.CommonAddr, qrp asdu.QualifierOfResetProcessCmd) error {
+	return asdu.ResetProcessCmd(sf, ca, qrp)
 }
 
 // TestCommand  wrap asdu.TestCommand
-func (sf *Synclient) TestCommand(coa asdu.CauseOfTransmission, ca asdu.CommonAddr) error {
-	return asdu.TestCommand(sf, coa, ca)
+func (sf *Synclient) TestCommand(ca asdu.CommonAddr) error {
+	return asdu.TestCommandCP56Time2a(sf, ca, time.Now())
 }
 
 // Connect connects to the server, always returns true
@@ -489,11 +472,13 @@ func (sf *Synclient) run(ctx context.Context) {
 					sf.Error("Error unmarshaling asdu: %v", err)
 				} else {
 					// this uID is used to matching response packet to request packet
+					// cot := asduPack.Coa.Cause
 					ca := asduPack.CommonAddr
 					ioa := asduPack.Clone().DecodeInfoObjAddr()
 					uID := uint64(ioa) + (uint64(ca) << (8 * sf.option.param.InfoObjAddrSize))
+					//  + ((uint64(cot)) << (8 * (sf.option.param.InfoObjAddrSize + sf.option.param.CommonAddrSize)))
 
-					if resp, ok := sf.responseHandler[uID]; ok {
+					if resp, ok := sf.readWriteHandler[uID]; ok {
 						resp <- asduPack
 					} else {
 						sf.rcvAsdu <- asduPack
@@ -621,6 +606,20 @@ func createAsduInfoFromAsdu(asduPack *asdu.ASDU) *AsduInfo {
 		data.Quality = v.Qds
 		data.Value = v.Value.Value()
 		data.Timestamp = v.Time
+	// case asdu.M_IT_NA_1:
+	// 	v := asduPack.GetIntegratedTotals()
+	// case asdu.P_ME_NA_1:
+	// 	v := asduPack.GetParameterNormal()
+	// 	// data.Quality = v.Qpm.Value()
+	// 	data.Value = v.Value.Value()
+	// case asdu.P_ME_NB_1:
+	// 	v := asduPack.GetParameterScaled()
+	// 	// data.Quality = v.Qpm.Value()
+	// 	data.Value = v.Value.Value()
+	// case asdu.P_ME_NC_1:
+	// 	v := asduPack.GetParameterFloat()
+	// 	// data.Quality = v.Qpm.Value()
+	// 	data.Value = v.Value.Value()
 	default:
 		return nil
 	}
