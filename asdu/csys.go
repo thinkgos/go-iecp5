@@ -211,11 +211,11 @@ func DelayAcquireCommand(c Connect, coa CauseOfTransmission, ca CommonAddr, msec
 // <45> := 未知的传送原因
 // <46> := 未知的应用服务数据单元公共地址
 // <47> := 未知的信息对象地址
-func TestCommandCP56Time2a(c Connect, coa CauseOfTransmission, ca CommonAddr, t time.Time) error {
+func TestCommandCP56Time2a(c Connect, ca CommonAddr, t time.Time) error {
 	u := NewASDU(c.Params(), Identifier{
 		C_TS_TA_1,
 		VariableStruct{IsSequence: false, Number: 1},
-		coa,
+		ParseCauseOfTransmission(byte(Activation)),
 		0,
 		ca,
 	})
