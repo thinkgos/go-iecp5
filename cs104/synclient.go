@@ -127,12 +127,6 @@ func (sf *Synclient) Subscribe(sub chan *AsduInfo) {
 // Only single address space at a time for now.
 // It returns nil if the write command succeed, otherwise an error will be returned.
 func (sf *Synclient) Write(ca asdu.CommonAddr, ioa asdu.InfoObjAddr, id asdu.TypeID, value interface{}, qualifier interface{}) error {
-	if !sf.IsConnected() {
-		return ErrUseClosedConnection
-	}
-	if atomic.LoadUint32(&sf.isActive) == inactive {
-		return ErrNotActive
-	}
 	asduPack := asdu.NewASDU(sf.Params(), asdu.Identifier{
 		Type:       id,
 		Variable:   asdu.VariableStruct{IsSequence: false, Number: 1},
@@ -157,10 +151,10 @@ func (sf *Synclient) Write(ca asdu.CommonAddr, ioa asdu.InfoObjAddr, id asdu.Typ
 
 	// this uID is used to matching response packet to request packet
 	uID := uint64(ioa) + (uint64(ca) << (8 * sf.option.param.InfoObjAddrSize))
-
+	// (uint64(asdu.Activation))<<(8*(sf.option.param.InfoObjAddrSize+sf.option.param.CommonAddrSize))
 	// Request target on ioa which is already in operating state will be rejected
 	if _, ok := sf.responseHandler[uID]; ok {
-		return fmt.Errorf("Last Read Request has not completed")
+		return fmt.Errorf("Last Write Command on Address ca(%v).ioa(%v) has not completed", ca, ioa)
 	}
 	ch := make(chan *asdu.ASDU)
 	sf.responseHandler[uID] = ch
@@ -169,27 +163,28 @@ func (sf *Synclient) Write(ca asdu.CommonAddr, ioa asdu.InfoObjAddr, id asdu.Typ
 		delete(sf.responseHandler, uID)
 		sf.rwMux.Unlock()
 	}()
-	resp, err := sf.syncSendIFrame(asduPack, ch)
+	err = sf.Send(asduPack)
 	if err != nil {
 		return err
 	}
+	timer := time.NewTimer(syncSendTimeout)
+	defer timer.Stop()
 
-	if resp.Coa.Cause == asdu.ActivationCon {
-		return nil
+	select {
+	case resp := <-ch:
+		if resp.Coa.Cause == asdu.ActivationCon {
+			return nil
+		}
+		return fmt.Errorf("Write ca=%v, ioa=%v, id=%v, value=%v, qualifier=%v failed: cause=%v", ca, ioa, id, value, qualifier, resp.Coa.Cause)
+	case <-timer.C:
+		return fmt.Errorf("ErrorBadTimeOut")
 	}
-	return fmt.Errorf("Write ca=%v, ioa=%v, id=%v, value=%v, qualifier=%v failed: cause=%v", ca, ioa, id, value, qualifier, resp.Coa.Cause)
 }
 
 // Read executes a synchronous read request
 // Only single address space at a time for now
 // It returns *AsduInfo which contains the data, and maybe also the time
 func (sf *Synclient) Read(ca asdu.CommonAddr, ioa asdu.InfoObjAddr) (*AsduInfo, error) {
-	if !sf.IsConnected() {
-		return nil, ErrUseClosedConnection
-	}
-	if atomic.LoadUint32(&sf.isActive) == inactive {
-		return nil, ErrNotActive
-	}
 	asduPack := asdu.NewASDU(sf.Params(), asdu.Identifier{
 		Type:       asdu.C_RD_NA_1,
 		Variable:   asdu.VariableStruct{IsSequence: false, Number: 1},
@@ -206,7 +201,7 @@ func (sf *Synclient) Read(ca asdu.CommonAddr, ioa asdu.InfoObjAddr) (*AsduInfo, 
 
 	// Request target on ioa which is already in operating state will be rejected
 	if _, ok := sf.responseHandler[uID]; ok {
-		return nil, fmt.Errorf("Last Read on ioa: %v has not completed", ioa)
+		return nil, fmt.Errorf("Last Read Command on Address ca(%v).ioa(%v) has not completed", ca, ioa)
 	}
 
 	ch := make(chan *asdu.ASDU)
@@ -216,21 +211,73 @@ func (sf *Synclient) Read(ca asdu.CommonAddr, ioa asdu.InfoObjAddr) (*AsduInfo, 
 		delete(sf.responseHandler, uID)
 		sf.rwMux.Unlock()
 	}()
-	resp, err := sf.syncSendIFrame(asduPack, ch)
+	err := sf.Send(asduPack)
 	if err != nil {
 		return nil, err
 	}
+	timer := time.NewTimer(syncSendTimeout)
+	defer timer.Stop()
 
-	if v := createAsduInfoFromAsdu(resp); v != nil {
-		return v, nil
+	select {
+	case resp := <-ch:
+		if v := createAsduInfoFromAsdu(resp); v != nil {
+			return v, nil
+		}
+		return nil, fmt.Errorf("TypeID: %v Not Supported", resp.Type)
+	case <-timer.C:
+		return nil, fmt.Errorf("ErrorBadTimeOut")
 	}
-	return nil, fmt.Errorf("TypeID: %v Not Supported", resp.Type)
-
 }
 
 //InterrogationCmd wrap asdu.InterrogationCmd
 func (sf *Synclient) InterrogationCmd(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, qoi asdu.QualifierOfInterrogation) error {
-	return asdu.InterrogationCmd(sf, coa, ca, qoi)
+	// if !sf.IsConnected() {
+	// 	return nil, ErrUseClosedConnection
+	// }
+	// if atomic.LoadUint32(&sf.isActive) == inactive {
+	// 	return nil, ErrNotActive
+	// }
+	// if !(coa.Cause == asdu.Activation || coa.Cause == asdu.Deactivation) {
+	// 	return asdu.ErrCmdCause
+	// }
+
+	// asduPack := asdu.NewASDU(sf.Params(), asdu.Identifier{
+	// 	asdu.C_IC_NA_1,
+	// 	asdu.VariableStruct{IsSequence: false, Number: 1},
+	// 	coa,
+	// 	0,
+	// 	ca,
+	// })
+	// if err := asduPack.AppendInfoObjAddr(asdu.InfoObjAddrIrrelevant); err != nil {
+	// 	return err
+	// }
+	// asduPack.AppendBytes(byte(qoi))
+
+	// // this id is used to matching response packet to request packet
+	// uID := uint64(0) + (uint64(ca) << (8 * sf.option.param.InfoObjAddrSize))
+
+	// // Request target on ioa which is already in operating state will be rejected
+	// if _, ok := sf.responseHandler[uID]; ok {
+	// 	return nil, fmt.Errorf("Last SystemCommand on CommonAddr %v has not completed", ca)
+	// }
+
+	// ch := make(chan *asdu.ASDU)
+	// sf.responseHandler[uID] = ch
+	// defer func() {
+	// 	sf.rwMux.Lock()
+	// 	delete(sf.responseHandler, uID)
+	// 	sf.rwMux.Unlock()
+	// }()
+	// resp, err := sf.syncSendIFrame(asduPack, ch)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// if v := createAsduInfoFromAsdu(resp); v != nil {
+	// 	return v, nil
+	// }
+	// return nil, fmt.Errorf("TypeID: %v Not Supported", resp.Type)
+	return nil
 }
 
 // CounterInterrogationCmd wrap asdu.CounterInterrogationCmd
@@ -739,46 +786,50 @@ func (sf *Synclient) Send(a *asdu.ASDU) error {
 	sf.seqNoSend = (seqNo + 1) & 32767
 	sf.pending = append(sf.pending, seqPending{seqNo & 32767, time.Now()})
 
+	if seqNoCount(sf.ackNoSend, sf.seqNoSend) > sf.option.config.SendUnAckLimitK {
+		// TODO: Wait some time? RecvUnAckTimeout2?
+		return ErrBufferFulled
+	}
 	sf.Debug("TX iFrame %v", iAPCI{seqNo, sf.seqNoRcv})
 	sf.sendRaw <- iframe
 
 	return nil
 }
 
-func (sf *Synclient) syncSendIFrame(asduPack *asdu.ASDU, resp chan *asdu.ASDU) (*asdu.ASDU, error) {
-	data, err := asduPack.MarshalBinary()
-	if err != nil {
-		return nil, err
-	}
-	seqNo := sf.seqNoSend
-	iframe, err := newIFrame(seqNo, sf.seqNoRcv, data)
-	if err != nil {
-		return nil, err
-	}
-	sf.ackNoRcv = sf.seqNoRcv
-	sf.seqNoSend = (seqNo + 1) & 32767
-	sf.pending = append(sf.pending, seqPending{seqNo & 32767, time.Now()})
+// func (sf *Synclient) syncSendIFrame(asduPack *asdu.ASDU, resp chan *asdu.ASDU) (*asdu.ASDU, error) {
+// 	data, err := asduPack.MarshalBinary()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	seqNo := sf.seqNoSend
+// 	iframe, err := newIFrame(seqNo, sf.seqNoRcv, data)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	sf.ackNoRcv = sf.seqNoRcv
+// 	sf.seqNoSend = (seqNo + 1) & 32767
+// 	sf.pending = append(sf.pending, seqPending{seqNo & 32767, time.Now()})
 
-	if seqNoCount(sf.ackNoSend, sf.seqNoSend) > sf.option.config.SendUnAckLimitK {
-		// TODO: Wait some time? RecvUnAckTimeout2?
-		return nil, ErrBufferFulled
-	}
+// 	if seqNoCount(sf.ackNoSend, sf.seqNoSend) > sf.option.config.SendUnAckLimitK {
+// 		// TODO: Wait some time? RecvUnAckTimeout2?
+// 		return nil, ErrBufferFulled
+// 	}
 
-	sf.Debug("TX iFrame %v", iAPCI{seqNo, sf.seqNoRcv})
+// 	sf.Debug("TX iFrame %v", iAPCI{seqNo, sf.seqNoRcv})
 
-	sf.sendRaw <- iframe
+// 	sf.sendRaw <- iframe
 
-	// timer := time.NewTimer(sf.option.config.SendUnAckTimeout1)
-	timer := time.NewTimer(syncSendTimeout)
-	defer timer.Stop()
+// 	// timer := time.NewTimer(sf.option.config.SendUnAckTimeout1)
+// 	timer := time.NewTimer(syncSendTimeout)
+// 	defer timer.Stop()
 
-	select {
-	case ch := <-resp:
-		return ch, nil
-	case <-timer.C:
-		return nil, fmt.Errorf("ErrorBadTimeOut")
-	}
-}
+// 	select {
+// 	case ch := <-resp:
+// 		return ch, nil
+// 	case <-timer.C:
+// 		return nil, fmt.Errorf("ErrorBadTimeOut")
+// 	}
+// }
 
 func (sf *Synclient) send(apdu []byte) {
 	sf.Debug("TX Raw[% x]", apdu)
