@@ -83,10 +83,7 @@ func (sf SinglePoint) Value() bool {
 
 // ParseSinglePoint ...
 func ParseSinglePoint(b byte) SinglePoint {
-	if (b & 0x01) == 0x01 {
-		return SinglePoint(true)
-	}
-	return SinglePoint(false)
+	return SinglePoint((b & 0x01) == 0x01)
 }
 
 // DoublePoint is a measured value of a determination aware switch.
