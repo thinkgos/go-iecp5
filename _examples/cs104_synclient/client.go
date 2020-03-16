@@ -30,13 +30,13 @@ type WriteTable struct {
 var readTable []*ReadTable
 var writeTable []*WriteTable
 var opt *cs104.ClientOption
-var synclientInstance *cs104.HighLevelClient
+var synclientInstance *cs104.Synclient
 
 func init() {
 	opt = cs104.NewOption()
 	opt.AddRemoteServer("192.168.137.2:2404")
 	opt.SetReconnectInterval(10 * time.Second)
-	synclientInstance = cs104.NewHighLevelClient(opt)
+	synclientInstance = cs104.NewSynclient(opt)
 	// synclientInstance.LogMode(false)
 
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -65,7 +65,9 @@ func init() {
 	writeTable = []*WriteTable{
 		{1, 45, 45, asdu.SingleCommand(b), asdu.ParseQualifierOfCommand(0)},
 		{1, 46, 46, asdu.DoubleCommand(r.Intn(4)), asdu.ParseQualifierOfCommand(0)},
-		{1, 47, 47, asdu.StepCommand(r.Intn(4)), asdu.ParseQualifierOfCommand(0)},
+		// According to 7.2.4.17 StepCommand value could be 0, 1, 2, 3
+		// but the server returns cause: unknown info obj address
+		{1, 47, 47, asdu.StepCommand(r.Intn(2) + 1), asdu.ParseQualifierOfCommand(0)},
 		{1, 48, 48, asdu.NormalizedMeasurement(r.Intn(65536) - 32768), asdu.ParseQualifierOfCommand(0)},
 		{1, 49, 49, asdu.ScaledMeasurement(r.Intn(65536) - 32768), asdu.ParseQualifierOfCommand(0)},
 		{1, 50, 50, asdu.ShortFloatMeasurement(r.Float32()), asdu.ParseQualifierOfCommand(0)},
@@ -73,7 +75,7 @@ func init() {
 
 		{1, 58, 58, asdu.SingleCommand(b), asdu.ParseQualifierOfCommand(0)},
 		{1, 59, 59, asdu.DoubleCommand(r.Intn(4)), asdu.ParseQualifierOfCommand(0)},
-		{1, 60, 60, asdu.StepCommand(r.Intn(4)), asdu.ParseQualifierOfCommand(0)},
+		{1, 60, 60, asdu.StepCommand(r.Intn(2) + 1), asdu.ParseQualifierOfCommand(0)},
 		{1, 61, 61, asdu.NormalizedMeasurement(r.Intn(65536) - 32768), asdu.ParseQualifierOfCommand(0)},
 		{1, 62, 62, asdu.ScaledMeasurement(r.Intn(65536) - 32768), asdu.ParseQualifierOfCommand(0)},
 		{1, 63, 63, asdu.ShortFloatMeasurement(r.Float32()), asdu.ParseQualifierOfCommand(0)},
@@ -87,13 +89,13 @@ func main() {
 	synclientInstance.Connect(ctx)
 	go func() {
 		for {
-			ReadAndWrite()
 			select {
 			case <-time.After(5 * time.Second):
 				continue
 			case <-ctx.Done():
 				return
 			}
+			ReadAndWrite()
 		}
 	}()
 	Subscribing(ctx)

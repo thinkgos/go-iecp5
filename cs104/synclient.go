@@ -22,6 +22,8 @@ const (
 	syncSendTimeout = time.Second
 )
 
+// AsduInfo contains infomation of an asdu packet
+// TODO: support more than just one infoObj
 type AsduInfo struct {
 	asdu.Identifier
 	Ioa       asdu.InfoObjAddr
@@ -30,10 +32,11 @@ type AsduInfo struct {
 	Timestamp time.Time
 }
 
-// Client is an IEC104 master
-type HighLevelClient struct {
-	option           ClientOption
-	conn             net.Conn
+// Synclient is an IEC104 master which implements syncronous read and write, and also subscribe.
+type Synclient struct {
+	option ClientOption
+	conn   net.Conn
+
 	responseHandler  map[uint64]chan *asdu.ASDU
 	subscriptionChan chan *AsduInfo
 
@@ -65,9 +68,9 @@ type HighLevelClient struct {
 	onConnectionLost func()
 }
 
-// NewClient returns an IEC104 master,default config and default asdu.ParamsWide params
-func NewHighLevelClient(o *ClientOption) *HighLevelClient {
-	return &HighLevelClient{
+// NewSynclient returns an IEC104 master,default config and default asdu.ParamsWide params
+func NewSynclient(o *ClientOption) *Synclient {
+	return &Synclient{
 		option:           *o,
 		responseHandler:  make(map[uint64]chan *asdu.ASDU),
 		rcvAsdu:          make(chan *asdu.ASDU, o.config.RecvUnAckLimitW<<5),
@@ -79,51 +82,42 @@ func NewHighLevelClient(o *ClientOption) *HighLevelClient {
 	}
 }
 
-// SetOption set the client option
-func (sf *HighLevelClient) SetOption(o *ClientOption) {
-	sf.option = *o
-}
-
 // SetOnConnectHandler set on connect handler
-func (sf *HighLevelClient) SetOnConnectHandler(f func()) {
+func (sf *Synclient) SetOnConnectHandler(f func()) {
 	if f != nil {
 		sf.onConnect = f
 	}
 }
 
 // SetConnectionLostHandler set connection lost handler
-func (sf *HighLevelClient) SetConnectionLostHandler(f func()) {
+func (sf *Synclient) SetConnectionLostHandler(f func()) {
 	if f != nil {
 		sf.onConnectionLost = f
 	}
 }
 
-// IsConnected get server session connected state
-func (sf *HighLevelClient) IsConnected() bool {
-	return sf.connectStatus() == connected
+// IsConnected get client session connected state
+func (sf *Synclient) IsConnected() bool {
+	return atomic.LoadUint32(&sf.status) == connected
+}
+
+// IsActived indicate whether uStartDtActive is Confirmed
+func (sf *Synclient) IsActived() bool {
+	return atomic.LoadUint32(&sf.isActive) == active
 }
 
 // Params returns params of client
-func (sf *HighLevelClient) Params() *asdu.Params {
+func (sf *Synclient) Params() *asdu.Params {
 	return &sf.option.param
 }
 
 // UnderlyingConn returns underlying conn of client
-func (sf *HighLevelClient) UnderlyingConn() net.Conn {
+func (sf *Synclient) UnderlyingConn() net.Conn {
 	return sf.conn
 }
 
-// // Close close all
-// func (sf *HighLevelClient) Close() error {
-// 	sf.rwMux.Lock()
-// 	if sf.closeCancel != nil {
-// 		sf.closeCancel()
-// 	}
-// 	sf.rwMux.Unlock()
-// 	return nil
-// }
-
-func (sf *HighLevelClient) Subscribe(sub chan *AsduInfo) {
+// Subscribe the spontaneous messages from server
+func (sf *Synclient) Subscribe(sub chan *AsduInfo) {
 	sf.rwMux.Lock()
 	sf.subscriptionChan = sub
 	sf.rwMux.Unlock()
@@ -132,8 +126,13 @@ func (sf *HighLevelClient) Subscribe(sub chan *AsduInfo) {
 // Write executes a synchronous write request.
 // Only single address space at a time for now.
 // It returns nil if the write command succeed, otherwise an error will be returned.
-func (sf *HighLevelClient) Write(id asdu.TypeID, ca asdu.CommonAddr, ioa asdu.InfoObjAddr, value interface{}, qualifier interface{}) error {
-
+func (sf *Synclient) Write(ca asdu.CommonAddr, ioa asdu.InfoObjAddr, id asdu.TypeID, value interface{}, qualifier interface{}) error {
+	if !sf.IsConnected() {
+		return ErrUseClosedConnection
+	}
+	if atomic.LoadUint32(&sf.isActive) == inactive {
+		return ErrNotActive
+	}
 	asduPack := asdu.NewASDU(sf.Params(), asdu.Identifier{
 		Type:       id,
 		Variable:   asdu.VariableStruct{IsSequence: false, Number: 1},
@@ -152,7 +151,8 @@ func (sf *HighLevelClient) Write(id asdu.TypeID, ca asdu.CommonAddr, ioa asdu.In
 
 	switch id {
 	case asdu.C_SC_TA_1, asdu.C_DC_TA_1, asdu.C_RC_TA_1, asdu.C_SE_TA_1, asdu.C_SE_TB_1, asdu.C_SE_TC_1, asdu.C_BO_TA_1:
-		asduPack.AppendBytes(asdu.CP56Time2a(time.Now(), asduPack.InfoObjTimeZone)...)
+		asduPack.AppendCP56Time2a(time.Now(), asduPack.InfoObjTimeZone)
+		// asduPack.AppendBytes(asdu.CP56Time2a(time.Now(), asduPack.InfoObjTimeZone)...)
 	}
 
 	// this uID is used to matching response packet to request packet
@@ -177,13 +177,19 @@ func (sf *HighLevelClient) Write(id asdu.TypeID, ca asdu.CommonAddr, ioa asdu.In
 	if resp.Coa.Cause == asdu.ActivationCon {
 		return nil
 	}
-	return fmt.Errorf("Unexpected CauseOfTransmission: %v", resp.Coa.Cause)
+	return fmt.Errorf("Write ca=%v, ioa=%v, id=%v, value=%v, qualifier=%v failed: cause=%v", ca, ioa, id, value, qualifier, resp.Coa.Cause)
 }
 
 // Read executes a synchronous read request
 // Only single address space at a time for now
 // It returns *AsduInfo which contains the data, and maybe also the time
-func (sf *HighLevelClient) Read(ca asdu.CommonAddr, ioa asdu.InfoObjAddr) (*AsduInfo, error) {
+func (sf *Synclient) Read(ca asdu.CommonAddr, ioa asdu.InfoObjAddr) (*AsduInfo, error) {
+	if !sf.IsConnected() {
+		return nil, ErrUseClosedConnection
+	}
+	if atomic.LoadUint32(&sf.isActive) == inactive {
+		return nil, ErrNotActive
+	}
 	asduPack := asdu.NewASDU(sf.Params(), asdu.Identifier{
 		Type:       asdu.C_RD_NA_1,
 		Variable:   asdu.VariableStruct{IsSequence: false, Number: 1},
@@ -223,40 +229,40 @@ func (sf *HighLevelClient) Read(ca asdu.CommonAddr, ioa asdu.InfoObjAddr) (*Asdu
 }
 
 //InterrogationCmd wrap asdu.InterrogationCmd
-func (sf *HighLevelClient) InterrogationCmd(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, qoi asdu.QualifierOfInterrogation) error {
+func (sf *Synclient) InterrogationCmd(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, qoi asdu.QualifierOfInterrogation) error {
 	return asdu.InterrogationCmd(sf, coa, ca, qoi)
 }
 
 // CounterInterrogationCmd wrap asdu.CounterInterrogationCmd
-func (sf *HighLevelClient) CounterInterrogationCmd(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, qcc asdu.QualifierCountCall) error {
+func (sf *Synclient) CounterInterrogationCmd(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, qcc asdu.QualifierCountCall) error {
 	return asdu.CounterInterrogationCmd(sf, coa, ca, qcc)
 }
 
 // ClockSynchronizationCmd wrap asdu.ClockSynchronizationCmd
-func (sf *HighLevelClient) ClockSynchronizationCmd(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, t time.Time) error {
+func (sf *Synclient) ClockSynchronizationCmd(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, t time.Time) error {
 	return asdu.ClockSynchronizationCmd(sf, coa, ca, t)
 }
 
 // ResetProcessCmd wrap asdu.ResetProcessCmd
-func (sf *HighLevelClient) ResetProcessCmd(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, qrp asdu.QualifierOfResetProcessCmd) error {
+func (sf *Synclient) ResetProcessCmd(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, qrp asdu.QualifierOfResetProcessCmd) error {
 	return asdu.ResetProcessCmd(sf, coa, ca, qrp)
 }
 
 // DelayAcquireCommand wrap asdu.DelayAcquireCommand
-func (sf *HighLevelClient) DelayAcquireCommand(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, msec uint16) error {
+func (sf *Synclient) DelayAcquireCommand(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, msec uint16) error {
 	return asdu.DelayAcquireCommand(sf, coa, ca, msec)
 }
 
 // TestCommand  wrap asdu.TestCommand
-func (sf *HighLevelClient) TestCommand(coa asdu.CauseOfTransmission, ca asdu.CommonAddr) error {
+func (sf *Synclient) TestCommand(coa asdu.CauseOfTransmission, ca asdu.CommonAddr) error {
 	return asdu.TestCommand(sf, coa, ca)
 }
 
 // Connect connects to the server, always returns true
 // If autoReconnect is set, it will always try to reconnect.
 // You can always use the context to close the connection
-func (sf *HighLevelClient) Connect(ctx context.Context) {
-	defer sf.setConnectStatus(initial)
+func (sf *Synclient) Connect(ctx context.Context) {
+	defer atomic.StoreUint32(&sf.status, initial)
 	if !atomic.CompareAndSwapUint32(&sf.status, initial, disconnected) {
 		return
 	}
@@ -304,8 +310,9 @@ func (sf *HighLevelClient) Connect(ctx context.Context) {
 	}()
 }
 
-// run is the big fat state machine.
-func (sf *HighLevelClient) run(ctx context.Context) {
+// run start recvLoop and subscribeLoop
+// check timeout and handle asdu received
+func (sf *Synclient) run(ctx context.Context) {
 	// before any thing make sure init
 	sf.cleanUp()
 	sf.Debug("Connected server %+v", sf.option.server)
@@ -347,8 +354,8 @@ func (sf *HighLevelClient) run(ctx context.Context) {
 		atomic.StoreUint32(&sf.isActive, inactive)
 	}
 
-	sf.setConnectStatus(connected)
-	defer sf.setConnectStatus(disconnected)
+	atomic.StoreUint32(&sf.status, connected)
+	defer atomic.StoreUint32(&sf.status, disconnected)
 	sf.onConnect()
 	defer sf.onConnectionLost()
 	sendStartDt()
@@ -573,7 +580,7 @@ func createAsduInfoFromAsdu(asduPack *asdu.ASDU) *AsduInfo {
 	return data
 }
 
-func (sf *HighLevelClient) subscribeLoop(ctx context.Context) {
+func (sf *Synclient) subscribeLoop(ctx context.Context) {
 	sf.Debug("SubscribeLoop started")
 	defer sf.Debug("SubscribeLoop stopped")
 	defer sf.wg.Done()
@@ -595,7 +602,7 @@ func (sf *HighLevelClient) subscribeLoop(ctx context.Context) {
 
 }
 
-func (sf *HighLevelClient) recvLoop(ctx context.Context, cancel context.CancelFunc) {
+func (sf *Synclient) recvLoop(ctx context.Context, cancel context.CancelFunc) {
 	sf.Debug("recvLoop started")
 	defer sf.Debug("recvLoop stopped")
 	defer func() {
@@ -657,20 +664,7 @@ func (sf *HighLevelClient) recvLoop(ctx context.Context, cancel context.CancelFu
 	}
 }
 
-func (sf *HighLevelClient) setConnectStatus(status uint32) {
-	sf.rwMux.Lock()
-	atomic.StoreUint32(&sf.status, status)
-	sf.rwMux.Unlock()
-}
-
-func (sf *HighLevelClient) connectStatus() uint32 {
-	sf.rwMux.RLock()
-	status := atomic.LoadUint32(&sf.status)
-	sf.rwMux.RUnlock()
-	return status
-}
-
-func (sf *HighLevelClient) cleanUp() {
+func (sf *Synclient) cleanUp() {
 	sf.ackNoRcv = 0
 	sf.ackNoSend = 0
 	sf.seqNoRcv = 0
@@ -690,17 +684,17 @@ loop:
 	}
 }
 
-func (sf *HighLevelClient) sendSFrame() {
+func (sf *Synclient) sendSFrame() {
 	sf.Debug("TX sFrame %v", sAPCI{sf.seqNoRcv})
 	sf.sendRaw <- newSFrame(sf.seqNoRcv)
 }
 
-func (sf *HighLevelClient) sendUFrame(which byte) {
+func (sf *Synclient) sendUFrame(which byte) {
 	sf.Debug("TX uFrame %v", uAPCI{which})
 	sf.sendRaw <- newUFrame(which)
 }
 
-func (sf *HighLevelClient) updateAckNoOut(ackNo uint16) (ok bool) {
+func (sf *Synclient) updateAckNoOut(ackNo uint16) (ok bool) {
 	if ackNo == sf.ackNoSend {
 		return true
 	}
@@ -722,7 +716,7 @@ func (sf *HighLevelClient) updateAckNoOut(ackNo uint16) (ok bool) {
 }
 
 // Send send asdu
-func (sf *HighLevelClient) Send(a *asdu.ASDU) error {
+func (sf *Synclient) Send(a *asdu.ASDU) error {
 	if !sf.IsConnected() {
 		return ErrUseClosedConnection
 	}
@@ -751,7 +745,7 @@ func (sf *HighLevelClient) Send(a *asdu.ASDU) error {
 	return nil
 }
 
-func (sf *HighLevelClient) syncSendIFrame(asduPack *asdu.ASDU, resp chan *asdu.ASDU) (*asdu.ASDU, error) {
+func (sf *Synclient) syncSendIFrame(asduPack *asdu.ASDU, resp chan *asdu.ASDU) (*asdu.ASDU, error) {
 	data, err := asduPack.MarshalBinary()
 	if err != nil {
 		return nil, err
@@ -786,7 +780,7 @@ func (sf *HighLevelClient) syncSendIFrame(asduPack *asdu.ASDU, resp chan *asdu.A
 	}
 }
 
-func (sf *HighLevelClient) send(apdu []byte) {
+func (sf *Synclient) send(apdu []byte) {
 	sf.Debug("TX Raw[% x]", apdu)
 	for wrCnt := 0; len(apdu) > wrCnt; {
 		byteCount, err := sf.conn.Write(apdu[wrCnt:])
