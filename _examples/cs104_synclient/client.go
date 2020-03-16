@@ -58,12 +58,8 @@ func init() {
 		{1, 36},
 	}
 
-	var b bool
-	if r.Intn(2) == 1 {
-		b = true
-	}
 	writeTable = []*WriteTable{
-		{1, 45, 45, asdu.SingleCommand(b), asdu.ParseQualifierOfCommand(0)},
+		{1, 45, 45, asdu.SingleCommand(r.Intn(2) == 1), asdu.ParseQualifierOfCommand(0)},
 		{1, 46, 46, asdu.DoubleCommand(r.Intn(4)), asdu.ParseQualifierOfCommand(0)},
 		// According to 7.2.4.17 StepCommand value could be 0, 1, 2, 3
 		// but the server returns cause: unknown info obj address
@@ -73,7 +69,7 @@ func init() {
 		{1, 50, 50, asdu.ShortFloatMeasurement(r.Float32()), asdu.ParseQualifierOfCommand(0)},
 		{1, 51, 51, asdu.BitString(r.Uint32()), asdu.ParseQualifierOfCommand(0)},
 
-		{1, 58, 58, asdu.SingleCommand(b), asdu.ParseQualifierOfCommand(0)},
+		{1, 58, 58, asdu.SingleCommand(r.Intn(2) == 1), asdu.ParseQualifierOfCommand(0)},
 		{1, 59, 59, asdu.DoubleCommand(r.Intn(4)), asdu.ParseQualifierOfCommand(0)},
 		{1, 60, 60, asdu.StepCommand(r.Intn(2) + 1), asdu.ParseQualifierOfCommand(0)},
 		{1, 61, 61, asdu.NormalizedMeasurement(r.Intn(65536) - 32768), asdu.ParseQualifierOfCommand(0)},
@@ -91,7 +87,6 @@ func main() {
 		for {
 			select {
 			case <-time.After(5 * time.Second):
-				continue
 			case <-ctx.Done():
 				return
 			}
