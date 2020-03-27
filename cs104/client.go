@@ -414,7 +414,7 @@ func (sf *Client) handlerLoop() {
 		case <-sf.ctx.Done():
 			return
 		case rawAsdu := <-sf.rcvASDU:
-			asduPack := asdu.NewEmptyASDU(&sf.option.param)
+			asduPack := asdu.NewEmptyASDU(&sf.option.params)
 			if err := asduPack.UnmarshalBinary(rawAsdu); err != nil {
 				sf.Warn("asdu UnmarshalBinary failed,%+v", err)
 				continue
@@ -528,7 +528,7 @@ func (sf *Client) clientHandler(asduPack *asdu.ASDU) error {
 
 // Params returns params of client
 func (sf *Client) Params() *asdu.Params {
-	return &sf.option.param
+	return &sf.option.params
 }
 
 // Send send asdu

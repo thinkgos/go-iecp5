@@ -69,7 +69,7 @@ const (
 	QDSInvalid
 
 	// QDSGood means no flags, no problems.
-	QDSGood = 0
+	QDSGood QualityDescriptor = 0
 )
 
 //QualityDescriptorProtection  Quality descriptor Protection Equipment flags attribute.
@@ -95,7 +95,7 @@ const (
 	QDPInvalid
 
 	// QDPGood means no flags, no problems.
-	QDPGood = 0
+	QDPGood QualityDescriptorProtection = 0
 )
 
 // StepPosition is a measured value with transient state indication.

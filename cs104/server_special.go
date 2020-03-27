@@ -40,7 +40,7 @@ func NewServerSpecial(handler ServerHandlerInterface, o *ClientOption) ServerSpe
 	return &serverSpec{
 		SrvSession: SrvSession{
 			config:  &o.config,
-			params:  &o.param,
+			params:  &o.params,
 			handler: handler,
 
 			rcvASDU:  make(chan []byte, 1024),

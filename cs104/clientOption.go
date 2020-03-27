@@ -12,7 +12,7 @@ import (
 // ClientOption 客户端配置
 type ClientOption struct {
 	config            Config
-	param             asdu.Params
+	params            asdu.Params
 	server            *url.URL      // 连接的服务器端
 	autoReconnect     bool          // 是否启动重连
 	reconnectInterval time.Duration // 重连间隔时间
@@ -31,29 +31,31 @@ func NewOption() *ClientOption {
 	}
 }
 
-// SetConfig set config
+// SetConfig set config if config is valid it will use DefaultConfig()
 func (sf *ClientOption) SetConfig(cfg Config) *ClientOption {
 	if err := cfg.Valid(); err != nil {
-		panic(err)
+		sf.config = DefaultConfig()
+	} else {
+		sf.config = cfg
 	}
-	sf.config = cfg
-
 	return sf
 }
 
-// SetParams set asdu params
+// SetParams set asdu params if params is valid it will use asdu.ParamsWide
 func (sf *ClientOption) SetParams(p *asdu.Params) *ClientOption {
 	if err := p.Valid(); err != nil {
-		panic(err)
+		sf.params = *asdu.ParamsWide
+	} else {
+		sf.params = *p
 	}
-	sf.param = *p
-
 	return sf
 }
 
 // SetReconnectInterval set tcp  reconnect the host interval when connect failed after try
 func (sf *ClientOption) SetReconnectInterval(t time.Duration) *ClientOption {
-	sf.reconnectInterval = t
+	if t > 0 {
+		sf.reconnectInterval = t
+	}
 	return sf
 }
 

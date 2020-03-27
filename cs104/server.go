@@ -40,23 +40,23 @@ func NewServer(handler ServerHandlerInterface) *Server {
 	}
 }
 
-// SetConfig set config
+// SetConfig set config if config is valid it will use DefaultConfig()
 func (sf *Server) SetConfig(cfg Config) *Server {
 	if err := cfg.Valid(); err != nil {
-		panic(err)
+		sf.config = DefaultConfig()
+	} else {
+		sf.config = cfg
 	}
-	sf.config = cfg
-
 	return sf
 }
 
-// SetParams set asdu params
+// SetParams set asdu params if params is valid it will use asdu.ParamsWide
 func (sf *Server) SetParams(p *asdu.Params) *Server {
 	if err := p.Valid(); err != nil {
-		panic(err)
+		sf.params = *asdu.ParamsWide
+	} else {
+		sf.params = *p
 	}
-	sf.params = *p
-
 	return sf
 }
 
