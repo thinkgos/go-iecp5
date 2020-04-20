@@ -472,20 +472,12 @@ func createAsduInfoFromAsdu(asduPack *asdu.ASDU) *AsduInfo {
 	case asdu.M_SP_NA_1:
 		// Single Info
 		v := asduPack.GetSinglePoint()[0]
-		if v.Value.Value() {
-			data.Value = 0x01
-		} else {
-			data.Value = 0
-		}
+		data.Value = v.Value.Value()
 		data.Quality = v.Qds
 	case asdu.M_SP_TB_1:
 		// Single Info with time
 		v := asduPack.GetSinglePoint()[0]
-		if v.Value.Value() {
-			data.Value = 0x01
-		} else {
-			data.Value = 0
-		}
+		data.Value = v.Value.Value()
 		data.Quality = v.Qds
 		data.Timestamp = v.Time
 	case asdu.M_DP_NA_1:
