@@ -58,3 +58,5 @@ func (sf *mysrv) ResetProcessHandler(asdu.Connect, *asdu.ASDU, asdu.QualifierOfR
 }
 func (sf *mysrv) DelayAcquisitionHandler(asdu.Connect, *asdu.ASDU, uint16) error { return nil }
 func (sf *mysrv) ASDUHandler(asdu.Connect, *asdu.ASDU) error                     { return nil }
+func (sf *mysrv) OnConnectionHandler(asdu.Connect)                               {}
+func (sf *mysrv) OnDisconnectionHandler(asdu.Connect)                            {}
