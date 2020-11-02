@@ -10,6 +10,12 @@ import (
 
 func main() {
 	srv := cs104.NewServer(&mysrv{})
+	srv.SetOnConnectionHandler(func(c asdu.Connect) {
+		log.Println("on connect")
+	})
+	srv.SetConnectionLostHandler(func(c asdu.Connect) {
+		log.Println("connect lost")
+	})
 	srv.LogMode(true)
 	// go func() {
 	// 	time.Sleep(time.Second * 20)

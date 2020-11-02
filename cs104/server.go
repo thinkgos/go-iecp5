@@ -159,7 +159,7 @@ func (sf *Server) SetOnConnectionHandler(f func(asdu.Connect)) {
 	sf.onConnectionHandler = f
 }
 
-// SetConnectionLostHandlerHandler set connect lost handler
-func (sf *Server) SetConnectionLostHandlerHandler(f func(asdu.Connect)) {
+// SetConnectionLostHandler set connect lost handler
+func (sf *Server) SetConnectionLostHandler(f func(asdu.Connect)) {
 	sf.connectionLostHandler = f
 }
