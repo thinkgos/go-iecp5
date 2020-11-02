@@ -22,13 +22,13 @@ func main() {
 
 	srv.LogMode(true)
 
-	srv.SetOnConnectHandler(func(c cs104.ServerSpecial) {
+	srv.SetOnConnectHandler(func(c asdu.Connect) {
 		_, _ = c.UnderlyingConn().Write([]byte{0x68, 0x0e, 0x00, 0x00, 0x00, 0x00, 0x46, 0x01, 0x04, 0x00, 0xa0, 0xaf, 0xbd, 0xd8, 0x0a, 0xf4})
 		log.Println("connected")
-	}).
-		SetConnectionLostHandler(func(cs104.ServerSpecial) {
-			log.Println("disconnected")
-		})
+	})
+	srv.SetConnectionLostHandler(func(c asdu.Connect) {
+		log.Println("disconnected")
+	})
 	if err = srv.Start(); err != nil {
 		panic(err)
 	}

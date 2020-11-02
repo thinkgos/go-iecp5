@@ -24,8 +24,8 @@ type ServerSpecial interface {
 	Start() error
 	Close() error
 
-	SetOnConnectHandler(f func(c ServerSpecial)) ServerSpecial
-	SetConnectionLostHandler(f func(c ServerSpecial)) ServerSpecial
+	SetOnConnectHandler(f func(c asdu.Connect))
+	SetConnectionLostHandler(f func(c asdu.Connect))
 
 	LogMode(enable bool)
 	SetLogProvider(p clog.LogProvider)
@@ -33,10 +33,8 @@ type ServerSpecial interface {
 
 type serverSpec struct {
 	SrvSession
-	option           ClientOption
-	onConnect        func(c ServerSpecial)
-	onConnectionLost func(c ServerSpecial)
-	closeCancel      context.CancelFunc
+	option      ClientOption
+	closeCancel context.CancelFunc
 }
 
 // NewServerSpecial new special server
@@ -54,26 +52,18 @@ func NewServerSpecial(handler ServerHandlerInterface, o *ClientOption) ServerSpe
 
 			Clog: clog.NewLogger("cs104 serverSpec => "),
 		},
-		option:           *o,
-		onConnect:        func(ServerSpecial) {},
-		onConnectionLost: func(ServerSpecial) {},
+		option: *o,
 	}
 }
 
 // SetOnConnectHandler set on connect handler
-func (sf *serverSpec) SetOnConnectHandler(f func(conn ServerSpecial)) ServerSpecial {
-	if f != nil {
-		sf.onConnect = f
-	}
-	return sf
+func (sf *serverSpec) SetOnConnectHandler(f func(conn asdu.Connect)) {
+	sf.onConnection = f
 }
 
 // SetConnectionLostHandler set connection lost handler
-func (sf *serverSpec) SetConnectionLostHandler(f func(c ServerSpecial)) ServerSpecial {
-	if f != nil {
-		sf.onConnectionLost = f
-	}
-	return sf
+func (sf *serverSpec) SetConnectionLostHandler(f func(c asdu.Connect)) {
+	sf.connectionLost = f
 }
 
 // Start start the server,and return quickly,if it nil,the server will disconnected background,other failed
@@ -118,9 +108,7 @@ func (sf *serverSpec) running() {
 		}
 		sf.Debug("connect success")
 		sf.conn = conn
-		sf.onConnect(sf)
 		sf.run(ctx)
-		sf.onConnectionLost(sf)
 		sf.Debug("disconnected server %+v", sf.option.server)
 		select {
 		case <-ctx.Done():
