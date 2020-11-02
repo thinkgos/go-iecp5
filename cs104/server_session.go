@@ -49,6 +49,9 @@ type SrvSession struct {
 
 	clog.Clog
 
+	onConnectionHandler   func(asdu.Connect)
+	connectionLostHandler func(asdu.Connect)
+
 	wg     sync.WaitGroup
 	cancel context.CancelFunc
 	ctx    context.Context
@@ -200,14 +203,17 @@ func (sf *SrvSession) run(ctx context.Context) {
 		sf.Debug("TX iFrame %v", iAPCI{seqNo, sf.seqNoRcv})
 		sf.sendRaw <- iframe
 	}
-
-	sf.handler.OnConnectionHandler(sf)
+	if sf.onConnectionHandler != nil {
+		sf.onConnectionHandler(sf)
+	}
 	defer func() {
 		sf.setConnectStatus(disconnected)
 		checkTicker.Stop()
 		_ = sf.conn.Close() // 连锁引发cancel
 		sf.wg.Wait()
-		sf.handler.OnDisconnectionHandler(sf)
+		if sf.connectionLostHandler != nil {
+			sf.connectionLostHandler(sf)
+		}
 		sf.Debug("run stopped!")
 	}()
 

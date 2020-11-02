@@ -22,13 +22,15 @@ const timeoutResolution = 100 * time.Millisecond
 
 // Server the common server
 type Server struct {
-	config    Config
-	params    asdu.Params
-	handler   ServerHandlerInterface
-	TLSConfig *tls.Config
-	mux       sync.Mutex
-	sessions  map[*SrvSession]struct{}
-	listen    net.Listener
+	config                Config
+	params                asdu.Params
+	handler               ServerHandlerInterface
+	TLSConfig             *tls.Config
+	mux                   sync.Mutex
+	sessions              map[*SrvSession]struct{}
+	listen                net.Listener
+	onConnectionHandler   func(asdu.Connect)
+	connectionLostHandler func(asdu.Connect)
 	clog.Clog
 	wg sync.WaitGroup
 }
@@ -101,7 +103,9 @@ func (sf *Server) ListenAndServer(addr string) {
 				rcvRaw:   make(chan []byte, sf.config.RecvUnAckLimitW<<5),
 				sendRaw:  make(chan []byte, sf.config.SendUnAckLimitK<<5), // may not block!
 
-				Clog: sf.Clog,
+				onConnectionHandler:   sf.onConnectionHandler,
+				connectionLostHandler: sf.connectionLostHandler,
+				Clog:                  sf.Clog,
 			}
 			sf.mux.Lock()
 			sf.sessions[sess] = struct{}{}
@@ -148,4 +152,14 @@ func (sf *Server) UnderlyingConn() net.Conn { return nil }
 // SetInfoObjTimeZone set info object time zone
 func (sf *Server) SetInfoObjTimeZone(zone *time.Location) {
 	sf.params.InfoObjTimeZone = zone
+}
+
+// SetOnConnectionHandler set on connect handler
+func (sf *Server) SetOnConnectionHandler(f func(asdu.Connect)) {
+	sf.onConnectionHandler = f
+}
+
+// SetConnectionLostHandlerHandler set connect lost handler
+func (sf *Server) SetConnectionLostHandlerHandler(f func(asdu.Connect)) {
+	sf.connectionLostHandler = f
 }
