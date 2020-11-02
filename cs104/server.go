@@ -145,7 +145,7 @@ func (sf *Server) Params() *asdu.Params { return &sf.params }
 // UnderlyingConn imp interface Connect
 func (sf *Server) UnderlyingConn() net.Conn { return nil }
 
-// LoadCurrentTimeZone current time zone to server
-func (sf *Server) LoadCurrentTimeZone() {
-	sf.Params().InfoObjTimeZone = time.Local
+// SetInfoObjTimeZone set info object time zone
+func (sf *Server) SetInfoObjTimeZone(zone *time.Location) {
+	sf.params.InfoObjTimeZone = zone
 }
