@@ -144,3 +144,8 @@ func (sf *Server) Params() *asdu.Params { return &sf.params }
 
 // UnderlyingConn imp interface Connect
 func (sf *Server) UnderlyingConn() net.Conn { return nil }
+
+// SetInfoObjTimeZone set info object time zone
+func (sf *Server) SetInfoObjTimeZone(zone *time.Location) {
+	sf.params.InfoObjTimeZone = zone
+}
