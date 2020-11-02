@@ -201,13 +201,13 @@ func (sf *SrvSession) run(ctx context.Context) {
 		sf.sendRaw <- iframe
 	}
 
-	sf.handler.ConnectionEventHandler(sf, true)
+	sf.handler.OnConnectionHandler(sf)
 	defer func() {
 		sf.setConnectStatus(disconnected)
 		checkTicker.Stop()
 		_ = sf.conn.Close() // 连锁引发cancel
 		sf.wg.Wait()
-		sf.handler.ConnectionEventHandler(sf, false)
+		sf.handler.OnDisconnectionHandler(sf)
 		sf.Debug("run stopped!")
 	}()
 
