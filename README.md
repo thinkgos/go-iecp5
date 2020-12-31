@@ -25,3 +25,15 @@ cs104 package: [![GoDoc](https://godoc.org/github.com/thinkgos/go-iecp5/cs104?st
 # Reference
 lib60870 c library [lib60870](https://github.com/mz-automation/lib60870)  
 lib60870 c library doc [lib60870 doc](https://support.mz-automation.de/doc/lib60870/latest/group__CS104__MASTER.html)
+
+## Donation
+
+if package help you a lot,you can support us by:
+
+**Alipay**
+
+![alipay](https://github.com/thinkgos/thinkgos/blob/master/asserts/alipay.jpg)
+
+**WeChat Pay**
+
+![wxpay](https://github.com/thinkgos/thinkgos/blob/master/asserts/wxpay.jpg)
