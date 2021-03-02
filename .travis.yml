@@ -1,17 +1,25 @@
 language: go
 
-matrix:
-  fast_finish: true
-  include:
-    - go: 1.13.x
-    - go: 1.14.x
-    - go: 1.15.x
-    - go: master
+os:
+  - osx
+  - windows
+  - linux
 
-before_install:
+go:
+  - 1.15.x
+  - 1.16.x
+
+go_import_path: github.com/thinkgos/TODO_ADD_PACKAGENAME
+
+script:
   - go get -v ./...
-
-install:
   - go test -v -benchmem -test.bench=".*" -coverprofile=coverage.txt -covermode=atomic  ./...
+
 after_success:
-  - bash <(curl -s https://codecov.io/bash)
+  - if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then curl -s https://codecov.io/bash >
+    .codecov && chmod +x .codecov && ./.codecov; else bash <(curl -s https://codecov.io/bash);
+    fi
+
+env:
+  global:
+    - GO111MODULE=on
