@@ -164,7 +164,7 @@ const (
 
 // infoObjSize maps the type identification (TypeID) to the serial octet size.
 // Type extensions must register here.
-var infoObjSize = [256]int{
+var infoObjSize = map[TypeID]int{
 	M_SP_NA_1: 1,
 	M_SP_TA_1: 4,
 	M_DP_NA_1: 1,
@@ -233,8 +233,8 @@ var infoObjSize = [256]int{
 
 // GetInfoObjSize get the serial octet size of the type identification (TypeID).
 func GetInfoObjSize(id TypeID) (int, error) {
-	size := infoObjSize[id]
-	if size == 0 {
+	size, exists := infoObjSize[id]
+	if !exists {
 		return 0, ErrTypeIdentifier
 	}
 	return size, nil
