@@ -1613,11 +1613,11 @@ func TestASDU_GetStepPosition(t *testing.T) {
 				{0x000002, StepPosition{Val: 0x02}, QDSBlocked, time.Time{}}},
 		},
 		{
-			"M_SP_TB_1 CP56Time2a  Number = 2",
+			"M_ST_TB_1 CP56Time2a  Number = 2",
 			fields{
 				ParamsWide,
 				Identifier{
-					Type:     M_SP_TB_1,
+					Type:     M_ST_TB_1,
 					Variable: VariableStruct{IsSequence: false, Number: 2}},
 				append(append([]byte{0x01, 0x00, 0x00, 0x01, 0x10}, tm0CP56Time2aBytes...),
 					append([]byte{0x02, 0x00, 0x00, 0x02, 0x10}, tm0CP56Time2aBytes...)...)},
