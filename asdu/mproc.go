@@ -1212,7 +1212,7 @@ func (sf *ASDU) GetStepPosition() []StepPositionInfo {
 		case M_ST_NA_1:
 		case M_ST_TA_1:
 			t = sf.DecodeCP24Time2a()
-		case M_SP_TB_1:
+		case M_ST_TB_1:
 			t = sf.DecodeCP56Time2a()
 		default:
 			panic(ErrTypeIDNotMatch)
