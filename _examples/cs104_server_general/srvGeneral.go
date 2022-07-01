@@ -23,7 +23,10 @@ func main() {
 	// 	err := srv.Close()
 	// 	log.Println("ooooooo", err)
 	// }()
-	srv.ListenAndServer(":2404")
+	if err := srv.ListenAndServer(":2404"); err != nil {
+		log.Println(err)
+		return
+	}
 }
 
 type mysrv struct{}
