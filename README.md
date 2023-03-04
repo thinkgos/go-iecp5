@@ -1,4 +1,6 @@
-# go-iecp5 
+# go-iecp5(Archived)
+## NOTE: Archived, not maintain. 
+## NOTE: 已归档, 不再维护, 放弃License. 有需要的可以自由分发
 
 go-iecp5 library for IEC 60870-5 based protocols in pure go.
 The current implementation contains code for IEC 60870-5-104 (protocool over TCP/IP) specifications.
