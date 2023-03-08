@@ -9,7 +9,7 @@ package asdu
 // ParameterNormalInfo 测量值参数,归一化值 信息体
 type ParameterNormalInfo struct {
 	Ioa   InfoObjAddr
-	Value Normalize
+	Value NormalizedMeasurement
 	Qpm   QualifierOfParameterMV
 }
 
@@ -55,7 +55,7 @@ func ParameterNormal(c Connect, coa CauseOfTransmission, ca CommonAddr, p Parame
 // ParameterScaledInfo 测量值参数,标度化值 信息体
 type ParameterScaledInfo struct {
 	Ioa   InfoObjAddr
-	Value int16
+	Value ScaledMeasurement
 	Qpm   QualifierOfParameterMV
 }
 
@@ -100,7 +100,7 @@ func ParameterScaled(c Connect, coa CauseOfTransmission, ca CommonAddr, p Parame
 // ParameterFloatInfo 测量参数,短浮点数 信息体
 type ParameterFloatInfo struct {
 	Ioa   InfoObjAddr
-	Value float32
+	Value ShortFloatMeasurement
 	Qpm   QualifierOfParameterMV
 }
 

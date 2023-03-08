@@ -18,38 +18,6 @@ type InfoObjAddr uint
 // InfoObjAddrIrrelevant Zero means that the information object address is irrelevant.
 const InfoObjAddrIrrelevant InfoObjAddr = 0
 
-// SinglePoint is a measured value of a switch.
-// See companion standard 101, subclass 7.2.6.1.
-type SinglePoint byte
-
-// SinglePoint defined
-const (
-	SPIOff SinglePoint = iota // 关
-	SPIOn                     // 开
-)
-
-// Value single point to byte
-func (sf SinglePoint) Value() byte {
-	return byte(sf & 0x01)
-}
-
-// DoublePoint is a measured value of a determination aware switch.
-// See companion standard 101, subclass 7.2.6.2.
-type DoublePoint byte
-
-// DoublePoint defined
-const (
-	DPIIndeterminateOrIntermediate DoublePoint = iota // 不确定或中间状态
-	DPIDeterminedOff                                  // 确定状态开
-	DPIDeterminedOn                                   // 确定状态关
-	DPIIndeterminate                                  // 不确定或中间状态
-)
-
-// Value double point to byte
-func (sf DoublePoint) Value() byte {
-	return byte(sf & 0x03)
-}
-
 // QualityDescriptor Quality descriptor flags attribute measured values.
 // See companion standard 101, subclass 7.2.6.3.
 type QualityDescriptor byte
@@ -102,6 +70,48 @@ const (
 	QDPGood QualityDescriptorProtection = 0
 )
 
+// SinglePoint is a measured value of a switch.
+// See companion standard 101, subclass 7.2.6.1.
+type SinglePoint bool
+
+// SinglePoint defined
+const (
+	SPIOff SinglePoint = false // 关
+	SPIOn  SinglePoint = true  // 开
+)
+
+// Value single point to byte
+func (sf SinglePoint) Value() bool {
+	return bool(sf)
+}
+
+// ParseSinglePoint ...
+func ParseSinglePoint(b byte) SinglePoint {
+	return SinglePoint((b & 0x01) == 0x01)
+}
+
+// DoublePoint is a measured value of a determination aware switch.
+// See companion standard 101, subclass 7.2.6.2.
+type DoublePoint byte
+
+// DoublePoint defined
+const (
+	DPIIndeterminateOrIntermediate DoublePoint = iota // 不确定或中间状态
+	DPIDeterminedOff                                  // 确定状态开
+	DPIDeterminedOn                                   // 确定状态关
+	DPIIndeterminate                                  // 不确定或中间状态
+)
+
+// Value double point to byte
+func (sf DoublePoint) Value() byte {
+	return byte(sf & 0x03)
+}
+
+// ParseDoublePoint ...
+func ParseDoublePoint(b byte) DoublePoint {
+	return DoublePoint(b & 0x03)
+}
+
 // StepPosition is a measured value with transient state indication.
 // 带瞬变状态指示的测量值，用于变压器步位置或其它步位置的值
 // See companion standard 101, subclass 7.2.6.5.
@@ -134,14 +144,64 @@ func ParseStepPosition(b byte) StepPosition {
 	return step
 }
 
-// Normalize is a 16-bit normalized value in[-1, 1 − 2⁻¹⁵]..
+// BitString is 32 Bits String info
+// 二进制状态信息
+type BitString uint32
+
+// Value ...
+func (sf BitString) Value() uint32 {
+	return uint32(sf)
+}
+
+// ParseBitString ...
+func ParseBitString(b uint32) BitString {
+	return BitString(b)
+}
+
+// NormalizedMeasurement is a 16-bit normalized value in[-1, 1 − 2⁻¹⁵]..
 // 规一化值 f归一= 32768 * f真实 / 满码值
 // See companion standard 101, subclass 7.2.6.6.
-type Normalize int16
+type NormalizedMeasurement int16
 
-// Float64 returns the value in [-1, 1 − 2⁻¹⁵].
-func (sf Normalize) Float64() float64 {
+// Value ...
+func (sf NormalizedMeasurement) Value() int16 {
+	return int16(sf)
+}
+
+// NormalizedValue returns the value in [-1, 1 − 2⁻¹⁵].
+func (sf NormalizedMeasurement) NormalizedValue() float64 {
 	return float64(sf) / 32768
+}
+
+// ParseNormalizedMeasurement ...
+func ParseNormalizedMeasurement(b int16) NormalizedMeasurement {
+	return NormalizedMeasurement(b)
+}
+
+// ScaledMeasurement is a 16-bit scaled value in [-2¹⁵, +2¹⁵-1]
+type ScaledMeasurement int16
+
+// Value ...
+func (sf ScaledMeasurement) Value() int16 {
+	return int16(sf)
+}
+
+// ParseScaledMeasurement ...
+func ParseScaledMeasurement(b int16) ScaledMeasurement {
+	return ScaledMeasurement(b)
+}
+
+// ShortFloatMeasurement is a floa32 value
+type ShortFloatMeasurement float32
+
+// Value ...
+func (sf ShortFloatMeasurement) Value() float32 {
+	return float32(sf)
+}
+
+// ParseShortFloatMeasurement ...
+func ParseShortFloatMeasurement(b float32) ShortFloatMeasurement {
+	return ShortFloatMeasurement(b)
 }
 
 // BinaryCounterReading is binary counter reading
@@ -206,13 +266,26 @@ const FBPTestWord uint16 = 0x55aa
 
 // SingleCommand Single command
 // See companion standard 101, subclass 7.2.6.15.
-type SingleCommand byte
+type SingleCommand bool
 
 // SingleCommand defined
 const (
-	SCOOn SingleCommand = iota
-	SCOOff
+	SCOOn  SingleCommand = true
+	SCOOff SingleCommand = false
 )
+
+// Value ...
+func (sf SingleCommand) Value() bool {
+	return bool(sf)
+}
+
+// ParseSingleCommand ...
+func ParseSingleCommand(b byte) SingleCommand {
+	if (b & 0x01) == 0x01 {
+		return SingleCommand(true)
+	}
+	return SingleCommand(false)
+}
 
 // DoubleCommand double command
 // See companion standard 101, subclass 7.2.6.16.
@@ -226,6 +299,16 @@ const (
 	DCONotAllow3
 )
 
+// Value ...
+func (sf DoubleCommand) Value() byte {
+	return byte(sf)
+}
+
+// ParseDoubleCommand ...
+func ParseDoubleCommand(b byte) DoubleCommand {
+	return DoubleCommand(b & 0x03)
+}
+
 // StepCommand step command
 // See companion standard 101, subclass 7.2.6.17.
 type StepCommand byte
@@ -237,6 +320,16 @@ const (
 	SCOStepUP
 	SCONotAllow3
 )
+
+// Value ...
+func (sf StepCommand) Value() byte {
+	return byte(sf)
+}
+
+// ParseDoubleCommand ...
+func ParseStepCommand(b byte) StepCommand {
+	return StepCommand(b & 0x03)
+}
 
 // COICause Initialization reason
 // See companion standard 101, subclass 7.2.6.21.
@@ -496,7 +589,7 @@ TODO: file 文件相关未定义
 //	0: default
 //	0‥63: reserved for standard definitions of sf companion standard (compatible range)
 //	64‥127: reserved for special use (private range)
-type QOSQual uint
+type QOSQual byte
 
 // QualifierOfSetpointCmd is a qualifier of command. 设定命令限定词
 // See section 5, subclass 6.8.

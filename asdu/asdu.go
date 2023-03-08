@@ -253,11 +253,7 @@ func (sf *ASDU) MarshalBinary() (data []byte, err error) {
 		offset++
 	}
 	if sf.CommonAddrSize == 1 {
-		if sf.CommonAddr == GlobalCommonAddr {
-			raw[offset] = 255
-		} else {
-			raw[offset] = byte(sf.CommonAddr)
-		}
+		raw[offset] = byte(sf.CommonAddr)
 	} else { // 2
 		raw[offset] = byte(sf.CommonAddr)
 		offset++

@@ -28,9 +28,6 @@ func InterrogationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr, qoi Qua
 	if !(coa.Cause == Activation || coa.Cause == Deactivation) {
 		return ErrCmdCause
 	}
-	if err := c.Params().Valid(); err != nil {
-		return err
-	}
 
 	u := NewASDU(c.Params(), Identifier{
 		C_IC_NA_1,
@@ -59,9 +56,6 @@ func InterrogationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr, qoi Qua
 // <46> := 未知的应用服务数据单元公共地址
 // <47> := 未知的信息对象地址
 func CounterInterrogationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr, qcc QualifierCountCall) error {
-	if err := c.Params().Valid(); err != nil {
-		return err
-	}
 	coa.Cause = Activation
 	u := NewASDU(c.Params(), Identifier{
 		C_CI_NA_1,
@@ -87,15 +81,11 @@ func CounterInterrogationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr, 
 // <45> := 未知的传送原因
 // <46> := 未知的应用服务数据单元公共地址
 // <47> := 未知的信息对象地址
-func ReadCmd(c Connect, coa CauseOfTransmission, ca CommonAddr, ioa InfoObjAddr) error {
-	if err := c.Params().Valid(); err != nil {
-		return err
-	}
-	coa.Cause = Request
+func ReadCmd(c Connect, ca CommonAddr, ioa InfoObjAddr) error {
 	u := NewASDU(c.Params(), Identifier{
 		C_RD_NA_1,
 		VariableStruct{IsSequence: false, Number: 1},
-		coa,
+		ParseCauseOfTransmission(byte(Request)),
 		0,
 		ca,
 	})
@@ -117,15 +107,11 @@ func ReadCmd(c Connect, coa CauseOfTransmission, ca CommonAddr, ioa InfoObjAddr)
 // <45> := 未知的传送原因
 // <46> := 未知的应用服务数据单元公共地址
 // <47> := 未知的信息对象地址
-func ClockSynchronizationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr, t time.Time) error {
-	if err := c.Params().Valid(); err != nil {
-		return err
-	}
-	coa.Cause = Activation
+func ClockSynchronizationCmd(c Connect, ca CommonAddr, t time.Time) error {
 	u := NewASDU(c.Params(), Identifier{
 		C_CS_NA_1,
 		VariableStruct{IsSequence: false, Number: 1},
-		coa,
+		ParseCauseOfTransmission(byte(Activation)),
 		0,
 		ca,
 	})
@@ -147,15 +133,11 @@ func ClockSynchronizationCmd(c Connect, coa CauseOfTransmission, ca CommonAddr, 
 // <45> := 未知的传送原因
 // <46> := 未知的应用服务数据单元公共地址
 // <47> := 未知的信息对象地址
-func TestCommand(c Connect, coa CauseOfTransmission, ca CommonAddr) error {
-	if err := c.Params().Valid(); err != nil {
-		return err
-	}
-	coa.Cause = Activation
+func TestCommand(c Connect, ca CommonAddr) error {
 	u := NewASDU(c.Params(), Identifier{
 		C_TS_NA_1,
 		VariableStruct{IsSequence: false, Number: 1},
-		coa,
+		ParseCauseOfTransmission(byte(Activation)),
 		0,
 		ca,
 	})
@@ -177,15 +159,11 @@ func TestCommand(c Connect, coa CauseOfTransmission, ca CommonAddr) error {
 // <45> := 未知的传送原因
 // <46> := 未知的应用服务数据单元公共地址
 // <47> := 未知的信息对象地址
-func ResetProcessCmd(c Connect, coa CauseOfTransmission, ca CommonAddr, qrp QualifierOfResetProcessCmd) error {
-	if err := c.Params().Valid(); err != nil {
-		return err
-	}
-	coa.Cause = Activation
+func ResetProcessCmd(c Connect, ca CommonAddr, qrp QualifierOfResetProcessCmd) error {
 	u := NewASDU(c.Params(), Identifier{
 		C_RP_NA_1,
 		VariableStruct{IsSequence: false, Number: 1},
-		coa,
+		ParseCauseOfTransmission(byte(Activation)),
 		0,
 		ca,
 	})
@@ -212,9 +190,6 @@ func DelayAcquireCommand(c Connect, coa CauseOfTransmission, ca CommonAddr, msec
 	if !(coa.Cause == Spontaneous || coa.Cause == Activation) {
 		return ErrCmdCause
 	}
-	if err := c.Params().Valid(); err != nil {
-		return err
-	}
 
 	u := NewASDU(c.Params(), Identifier{
 		C_CD_NA_1,
@@ -240,14 +215,11 @@ func DelayAcquireCommand(c Connect, coa CauseOfTransmission, ca CommonAddr, msec
 // <45> := 未知的传送原因
 // <46> := 未知的应用服务数据单元公共地址
 // <47> := 未知的信息对象地址
-func TestCommandCP56Time2a(c Connect, coa CauseOfTransmission, ca CommonAddr, t time.Time) error {
-	if err := c.Params().Valid(); err != nil {
-		return err
-	}
+func TestCommandCP56Time2a(c Connect, ca CommonAddr, t time.Time) error {
 	u := NewASDU(c.Params(), Identifier{
 		C_TS_TA_1,
 		VariableStruct{IsSequence: false, Number: 1},
-		coa,
+		ParseCauseOfTransmission(byte(Activation)),
 		0,
 		ca,
 	})

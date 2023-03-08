@@ -26,12 +26,12 @@ type ClientOption struct {
 // NewOption with default config and default asdu.ParamsWide params
 func NewOption() *ClientOption {
 	return &ClientOption{
-		DefaultConfig(),
-		*asdu.ParamsWide,
-		nil,
-		true,
-		DefaultReconnectInterval,
-		nil,
+		config:            DefaultConfig(),
+		param:             *asdu.ParamsWide,
+		server:            nil,
+		autoReconnect:     true,
+		reconnectInterval: DefaultReconnectInterval,
+		TLSConfig:         nil,
 	}
 }
 

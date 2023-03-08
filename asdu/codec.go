@@ -6,9 +6,57 @@ package asdu
 
 import (
 	"encoding/binary"
+	"fmt"
 	"math"
 	"time"
 )
+
+// AppendValueAndQ append value and quality or qualifier to asdu
+func (sf *ASDU) AppendValueAndQ(value interface{}, quali interface{}) error {
+	var q byte
+	switch qq := quali.(type) {
+	case QualifierOfCommand:
+		q = qq.Value()
+	case QualifierOfSetpointCmd:
+		q = qq.Value()
+	default:
+		return fmt.Errorf("Unknown quality Type")
+	}
+	switch v := value.(type) {
+	case SinglePoint:
+		if v.Value() {
+			sf.infoObj = append(sf.infoObj, q|0x01)
+		} else {
+			sf.infoObj = append(sf.infoObj, q)
+		}
+	case DoublePoint:
+		sf.infoObj = append(sf.infoObj, v.Value()|q)
+	case StepPosition:
+		sf.infoObj = append(sf.infoObj, v.Value()|q)
+	case SingleCommand:
+		if v.Value() {
+			sf.infoObj = append(sf.infoObj, q|0x01)
+		} else {
+			sf.infoObj = append(sf.infoObj, q)
+		}
+	case DoubleCommand:
+		sf.infoObj = append(sf.infoObj, v.Value()|q)
+	case StepCommand:
+		sf.infoObj = append(sf.infoObj, v.Value()|q)
+	case BitString:
+		sf.infoObj = append(sf.infoObj, byte(v), byte(v>>8), byte(v>>16), byte(v>>24))
+	case NormalizedMeasurement:
+		sf.infoObj = append(sf.infoObj, byte(v), byte(v>>8), q)
+	case ScaledMeasurement:
+		sf.infoObj = append(sf.infoObj, byte(v), byte(v>>8), q)
+	case ShortFloatMeasurement:
+		bits := math.Float32bits(float32(v))
+		sf.infoObj = append(sf.infoObj, byte(bits), byte(bits>>8), byte(bits>>16), byte(bits>>24), q)
+	default:
+		return fmt.Errorf("Unknown value type")
+	}
+	return nil
+}
 
 // AppendBytes append some bytes to info object
 func (sf *ASDU) AppendBytes(b ...byte) *ASDU {
@@ -80,45 +128,45 @@ func (sf *ASDU) DecodeInfoObjAddr() InfoObjAddr {
 }
 
 // AppendNormalize append a Normalize value to info object
-func (sf *ASDU) AppendNormalize(n Normalize) *ASDU {
+func (sf *ASDU) AppendNormalize(n NormalizedMeasurement) *ASDU {
 	sf.infoObj = append(sf.infoObj, byte(n), byte(n>>8))
 	return sf
 }
 
 // DecodeNormalize decode info object byte to a Normalize value
-func (sf *ASDU) DecodeNormalize() Normalize {
-	n := Normalize(binary.LittleEndian.Uint16(sf.infoObj))
+func (sf *ASDU) DecodeNormalize() NormalizedMeasurement {
+	n := NormalizedMeasurement(binary.LittleEndian.Uint16(sf.infoObj))
 	sf.infoObj = sf.infoObj[2:]
 	return n
 }
 
 // AppendScaled append a Scaled value to info object
 // See companion standard 101, subclass 7.2.6.7.
-func (sf *ASDU) AppendScaled(i int16) *ASDU {
+func (sf *ASDU) AppendScaled(i ScaledMeasurement) *ASDU {
 	sf.infoObj = append(sf.infoObj, byte(i), byte(i>>8))
 	return sf
 }
 
 // DecodeScaled decode info object byte to a Scaled value
-func (sf *ASDU) DecodeScaled() int16 {
+func (sf *ASDU) DecodeScaled() ScaledMeasurement {
 	s := int16(binary.LittleEndian.Uint16(sf.infoObj))
 	sf.infoObj = sf.infoObj[2:]
-	return s
+	return ScaledMeasurement(s)
 }
 
 // AppendFloat32 append a float32 value to info object
 // See companion standard 101, subclass 7.2.6.8.
-func (sf *ASDU) AppendFloat32(f float32) *ASDU {
-	bits := math.Float32bits(f)
+func (sf *ASDU) AppendFloat32(f ShortFloatMeasurement) *ASDU {
+	bits := math.Float32bits(float32(f))
 	sf.infoObj = append(sf.infoObj, byte(bits), byte(bits>>8), byte(bits>>16), byte(bits>>24))
 	return sf
 }
 
 // DecodeFloat32 decode info object byte to a float32 value
-func (sf *ASDU) DecodeFloat32() float32 {
+func (sf *ASDU) DecodeFloat32() ShortFloatMeasurement {
 	f := math.Float32frombits(binary.LittleEndian.Uint32(sf.infoObj))
 	sf.infoObj = sf.infoObj[4:]
-	return f
+	return ShortFloatMeasurement(f)
 }
 
 // AppendBinaryCounterReading append binary couter reading value to info object
@@ -155,16 +203,16 @@ func (sf *ASDU) DecodeBinaryCounterReading() BinaryCounterReading {
 
 // AppendBitsString32 append a bits string value to info object
 // See companion standard 101, subclass 7.2.6.13.
-func (sf *ASDU) AppendBitsString32(v uint32) *ASDU {
+func (sf *ASDU) AppendBitsString32(v BitString) *ASDU {
 	sf.infoObj = append(sf.infoObj, byte(v), byte(v>>8), byte(v>>16), byte(v>>24))
 	return sf
 }
 
 // DecodeBitsString32 decode info object byte to a bits string value
-func (sf *ASDU) DecodeBitsString32() uint32 {
+func (sf *ASDU) DecodeBitsString32() BitString {
 	v := binary.LittleEndian.Uint32(sf.infoObj)
 	sf.infoObj = sf.infoObj[4:]
-	return v
+	return BitString(v)
 }
 
 // AppendCP56Time2a append a CP56Time2a value to info object

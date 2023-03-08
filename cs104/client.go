@@ -593,18 +593,18 @@ func (sf *Client) CounterInterrogationCmd(coa asdu.CauseOfTransmission, ca asdu.
 }
 
 // ReadCmd wrap asdu.ReadCmd
-func (sf *Client) ReadCmd(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, ioa asdu.InfoObjAddr) error {
-	return asdu.ReadCmd(sf, coa, ca, ioa)
+func (sf *Client) ReadCmd(ca asdu.CommonAddr, ioa asdu.InfoObjAddr) error {
+	return asdu.ReadCmd(sf, ca, ioa)
 }
 
 // ClockSynchronizationCmd wrap asdu.ClockSynchronizationCmd
-func (sf *Client) ClockSynchronizationCmd(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, t time.Time) error {
-	return asdu.ClockSynchronizationCmd(sf, coa, ca, t)
+func (sf *Client) ClockSynchronizationCmd(ca asdu.CommonAddr, t time.Time) error {
+	return asdu.ClockSynchronizationCmd(sf, ca, t)
 }
 
 // ResetProcessCmd wrap asdu.ResetProcessCmd
-func (sf *Client) ResetProcessCmd(coa asdu.CauseOfTransmission, ca asdu.CommonAddr, qrp asdu.QualifierOfResetProcessCmd) error {
-	return asdu.ResetProcessCmd(sf, coa, ca, qrp)
+func (sf *Client) ResetProcessCmd(ca asdu.CommonAddr, qrp asdu.QualifierOfResetProcessCmd) error {
+	return asdu.ResetProcessCmd(sf, ca, qrp)
 }
 
 // DelayAcquireCommand wrap asdu.DelayAcquireCommand
@@ -613,6 +613,6 @@ func (sf *Client) DelayAcquireCommand(coa asdu.CauseOfTransmission, ca asdu.Comm
 }
 
 // TestCommand  wrap asdu.TestCommand
-func (sf *Client) TestCommand(coa asdu.CauseOfTransmission, ca asdu.CommonAddr) error {
-	return asdu.TestCommand(sf, coa, ca)
+func (sf *Client) TestCommand(ca asdu.CommonAddr) error {
+	return asdu.TestCommand(sf, ca)
 }

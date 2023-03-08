@@ -13,7 +13,7 @@ import (
 // SingleCommandInfo 单命令 信息体
 type SingleCommandInfo struct {
 	Ioa   InfoObjAddr
-	Value bool
+	Value SingleCommand
 	Qoc   QualifierOfCommand
 	Time  time.Time
 }
@@ -70,7 +70,7 @@ func SingleCmd(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
 // DoubleCommandInfo 单命令 信息体
 type DoubleCommandInfo struct {
 	Ioa   InfoObjAddr
-	Value DoubleCommand
+	value DoubleCommand
 	Qoc   QualifierOfCommand
 	Time  time.Time
 }
@@ -109,8 +109,7 @@ func DoubleCmd(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr,
 	if err := u.AppendInfoObjAddr(cmd.Ioa); err != nil {
 		return err
 	}
-
-	u.AppendBytes(cmd.Qoc.Value() | byte(cmd.Value&0x03))
+	u.AppendValueAndQ(cmd.value, cmd.Qoc)
 	switch typeID {
 	case C_DC_NA_1:
 	case C_DC_TA_1:
@@ -163,7 +162,7 @@ func StepCmd(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr, c
 		return err
 	}
 
-	u.AppendBytes(cmd.Qoc.Value() | byte(cmd.Value&0x03))
+	u.AppendValueAndQ(cmd.Value, cmd.Qoc)
 	switch typeID {
 	case C_RC_NA_1:
 	case C_RC_TA_1:
@@ -177,7 +176,7 @@ func StepCmd(c Connect, typeID TypeID, coa CauseOfTransmission, ca CommonAddr, c
 // SetpointCommandNormalInfo 设置命令，规一化值 信息体
 type SetpointCommandNormalInfo struct {
 	Ioa   InfoObjAddr
-	Value Normalize
+	Value NormalizedMeasurement
 	Qos   QualifierOfSetpointCmd
 	Time  time.Time
 }
@@ -215,7 +214,7 @@ func SetpointCmdNormal(c Connect, typeID TypeID, coa CauseOfTransmission, ca Com
 	if err := u.AppendInfoObjAddr(cmd.Ioa); err != nil {
 		return err
 	}
-	u.AppendNormalize(cmd.Value).AppendBytes(cmd.Qos.Value())
+	u.AppendValueAndQ(cmd.Value, cmd.Qos.Value())
 	switch typeID {
 	case C_SE_NA_1:
 	case C_SE_TA_1:
@@ -229,7 +228,7 @@ func SetpointCmdNormal(c Connect, typeID TypeID, coa CauseOfTransmission, ca Com
 // SetpointCommandScaledInfo 设定命令,标度化值 信息体
 type SetpointCommandScaledInfo struct {
 	Ioa   InfoObjAddr
-	Value int16
+	Value ScaledMeasurement
 	Qos   QualifierOfSetpointCmd
 	Time  time.Time
 }
@@ -267,7 +266,7 @@ func SetpointCmdScaled(c Connect, typeID TypeID, coa CauseOfTransmission, ca Com
 	if err := u.AppendInfoObjAddr(cmd.Ioa); err != nil {
 		return err
 	}
-	u.AppendScaled(cmd.Value).AppendBytes(cmd.Qos.Value())
+	u.AppendValueAndQ(cmd.Value, cmd.Qos.Value())
 	switch typeID {
 	case C_SE_NB_1:
 	case C_SE_TB_1:
@@ -281,7 +280,7 @@ func SetpointCmdScaled(c Connect, typeID TypeID, coa CauseOfTransmission, ca Com
 // SetpointCommandFloatInfo 设定命令, 短浮点数 信息体
 type SetpointCommandFloatInfo struct {
 	Ioa   InfoObjAddr
-	Value float32
+	Value ShortFloatMeasurement
 	Qos   QualifierOfSetpointCmd
 	Time  time.Time
 }
@@ -319,7 +318,7 @@ func SetpointCmdFloat(c Connect, typeID TypeID, coa CauseOfTransmission, ca Comm
 		return err
 	}
 
-	u.AppendFloat32(cmd.Value).AppendBytes(cmd.Qos.Value())
+	u.AppendValueAndQ(cmd.Value, cmd.Qos.Value())
 
 	switch typeID {
 	case C_SE_NC_1:
@@ -335,7 +334,7 @@ func SetpointCmdFloat(c Connect, typeID TypeID, coa CauseOfTransmission, ca Comm
 // BitsString32CommandInfo 比特串命令 信息体
 type BitsString32CommandInfo struct {
 	Ioa   InfoObjAddr
-	Value uint32
+	Value BitString
 	Time  time.Time
 }
 
@@ -373,7 +372,7 @@ func BitsString32Cmd(c Connect, typeID TypeID, coa CauseOfTransmission, commonAd
 		return err
 	}
 
-	u.AppendBitsString32(cmd.Value)
+	u.AppendValueAndQ(cmd.Value, QOCQual(0))
 
 	switch typeID {
 	case C_BO_NA_1:
@@ -412,7 +411,7 @@ func (sf *ASDU) GetDoubleCmd() DoubleCommandInfo {
 
 	cmd.Ioa = sf.DecodeInfoObjAddr()
 	value := sf.DecodeByte()
-	cmd.Value = DoubleCommand(value & 0x03)
+	cmd.value = DoubleCommand(value & 0x03)
 	cmd.Qoc = ParseQualifierOfCommand(value & 0xfc)
 
 	switch sf.Type {
